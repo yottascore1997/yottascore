@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  password  String
+  phoneNumber String
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // New fields for student details
+  rollNumber String?
+  className  String?
+  section    String?
+
+  exams     Exam[]   @relation("StudentExams")
+  createdExams Exam[] @relation("CreatedExams")
+}
+
+model Exam {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  duration    Int       // Duration in minutes
+  startTime   DateTime
+  endTime     DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   User      @relation("CreatedExams", fields: [createdById], references: [id])
+  createdById Int
+  students    User[]    @relation("StudentExams")
+  questions   Question[]
+}
+
+model Question {
+  id        Int      @id @default(autoincrement())
+  question  String
+  options   Json     // Array of options
+  correctAnswer Int
+  marks     Int
+  exam      Exam     @relation(fields: [examId], references: [id])
+  examId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+} 
