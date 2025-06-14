@@ -1,17 +1,9 @@
 {
-  "/not-found": "app/not-found.js",
-  "/auth/login/page": "app/auth/login/page.js",
   "/api/student/live-exams/[examId]/leaderboard/route": "app/api/student/live-exams/[examId]/leaderboard/route.js",
   "/api/student/exams/route": "app/api/student/exams/route.js",
-  "/api/student/practice-exams/route": "app/api/student/practice-exams/route.js",
-  "/api/student/practice-exams/[examId]/route": "app/api/student/practice-exams/[examId]/route.js",
-  "/api/student/practice-exams/join/route": "app/api/student/practice-exams/join/route.js",
-  "/api/student/practice-exams/[examId]/questions/route": "app/api/student/practice-exams/[examId]/questions/route.js",
-  "/api/student/practice-exams/[examId]/submit/route": "app/api/student/practice-exams/[examId]/submit/route.js",
-  "/api/student/practice-exams/[examId]/leaderboard/route": "app/api/student/practice-exams/[examId]/leaderboard/route.js",
-  "/api/student/practice-exams/[examId]/attempts/route": "app/api/student/practice-exams/[examId]/attempts/route.js",
+  "/api/student/exam-notifications/route": "app/api/student/exam-notifications/route.js",
+  "/api/student/exam-notifications/[id]/route": "app/api/student/exam-notifications/[id]/route.js",
   "/student/dashboard/page": "app/student/dashboard/page.js",
-  "/student/practice-exams/page": "app/student/practice-exams/page.js",
-  "/student/practice-exams/[examId]/page": "app/student/practice-exams/[examId]/page.js",
-  "/student/practice-exams/[examId]/attempt/page": "app/student/practice-exams/[examId]/attempt/page.js"
+  "/student/notifications/page": "app/student/notifications/page.js",
+  "/student/notifications/[id]/page": "app/student/notifications/[id]/page.js"
 }

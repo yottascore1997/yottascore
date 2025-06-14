@@ -6,16 +6,6 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
-    ],
-    "/auth/login/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/auth/login/page.js"
-    ],
     "/student/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -26,25 +16,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/student/dashboard/page.js"
     ],
-    "/student/practice-exams/page": [
+    "/student/notifications/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/student/practice-exams/page.js"
+      "static/chunks/app/student/notifications/page.js"
     ],
-    "/student/practice-exams/[examId]/page": [
+    "/student/notifications/[id]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/student/practice-exams/[examId]/page.js"
-    ],
-    "/student/practice-exams/[examId]/attempt/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/student/practice-exams/[examId]/attempt/page.js"
-    ],
-    "/not-found": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/not-found.js"
+      "static/chunks/app/student/notifications/[id]/page.js"
     ]
   }
 }

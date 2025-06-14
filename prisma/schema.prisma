@@ -180,3 +180,15 @@ model PracticeExamQuestion {
   exam        PracticeExam? @relation(fields: [examId], references: [id])
   examId      String?
 }
+
+model GovtExamNotification {
+  id            String   @id @default(cuid())
+  title         String
+  description   String   @db.Text
+  year          Int
+  month         Int
+  applyLastDate DateTime
+  applyLink     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
