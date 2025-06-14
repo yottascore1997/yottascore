@@ -1,52 +1,53 @@
 import { NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
-import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma'
+import { validateUser, signToken } from '@/lib/auth'
+import { z } from 'zod'
 import { withCORS } from '@/lib/cors'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+})
 
 const handler = async (req: Request) => {
   try {
-    const { email, password } = await req.json()
+    const body = await req.json()
+    const validatedFields = loginSchema.safeParse(body)
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
-    })
+    if (!validatedFields.success) {
+      return NextResponse.json(
+        { error: 'Invalid fields', details: validatedFields.error.errors },
+        { status: 400 }
+      )
+    }
+
+    const { email, password } = validatedFields.data
+    const user = await validateUser(email, password)
 
     if (!user) {
       return NextResponse.json(
-        { message: 'Invalid credentials' },
+        { error: 'Invalid credentials' },
         { status: 401 }
       )
     }
 
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password)
-    if (!isMatch) {
-      return NextResponse.json(
-        { message: 'Invalid credentials' },
-        { status: 401 }
-      )
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    const token = await signToken({
+      userId: user.id,
+      role: user.role,
+    })
 
     return NextResponse.json({
       token,
-      role: user.role,
-      message: 'Login successful',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     })
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

@@ -44,7 +44,7 @@ const handler = async (req: Request) => {
       data: {
         email,
         name,
-        password: hashedPassword,
+        hashedPassword,
         phoneNumber,
         role: 'STUDENT', // Default role is student
       },

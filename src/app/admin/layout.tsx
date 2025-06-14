@@ -8,7 +8,7 @@ const sidebarLinks = [
   { name: 'Students', href: '/admin/students', icon: '👥' },
   { name: 'Exams', href: '/admin/exams', icon: '📄' },
   { name: 'Assign Exams', href: '/admin/assign-exams', icon: '📝' },
-  { name: 'Question Bank', href: '/admin/question-bank', icon: '❓' },
+  { name: 'Question Bank', href: '/admin/questions', icon: '❓' },
   { name: 'Battle Quizzes', href: '/admin/battle-quizzes', icon: '⚔️' },
   { name: 'Results', href: '/admin/results', icon: '📊' },
   { name: 'Referrals', href: '/admin/referrals', icon: '🔗' },

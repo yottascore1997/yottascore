@@ -3,20 +3,150 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { formatDistanceToNow } from 'date-fns'
 
-interface Exam {
-  id: number
+interface Quiz {
+  id: string
   title: string
-  description: string | null
+  description: string
   startTime: string
-  endTime: string
   duration: number
+  spots: number
+  spotsLeft: number
+  entryFee: number
+  prizePool: number
+  isLive: boolean
+  createdBy: {
+    name: string
+  }
+}
+
+function BattleQuizList() {
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
+  const router = useRouter()
+
+  useEffect(() => {
+    fetchQuizzes()
+  }, [])
+
+  const fetchQuizzes = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      const response = await fetch('/api/student/exams', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to fetch quizzes')
+      }
+
+      const data = await response.json()
+      setQuizzes(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('Error fetching quizzes:', error)
+    }
+  }
+
+  const handleJoinQuiz = async (quizId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      const response = await fetch('/api/student/live-exams/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ examId: quizId })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to join exam')
+      }
+
+      router.push(`/student/live-exams/${quizId}`)
+    } catch (error) {
+      console.error('Error joining exam:', error)
+      alert(error instanceof Error ? error.message : 'Failed to join exam')
+    }
+  }
+
+  return (
+    <div className="mt-8">
+      <h2 className="text-xl font-bold mb-4">Battle Quizzes</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {quizzes.map((quiz) => (
+          <div key={quiz.id} className="bg-white rounded shadow p-4 flex flex-col justify-between">
+            <div>
+              <h3 className="font-semibold text-lg">{quiz.title}</h3>
+              <p className="text-gray-600 mb-2">{quiz.description}</p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-500">Spots:</span>
+                  <span className="ml-1">{quiz.spotsLeft}/{quiz.spots}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Entry Fee:</span>
+                  <span className="ml-1">₹{quiz.entryFee}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Prize Pool:</span>
+                  <span className="ml-1">₹{quiz.prizePool}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Duration:</span>
+                  <span className="ml-1">{quiz.duration} mins</span>
+                </div>
+              </div>
+              <div className="mt-2 text-sm text-gray-500">
+                Starts {formatDistanceToNow(new Date(quiz.startTime), { addSuffix: true })}
+              </div>
+            </div>
+            <div className="mt-4">
+              <Button
+                onClick={() => handleJoinQuiz(quiz.id)}
+                disabled={!quiz.isLive || quiz.spotsLeft === 0}
+                className="w-full"
+              >
+                {quiz.spotsLeft === 0 ? 'Full' : quiz.isLive ? 'Join Now' : 'Coming Soon'}
+              </Button>
+            </div>
+          </div>
+        ))}
+
+        {quizzes.length === 0 && (
+          <div className="col-span-full text-center py-12 text-gray-500">
+            No battle quizzes available at the moment.
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function StudentDashboard() {
   const router = useRouter()
-  const [exams, setExams] = useState<Exam[]>([])
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchQuizzes()
+  }, [])
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -24,29 +154,71 @@ export default function StudentDashboard() {
       router.push('/auth/login')
       return
     }
-
-    fetchExams()
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      if (payload.role !== 'STUDENT') {
+        router.push('/admin/dashboard')
+      }
+    } catch (e) {
+      router.push('/auth/login')
+    }
   }, [router])
 
-  const fetchExams = async () => {
+  const fetchQuizzes = async () => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
       const response = await fetch('/api/student/exams', {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
+          Authorization: `Bearer ${token}`
+        }
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setExams(data)
-      } else {
-        // Handle unauthorized access
-        router.push('/auth/login')
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to fetch quizzes')
       }
+
+      const data = await response.json()
+      setQuizzes(Array.isArray(data) ? data : [])
     } catch (error) {
-      console.error('Error fetching exams:', error)
+      console.error('Error fetching quizzes:', error)
+      setError(error instanceof Error ? error.message : 'Failed to fetch quizzes')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleJoinQuiz = async (quizId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      const response = await fetch('/api/student/live-exams/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ examId: quizId })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to join exam')
+      }
+
+      router.push(`/student/live-exams/${quizId}`)
+    } catch (error) {
+      console.error('Error joining exam:', error)
+      alert(error instanceof Error ? error.message : 'Failed to join exam')
     }
   }
 
@@ -58,78 +230,67 @@ export default function StudentDashboard() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500">{error}</div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex">
-              <div className="flex-shrink-0 flex items-center">
-                <h1 className="text-xl font-bold text-gray-900">Student Dashboard</h1>
+    <div className="container mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">Student Dashboard</h1>
+
+      <div className="mb-8">
+        <h2 className="text-xl font-bold mb-4">Battle Quizzes</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {quizzes.map((quiz) => (
+            <div key={quiz.id} className="bg-white rounded shadow p-4 flex flex-col justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">{quiz.title}</h3>
+                <p className="text-gray-600 mb-2">{quiz.description}</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-gray-500">Spots:</span>
+                    <span className="ml-1">{quiz.spotsLeft}/{quiz.spots}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Entry Fee:</span>
+                    <span className="ml-1">₹{quiz.entryFee}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Prize Pool:</span>
+                    <span className="ml-1">₹{quiz.prizePool}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Duration:</span>
+                    <span className="ml-1">{quiz.duration} mins</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-sm text-gray-500">
+                  Starts {formatDistanceToNow(new Date(quiz.startTime), { addSuffix: true })}
+                </div>
+              </div>
+              <div className="mt-4">
+                <Button
+                  onClick={() => handleJoinQuiz(quiz.id)}
+                  disabled={!quiz.isLive || quiz.spotsLeft === 0}
+                  className="w-full"
+                >
+                  {quiz.spotsLeft === 0 ? 'Full' : quiz.isLive ? 'Join Now' : 'Coming Soon'}
+                </Button>
               </div>
             </div>
-            <div className="flex items-center">
-              <button
-                onClick={() => {
-                  localStorage.removeItem('token')
-                  router.push('/auth/login')
-                }}
-                className="ml-4 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-              >
-                Logout
-              </button>
+          ))}
+
+          {quizzes.length === 0 && (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              No battle quizzes available at the moment.
             </div>
-          </div>
+          )}
         </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Available Exams</h2>
-
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
-              {exams.map((exam) => (
-                <li key={exam.id}>
-                  <div className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-primary truncate">
-                          {exam.title}
-                        </p>
-                        <p className="mt-1 text-sm text-gray-500">
-                          {exam.description}
-                        </p>
-                      </div>
-                      <div className="ml-4 flex-shrink-0">
-                        <Link
-                          href={`/student/exams/${exam.id}`}
-                          className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700"
-                        >
-                          Start Exam
-                        </Link>
-                      </div>
-                    </div>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500">
-                          Duration: {exam.duration} minutes
-                        </p>
-                      </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                        <p>
-                          {new Date(exam.startTime).toLocaleDateString()} -{' '}
-                          {new Date(exam.endTime).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </main>
+      </div>
     </div>
   )
 } 

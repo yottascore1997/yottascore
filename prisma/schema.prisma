@@ -1,59 +1,135 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String
-  password  String
-  phoneNumber String
-  role      Role     @default(STUDENT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // New fields for student details
-  rollNumber String?
-  className  String?
-  section    String?
-
-  exams     Exam[]   @relation("StudentExams")
-  createdExams Exam[] @relation("CreatedExams")
-}
-
-model Exam {
-  id          Int       @id @default(autoincrement())
-  title       String
-  description String?
-  duration    Int       // Duration in minutes
-  startTime   DateTime
-  endTime     DateTime
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  createdBy   User      @relation("CreatedExams", fields: [createdById], references: [id])
-  createdById Int
-  students    User[]    @relation("StudentExams")
-  questions   Question[]
-}
-
-model Question {
-  id        Int      @id @default(autoincrement())
-  question  String
-  options   Json     // Array of options
-  correctAnswer Int
-  marks     Int
-  exam      Exam     @relation(fields: [examId], references: [id])
-  examId    Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+generator client {
+  provider = "prisma-client-js"
 }
 
 enum Role {
   ADMIN
   STUDENT
-} 
+  USER
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id              String      @id @default(cuid())
+  name            String?
+  email           String?     @unique
+  emailVerified   DateTime?
+  image           String?
+  hashedPassword  String?
+  phoneNumber     String?
+  role            Role        @default(USER)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  accounts        Account[]
+  sessions        Session[]
+  participatedExams LiveExamParticipant[]
+  wonExams         LiveExamWinner[]
+  createdLiveExams LiveExam[]
+  wallet           Float    @default(0)
+  transactions     Transaction[]
+}
+
+model LiveExam {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  duration    Int         // in minutes
+  spots       Int
+  spotsLeft   Int
+  entryFee    Float
+  totalCollection Float
+  prizePool   Float
+  startTime   DateTime
+  endTime     DateTime?
+  isLive      Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  createdBy   User       @relation(fields: [createdById], references: [id])
+  createdById String
+  questions   Question[]
+  participants LiveExamParticipant[]
+  winners     LiveExamWinner[]
+}
+
+model LiveExamParticipant {
+  id          String    @id @default(cuid())
+  exam        LiveExam  @relation(fields: [examId], references: [id])
+  examId      String
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  score       Int?
+  answers     Json?     // Store answers as JSON
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  paid        Boolean   @default(false)
+  paymentId   String?   // Reference to payment transaction
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([examId, userId])
+}
+
+model LiveExamWinner {
+  id          String    @id @default(cuid())
+  exam        LiveExam  @relation(fields: [examId], references: [id])
+  examId      String
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  rank        Int
+  prizeAmount Float
+  paid        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([examId, rank])
+}
+
+model Question {
+  id          String    @id @default(cuid())
+  text        String?   @db.Text
+  options     Json?     // Array of options
+  correct     Int?      // Index of correct option
+  exam        LiveExam? @relation(fields: [examId], references: [id])
+  examId      String?
+}
+
+model Transaction {
+  id        String    @id @default(cuid())
+  userId    String
+  amount    Float
+  type      String
+  status    String
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+}

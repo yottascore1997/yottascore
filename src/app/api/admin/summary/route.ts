@@ -8,26 +8,62 @@ export async function GET(req: Request) {
   try {
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; role: string };
-    if (decoded.role !== 'ADMIN') {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const totalStudents = await prisma.user.count({ where: { role: 'STUDENT' } });
-    const totalExams = await prisma.exam.count();
-    // Exams taken: yeh aapke schema pe depend karega
-    const examsTaken = 0; // Placeholder
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+
+    if (decoded.role !== 'ADMIN') {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    // Get total users
+    const totalUsers = await prisma.user.count({
+      where: { role: 'STUDENT' }
+    });
+
+    // Get total live exams
+    const totalExams = await prisma.liveExam.count();
+
+    // Get total revenue (sum of all entry fees)
+    const totalRevenue = await prisma.liveExam.aggregate({
+      _sum: {
+        totalCollection: true
+      }
+    });
+
+    // Get recent activities (last 5 live exams)
+    const recentActivities = await prisma.liveExam.findMany({
+      take: 5,
+      orderBy: {
+        createdAt: 'desc'
+      },
+      include: {
+        createdBy: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
 
     return NextResponse.json({
-      totalStudents,
+      totalUsers,
       totalExams,
-      examsTaken,
-      recentActivities: [],
+      totalRevenue: totalRevenue._sum.totalCollection || 0,
+      recentActivities: recentActivities.map(exam => ({
+        id: exam.id,
+        title: exam.title,
+        createdAt: exam.createdAt,
+        createdBy: exam.createdBy.name
+      }))
     });
   } catch (error) {
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    if (error instanceof jwt.JsonWebTokenError) {
+      return new NextResponse('Invalid token', { status: 401 });
+    }
+    console.error('[ADMIN_SUMMARY_GET]', error);
+    return new NextResponse('Internal Error', { status: 500 });
   }
 } 

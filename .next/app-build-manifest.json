@@ -1,20 +1,25 @@
 {
   "pages": {
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
     "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
-    ],
     "/auth/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/auth/login/page.js"
+    ],
+    "/student/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/student/layout.js"
     ],
     "/student/dashboard/page": [
       "static/chunks/webpack.js",
@@ -31,10 +36,26 @@
       "static/chunks/main-app.js",
       "static/chunks/app/admin/dashboard/page.js"
     ],
-    "/admin/students/page": [
+    "/admin/live-exams/create/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/admin/students/page.js"
+      "static/css/app/admin/live-exams/create/page.css",
+      "static/chunks/app/admin/live-exams/create/page.js"
+    ],
+    "/student/live-exams/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/student/live-exams/page.js"
+    ],
+    "/student/live-exams/[examId]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/student/live-exams/[examId]/page.js"
+    ],
+    "/not-found": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/not-found.js"
     ]
   }
 }
