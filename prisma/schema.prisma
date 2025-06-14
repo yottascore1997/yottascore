@@ -58,6 +58,8 @@ model User {
   createdLiveExams LiveExam[]
   wallet           Float    @default(0)
   transactions     Transaction[]
+  createdPracticeExams PracticeExam[]
+  participatedPracticeExams PracticeExamParticipant[]
 }
 
 model LiveExam {
@@ -133,4 +135,48 @@ model Transaction {
   status    String
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id])
+}
+
+model PracticeExam {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  duration    Int         // in minutes
+  spots       Int
+  spotsLeft   Int
+  startTime   DateTime
+  endTime     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  createdBy   User       @relation(fields: [createdById], references: [id])
+  createdById String
+  questions   PracticeExamQuestion[]
+  participants PracticeExamParticipant[]
+  category    String
+  subcategory String
+}
+
+model PracticeExamParticipant {
+  id          String    @id @default(cuid())
+  exam        PracticeExam  @relation(fields: [examId], references: [id])
+  examId      String
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  score       Int?
+  answers     Json?     // Store answers as JSON
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([examId, userId])
+}
+
+model PracticeExamQuestion {
+  id          String    @id @default(cuid())
+  text        String?   @db.Text
+  options     Json?     // Array of options
+  correct     Int?      // Index of correct option
+  exam        PracticeExam? @relation(fields: [examId], references: [id])
+  examId      String?
 }
