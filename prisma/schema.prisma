@@ -73,6 +73,7 @@ model LiveExam {
   startTime   DateTime
   endTime     DateTime?
   isLive      Boolean    @default(false)
+  winningsDistributed Boolean @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   createdBy   User       @relation(fields: [createdById], references: [id])

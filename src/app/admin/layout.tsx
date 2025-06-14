@@ -11,6 +11,7 @@ const sidebarLinks = [
   { name: 'Question Bank', href: '/admin/questions', icon: '❓' },
   { name: 'Battle Quizzes', href: '/admin/battle-quizzes', icon: '⚔️' },
   { name: 'Results', href: '/admin/results', icon: '📊' },
+  { name: 'Winnings', href: '/admin/winnings', icon: '💰' },
   { name: 'Referrals', href: '/admin/referrals', icon: '🔗' },
   { name: 'Settings', href: '/admin/settings', icon: '⚙️' },
   { name: 'Practice Exams', href: '/admin/practice-exams', icon: '🧑‍💻' },

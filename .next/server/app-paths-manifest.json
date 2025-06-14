@@ -1,17 +1,12 @@
 {
   "/not-found": "app/not-found.js",
+  "/auth/login/page": "app/auth/login/page.js",
   "/api/student/live-exams/[examId]/leaderboard/route": "app/api/student/live-exams/[examId]/leaderboard/route.js",
-  "/api/student/live-exams/route": "app/api/student/live-exams/route.js",
-  "/api/student/live-exams/join/route": "app/api/student/live-exams/join/route.js",
-  "/api/student/live-exams/[examId]/route": "app/api/student/live-exams/[examId]/route.js",
-  "/api/student/live-exams/[examId]/attempts/route": "app/api/student/live-exams/[examId]/attempts/route.js",
-  "/api/student/live-exams/[examId]/winnings/route": "app/api/student/live-exams/[examId]/winnings/route.js",
-  "/api/student/live-exams/[examId]/participant/route": "app/api/student/live-exams/[examId]/participant/route.js",
-  "/api/student/live-exams/[examId]/questions/route": "app/api/student/live-exams/[examId]/questions/route.js",
-  "/api/student/live-exams/[examId]/submit/route": "app/api/student/live-exams/[examId]/submit/route.js",
-  "/student/dashboard/page": "app/student/dashboard/page.js",
+  "/api/admin/summary/route": "app/api/admin/summary/route.js",
+  "/api/admin/live-exams/route": "app/api/admin/live-exams/route.js",
+  "/api/admin/ended-exams/route": "app/api/admin/ended-exams/route.js",
+  "/api/admin/distribute-winnings/route": "app/api/admin/distribute-winnings/route.js",
   "/admin/dashboard/page": "app/admin/dashboard/page.js",
   "/admin/live-exams/create/page": "app/admin/live-exams/create/page.js",
-  "/student/live-exams/page": "app/student/live-exams/page.js",
-  "/student/live-exams/[examId]/page": "app/student/live-exams/[examId]/page.js"
+  "/admin/winnings/page": "app/admin/winnings/page.js"
 }

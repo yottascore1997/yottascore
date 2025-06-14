@@ -42,15 +42,10 @@
       "static/css/app/admin/live-exams/create/page.css",
       "static/chunks/app/admin/live-exams/create/page.js"
     ],
-    "/student/live-exams/page": [
+    "/admin/winnings/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/student/live-exams/page.js"
-    ],
-    "/student/live-exams/[examId]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/student/live-exams/[examId]/page.js"
+      "static/chunks/app/admin/winnings/page.js"
     ],
     "/not-found": [
       "static/chunks/webpack.js",
