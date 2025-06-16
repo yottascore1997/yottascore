@@ -139,6 +139,184 @@ function BattleQuizList() {
   )
 }
 
+function QuestionOfTheDay() {
+  const [question, setQuestion] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [selectedOption, setSelectedOption] = useState<number | null>(null)
+  const [timeLeft, setTimeLeft] = useState(0)
+  const [isAnswered, setIsAnswered] = useState(false)
+  const [isCorrect, setIsCorrect] = useState(false)
+  const router = useRouter()
+
+  useEffect(() => {
+    fetchQuestion()
+  }, [])
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+    if (showModal && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1)
+      }, 1000)
+    }
+    return () => clearInterval(timer)
+  }, [showModal, timeLeft])
+
+  const fetchQuestion = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      const response = await fetch('/api/student/question-of-the-day', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch question')
+      }
+
+      const data = await response.json()
+      setQuestion(data)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to fetch question')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleViewQuestion = () => {
+    if (question && !question.hasAttempted) {
+      setShowModal(true)
+      setTimeLeft(question.timeLimit)
+      setSelectedOption(null)
+      setIsAnswered(false)
+    }
+  }
+
+  const handleSelectOption = async (index: number) => {
+    if (isAnswered) return
+
+    setSelectedOption(index)
+    setIsAnswered(true)
+
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      const response = await fetch('/api/student/question-of-the-day', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          questionId: question.id,
+          selected: index,
+          timeTaken: question.timeLimit - timeLeft
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to submit answer')
+      }
+
+      const data = await response.json()
+      setIsCorrect(data.isCorrect)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to submit answer')
+    }
+  }
+
+  if (loading) {
+    return <div className="mt-8">Loading...</div>
+  }
+
+  if (error) {
+    return <div className="mt-8 text-red-500">{error}</div>
+  }
+
+  if (!question) {
+    return null
+  }
+
+  return (
+    <div className="mt-8">
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Question of the Day</h2>
+          {!question.hasAttempted && (
+            <Button onClick={handleViewQuestion}>View Question</Button>
+          )}
+        </div>
+        {question.hasAttempted && (
+          <div className="text-center py-4">
+            <p className="text-lg">
+              {question.isCorrect
+                ? '🎉 Congratulations! You got it right!'
+                : 'Better luck next time!'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg w-full max-w-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Question of the Day</h3>
+              <div className="text-sm font-medium">
+                Time Left: {timeLeft}s
+              </div>
+            </div>
+            <p className="mb-4">{question.question}</p>
+            <div className="space-y-2">
+              {question.options.map((option: string, index: number) => (
+                <button
+                  key={index}
+                  onClick={() => handleSelectOption(index)}
+                  disabled={isAnswered}
+                  className={`w-full p-3 text-left rounded-lg border ${
+                    selectedOption === index
+                      ? isCorrect
+                        ? 'bg-green-100 border-green-500'
+                        : 'bg-red-100 border-red-500'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            {isAnswered && (
+              <div className="mt-4 text-center">
+                <p className="text-lg font-medium">
+                  {isCorrect ? '🎉 Congratulations! You are a champion!' : 'Try again tomorrow!'}
+                </p>
+                <Button
+                  className="mt-4"
+                  onClick={() => setShowModal(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function StudentDashboard() {
   const router = useRouter()
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
@@ -397,6 +575,7 @@ export default function StudentDashboard() {
           )}
         </div>
       </div>
+      <QuestionOfTheDay />
     </div>
   )
 } 

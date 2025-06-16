@@ -16,6 +16,7 @@ const sidebarLinks = [
   { name: 'Settings', href: '/admin/settings', icon: '⚙️' },
   { name: 'Practice Exams', href: '/admin/practice-exams', icon: '🧑‍💻' },
   { name: 'Exam Notifications', href: '/admin/exam-notifications', icon: '📢' },
+  { name: 'Question of the Day', href: '/admin/question-of-the-day', icon: '⭐' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

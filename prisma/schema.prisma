@@ -60,6 +60,8 @@ model User {
   transactions     Transaction[]
   createdPracticeExams PracticeExam[]
   participatedPracticeExams PracticeExamParticipant[]
+  createdQuestionsOfTheDay QuestionOfTheDay[]
+  questionOfTheDayAttempts QuestionOfTheDayAttempt[]
 }
 
 model LiveExam {
@@ -191,4 +193,32 @@ model GovtExamNotification {
   applyLink     String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model QuestionOfTheDay {
+  id          String    @id @default(cuid())
+  question    String    @db.Text
+  options     Json      // Array of options
+  correct     Int       // Index of correct option
+  timeLimit   Int       @default(10) // Time limit in seconds
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdById String
+  attempts    QuestionOfTheDayAttempt[]
+}
+
+model QuestionOfTheDayAttempt {
+  id          String    @id @default(cuid())
+  question    QuestionOfTheDay @relation(fields: [questionId], references: [id])
+  questionId  String
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  selected    Int       // Index of selected option
+  isCorrect   Boolean
+  timeTaken   Int       // Time taken in seconds
+  createdAt   DateTime  @default(now())
+
+  @@unique([questionId, userId])
 }
