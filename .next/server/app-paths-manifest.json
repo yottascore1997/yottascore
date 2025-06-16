@@ -1,9 +1,10 @@
 {
-  "/api/student/live-exams/[examId]/leaderboard/route": "app/api/student/live-exams/[examId]/leaderboard/route.js",
-  "/api/student/exams/route": "app/api/student/exams/route.js",
+  "/page": "app/page.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/api/student/live-exams/route": "app/api/student/live-exams/route.js",
   "/api/student/exam-notifications/route": "app/api/student/exam-notifications/route.js",
-  "/api/student/exam-notifications/[id]/route": "app/api/student/exam-notifications/[id]/route.js",
-  "/student/dashboard/page": "app/student/dashboard/page.js",
-  "/student/notifications/page": "app/student/notifications/page.js",
-  "/student/notifications/[id]/page": "app/student/notifications/[id]/page.js"
+  "/api/student/practice-exams/route": "app/api/student/practice-exams/route.js",
+  "/api/student/wallet/deposit/route": "app/api/student/wallet/deposit/route.js",
+  "/api/student/wallet/route": "app/api/student/wallet/route.js",
+  "/student/wallet/page": "app/student/wallet/page.js"
 }

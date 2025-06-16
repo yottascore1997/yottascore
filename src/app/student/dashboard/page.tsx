@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { formatDistanceToNow } from 'date-fns'
+import { FaRupeeSign } from 'react-icons/fa'
 
 interface Quiz {
   id: string
@@ -143,9 +144,16 @@ export default function StudentDashboard() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [wallet, setWallet] = useState<number>(0)
+  const [walletLoading, setWalletLoading] = useState(true)
+  const [showAddCash, setShowAddCash] = useState(false)
+  const [addAmount, setAddAmount] = useState<number | ''>('')
+  const [addLoading, setAddLoading] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchQuizzes()
+    fetchWallet()
   }, [])
 
   useEffect(() => {
@@ -193,6 +201,59 @@ export default function StudentDashboard() {
     }
   }
 
+  const fetchWallet = async () => {
+    setWalletLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+      const res = await fetch('/api/student/wallet', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error('Failed to fetch wallet')
+      const data = await res.json()
+      setWallet(data.balance ?? data.wallet ?? 0)
+    } catch (e) {
+      setWallet(0)
+    } finally {
+      setWalletLoading(false)
+    }
+  }
+
+  const handleAddCash = async () => {
+    if (typeof addAmount !== 'number' || addAmount <= 0) return
+    setAddLoading(true)
+    setAddError(null)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+      const res = await fetch('/api/student/wallet/deposit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ amount: addAmount })
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.message || 'Failed to add cash')
+      }
+      setAddAmount('')
+      setShowAddCash(false)
+      fetchWallet()
+    } catch (e: any) {
+      setAddError(e.message || 'Failed to add cash')
+    } finally {
+      setAddLoading(false)
+    }
+  }
+
   const handleJoinQuiz = async (quizId: string) => {
     try {
       const token = localStorage.getItem('token')
@@ -222,7 +283,7 @@ export default function StudentDashboard() {
     }
   }
 
-  if (loading) {
+  if (loading || walletLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -241,7 +302,52 @@ export default function StudentDashboard() {
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Student Dashboard</h1>
-
+      {/* Wallet Card */}
+      <div className="bg-blue-600 text-white rounded-lg shadow-md p-6 mb-6 flex items-center justify-between">
+        <div>
+          <div className="text-lg font-semibold mb-1">Available Balance</div>
+          <div className="text-3xl font-bold flex items-center"><FaRupeeSign className="mr-1" />{wallet.toFixed(2)}</div>
+        </div>
+        <button
+          className="bg-white text-blue-700 font-bold px-4 py-2 rounded-lg shadow hover:bg-blue-100 transition"
+          onClick={() => setShowAddCash(true)}
+        >
+          + Add Cash
+        </button>
+      </div>
+      {/* Add Cash Dialog */}
+      {showAddCash && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
+            <h2 className="text-xl font-bold mb-4">Add Cash</h2>
+            <input
+              type="number"
+              placeholder="Enter amount"
+              value={addAmount}
+              onChange={e => setAddAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
+              className="w-full p-2 border rounded mb-4"
+              min={1}
+            />
+            {addError && <div className="text-red-500 mb-2 text-sm">{addError}</div>}
+            <div className="flex gap-2">
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded font-semibold disabled:bg-gray-400"
+                onClick={handleAddCash}
+                disabled={addLoading || typeof addAmount !== 'number' || addAmount <= 0}
+              >
+                {addLoading ? 'Adding...' : 'Add'}
+              </button>
+              <button
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-semibold"
+                onClick={() => setShowAddCash(false)}
+                disabled={addLoading}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mb-8">
         <h2 className="text-xl font-bold mb-4">Battle Quizzes</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

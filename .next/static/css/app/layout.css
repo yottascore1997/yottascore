@@ -832,6 +832,9 @@ video {
 .max-w-none {
   max-width: none;
 }
+.max-w-sm {
+  max-width: 24rem;
+}
 .max-w-xl {
   max-width: 36rem;
 }
@@ -1177,6 +1180,9 @@ video {
 }
 .bg-opacity-30 {
   --tw-bg-opacity: 0.3;
+}
+.bg-opacity-40 {
+  --tw-bg-opacity: 0.4;
 }
 .object-contain {
   -o-object-fit: contain;
