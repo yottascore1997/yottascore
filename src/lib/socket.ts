@@ -10,6 +10,17 @@ export type NextApiResponseWithSocket = NextApiResponse & {
   };
 };
 
+// Global variable to store the socket server instance
+let globalIo: SocketIOServer | null = null;
+
+export const setSocketServer = (io: SocketIOServer) => {
+  globalIo = io;
+};
+
+export const getSocketServer = (): SocketIOServer | null => {
+  return globalIo;
+};
+
 export const initSocket = (res: NextApiResponseWithSocket) => {
   if (!res.socket.server.io) {
     const io = new SocketIOServer(res.socket.server, {
@@ -40,6 +51,7 @@ export const initSocket = (res: NextApiResponseWithSocket) => {
     });
 
     res.socket.server.io = io;
+    setSocketServer(io); // Store the instance globally
   }
   return res.socket.server.io;
 }; 

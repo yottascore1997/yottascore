@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import io, { Socket } from 'socket.io-client';
 
 // Use the current window location for the socket URL
@@ -6,7 +6,7 @@ const SOCKET_URL = typeof window !== 'undefined'
   ? window.location.origin 
   : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
 
-export const useSocket = () => {
+export const useSocket = (onNotification?: (notification: any) => void) => {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -61,6 +61,29 @@ export const useSocket = () => {
       socketRef.current.on('reconnect_failed', () => {
         console.error('Socket reconnection failed');
       });
+
+      // Post notification events
+      socketRef.current.on('post_liked_notification', (data) => {
+        console.log('Post liked notification:', data);
+        if (onNotification) {
+          onNotification({
+            type: 'post_liked',
+            message: `${data.likerName} liked your post`,
+            data
+          });
+        }
+      });
+
+      socketRef.current.on('post_commented_notification', (data) => {
+        console.log('Post commented notification:', data);
+        if (onNotification) {
+          onNotification({
+            type: 'post_commented',
+            message: `${data.commenterName} commented on your post`,
+            data
+          });
+        }
+      });
     }
 
     return () => {
@@ -70,7 +93,13 @@ export const useSocket = () => {
         socketRef.current = null;
       }
     };
+  }, [onNotification]);
+
+  const registerUser = useCallback((userId: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit('register_user', userId);
+    }
   }, []);
 
-  return socketRef.current;
+  return { socket: socketRef.current, registerUser };
 }; 

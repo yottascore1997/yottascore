@@ -2,6 +2,142 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Instagram-like styling improvements */
+@layer components {
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+
+  /* Line clamp utility */
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Instagram-like gradients */
+  .instagram-gradient {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Card shadows */
+  .card-shadow {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  }
+
+  .card-shadow-hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-xl transition-all duration-200;
+  }
+
+  /* Input styles */
+  .input-modern {
+    @apply border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-xl transition-all duration-200;
+  }
+
+  /* Avatar styles */
+  .avatar-gradient {
+    background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+  }
+
+  /* Loading animation */
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Instagram-like post card */
+  .post-card {
+    @apply bg-white rounded-xl border border-gray-100 overflow-hidden transition-all duration-200 hover:card-shadow-hover;
+  }
+
+  /* Instagram-like profile header */
+  .profile-header {
+    @apply bg-white border-b border-gray-100 sticky top-16 z-40;
+  }
+
+  /* Instagram-like bottom navigation */
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200;
+  }
+
+  /* Instagram-like search bar */
+  .search-bar {
+    @apply relative bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200;
+  }
+
+  /* Instagram-like modal */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4;
+  }
+
+  .modal-content {
+    @apply bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto;
+  }
+
+  /* Instagram-like tabs */
+  .tab-active {
+    @apply border-blue-500 text-blue-600;
+  }
+
+  .tab-inactive {
+    @apply border-transparent text-gray-500 hover:text-gray-700;
+  }
+
+  /* Instagram-like empty state */
+  .empty-state {
+    @apply text-center py-12;
+  }
+
+  .empty-state-icon {
+    @apply w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4;
+  }
+
+  .empty-state-title {
+    @apply text-lg font-semibold text-gray-900 mb-2;
+  }
+
+  .empty-state-description {
+    @apply text-gray-500;
+  }
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-rgb: 255, 255, 255;

@@ -62,6 +62,55 @@ model User {
   participatedPracticeExams PracticeExamParticipant[]
   createdQuestionsOfTheDay QuestionOfTheDay[]
   questionOfTheDayAttempts QuestionOfTheDayAttempt[]
+  timetables      Timetable[]
+  timetableSlots  TimetableSlot[]
+  
+  // Social Media Features
+  profilePhoto    String?
+  course          String?
+  year            String?
+  bio             String?     @db.Text
+  isPrivate       Boolean     @default(false)
+  
+  // Posts
+  posts           Post[]
+  
+  // Follow System
+  followers       Follow[]    @relation("UserFollowers")
+  following       Follow[]    @relation("UserFollowing")
+  
+  // Follow Requests
+  sentRequests    FollowRequest[] @relation("RequestSender")
+  receivedRequests FollowRequest[] @relation("RequestReceiver")
+  
+  // Engagement
+  likes           Like[]
+  comments        Comment[]
+  savedPosts      SavedPost[]
+  
+  // Groups
+  groupMemberships GroupMember[]
+  createdGroups   Group[]
+  
+  // Group Posts & Messages
+  groupPosts      GroupPost[]
+  groupMessages   GroupMessage[]
+  groupPostLikes  GroupPostLike[]
+  groupPostComments GroupPostComment[]
+  
+  // Group Events
+  createdEvents   GroupEvent[]
+  eventParticipations GroupEventParticipant[]
+  
+  // Group Quizzes & Polls
+  createdQuizzes  GroupQuiz[]
+  quizAttempts    GroupQuizAttempt[]
+  createdPolls    GroupPoll[]
+  pollVotes       GroupPollVote[]
+  
+  // Direct Messages
+  sentMessages    DirectMessage[] @relation("MessageSender")
+  receivedMessages DirectMessage[] @relation("MessageReceiver")
 }
 
 model LiveExam {
@@ -221,4 +270,372 @@ model QuestionOfTheDayAttempt {
   createdAt   DateTime  @default(now())
 
   @@unique([questionId, userId])
+}
+
+model Timetable {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  isWeekly    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  slots       TimetableSlot[]
+}
+
+model TimetableSlot {
+  id          String    @id @default(cuid())
+  day         Int       // 0-6 for Sunday-Saturday
+  startTime   DateTime
+  endTime     DateTime
+  subject     String
+  topic       String?
+  notes       String?   @db.Text
+  isCompleted Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  timetable   Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  timetableId String
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  reminder    Boolean   @default(true)
+  reminderSent Boolean  @default(false)
+
+  @@index([userId, day, startTime])
+}
+
+model Post {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  imageUrl    String?
+  videoUrl    String?
+  hashtags    Json?     // Array of hashtags
+  isPrivate   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  
+  // Engagement
+  likes       Like[]
+  comments    Comment[]
+  savedBy     SavedPost[]
+  
+  // Tags
+  taggedUsers Json?     // Array of tagged user IDs
+  
+  @@index([authorId, createdAt])
+}
+
+model Follow {
+  id          String    @id @default(cuid())
+  follower    User      @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  followerId  String
+  following   User      @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  followingId String
+  createdAt   DateTime  @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model FollowRequest {
+  id          String    @id @default(cuid())
+  sender      User      @relation("RequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId    String
+  receiver    User      @relation("RequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  receiverId  String
+  status      RequestStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([senderId, receiverId])
+}
+
+model Like {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, postId])
+}
+
+model Comment {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  parentId    String?   // For replies
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([postId, createdAt])
+}
+
+model SavedPost {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, postId])
+}
+
+model DirectMessage {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  messageType MessageType @default(TEXT)
+  fileUrl     String?   // For file attachments
+  isRead      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  
+  // Relations
+  sender      User      @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId    String
+  receiver    User      @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  receiverId  String
+  
+  @@index([senderId, receiverId, createdAt])
+  @@index([receiverId, senderId, createdAt])
+}
+
+model Group {
+  id          String    @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  imageUrl    String?
+  isPrivate   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  creator     User      @relation(fields: [creatorId], references: [id])
+  creatorId   String
+  members     GroupMember[]
+  posts       GroupPost[]
+  messages    GroupMessage[]
+  events      GroupEvent[]
+  quizzes     GroupQuiz[]
+  polls       GroupPoll[]
+}
+
+model GroupMember {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String
+  role        GroupRole @default(MEMBER)
+  joinedAt    DateTime  @default(now())
+
+  @@unique([userId, groupId])
+}
+
+model GroupPost {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  imageUrl    String?
+  videoUrl    String?
+  fileUrl     String?   // For study materials
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String
+  
+  // Engagement
+  likes       GroupPostLike[]
+  comments    GroupPostComment[]
+  
+  @@index([groupId, createdAt])
+}
+
+model GroupPostLike {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  post        GroupPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, postId])
+}
+
+model GroupPostComment {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  post        GroupPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  parentId    String?   // For replies
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([postId, createdAt])
+}
+
+model GroupMessage {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  messageType MessageType @default(TEXT)
+  fileUrl     String?   // For file attachments
+  createdAt   DateTime  @default(now())
+  
+  // Relations
+  sender      User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId    String
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String
+  
+  @@index([groupId, createdAt])
+}
+
+model GroupEvent {
+  id          String    @id @default(cuid())
+  title       String
+  description String?   @db.Text
+  startTime   DateTime
+  endTime     DateTime
+  location    String?   // Can be physical location or online meeting link
+  eventType   EventType @default(STUDY_SESSION)
+  maxParticipants Int?
+  isRecurring Boolean   @default(false)
+  recurrence  Json?     // Store recurrence pattern
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String
+  creator     User      @relation(fields: [creatorId], references: [id])
+  creatorId   String
+  participants GroupEventParticipant[]
+  
+  @@index([groupId, startTime])
+}
+
+model GroupEventParticipant {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  event       GroupEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId     String
+  status      ParticipationStatus @default(ATTENDING)
+  joinedAt    DateTime  @default(now())
+
+  @@unique([userId, eventId])
+}
+
+model GroupQuiz {
+  id          String    @id @default(cuid())
+  title       String
+  description String?   @db.Text
+  questions   Json      // Array of questions with options and correct answers
+  timeLimit   Int?      // Time limit in minutes
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String
+  creator     User      @relation(fields: [creatorId], references: [id])
+  creatorId   String
+  attempts    GroupQuizAttempt[]
+  
+  @@index([groupId, createdAt])
+}
+
+model GroupQuizAttempt {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  quiz        GroupQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId      String
+  answers     Json      // User's answers
+  score       Int       // Score percentage
+  timeTaken   Int       // Time taken in seconds
+  completedAt DateTime  @default(now())
+
+  @@unique([userId, quizId])
+}
+
+model GroupPoll {
+  id          String    @id @default(cuid())
+  question    String    @db.Text
+  options     Json      // Array of poll options
+  isMultiple  Boolean   @default(false) // Allow multiple selections
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String
+  creator     User      @relation(fields: [creatorId], references: [id])
+  creatorId   String
+  votes       GroupPollVote[]
+  
+  @@index([groupId, createdAt])
+}
+
+model GroupPollVote {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  poll        GroupPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId      String
+  selectedOptions Json  // Array of selected option indices
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, pollId])
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum GroupRole {
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
+enum EventType {
+  STUDY_SESSION
+  QUIZ
+  DISCUSSION
+  PRESENTATION
+  EXAM_PREP
+  SOCIAL
+}
+
+enum ParticipationStatus {
+  ATTENDING
+  MAYBE
+  DECLINED
+  NOT_RESPONDED
 }
