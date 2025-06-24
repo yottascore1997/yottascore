@@ -34,6 +34,7 @@ export async function GET(req: Request, { params }: { params: { examId: string }
         id: true,
         text: true,
         options: true,
+        marks: true,
       },
       orderBy: { id: 'asc' },
     });

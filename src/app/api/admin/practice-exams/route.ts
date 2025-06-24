@@ -44,35 +44,83 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const body = await req.json();
-    const { title, description, startTime, endTime, duration, spots, questions, category, subcategory } = body;
+    console.log('Request body:', JSON.stringify(body, null, 2));
+    
+    const { title, description, instructions, startTime, endTime, duration, spots, questions, category, subcategory } = body;
     if (!title || !startTime || !duration || !spots || !category || !subcategory) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-    const exam = await prisma.practiceExam.create({
-      data: {
-        title,
-        description,
-        category,
-        subcategory,
-        startTime: new Date(startTime),
-        endTime: endTime ? new Date(endTime) : null,
-        duration,
-        spots,
-        spotsLeft: spots,
-        createdById: decoded.userId,
-        questions: questions && Array.isArray(questions)
-          ? {
-              create: questions.map((q: any) => ({
-                text: q.text,
-                options: q.options,
-                correct: q.correct,
-              }))
-            }
-          : undefined,
-      },
+    
+    // Test database connection first
+    try {
+      await prisma.$connect();
+      console.log('Database connection successful');
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError);
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+    }
+    
+    console.log('Creating exam with data:', {
+      title,
+      description,
+      instructions,
+      category,
+      subcategory,
+      startTime: new Date(startTime),
+      endTime: endTime ? new Date(endTime) : null,
+      duration,
+      spots,
+      spotsLeft: spots,
+      createdById: decoded.userId,
+      questionsCount: questions?.length || 0
     });
+    
+    // Try creating without questions first
+    const examData = {
+      title,
+      description,
+      instructions,
+      category,
+      subcategory,
+      startTime: new Date(startTime),
+      endTime: endTime ? new Date(endTime) : null,
+      duration,
+      spots,
+      spotsLeft: spots,
+      createdById: decoded.userId,
+    };
+    
+    console.log('Exam data without questions:', examData);
+    
+    const exam = await prisma.practiceExam.create({
+      data: examData,
+    });
+    
+    console.log('Exam created successfully:', exam.id);
+    
+    // If there are questions, add them separately
+    if (questions && Array.isArray(questions) && questions.length > 0) {
+      console.log('Adding questions:', questions.length);
+      for (const q of questions) {
+        await prisma.practiceExamQuestion.create({
+          data: {
+            examId: exam.id,
+            text: q.text,
+            options: q.options,
+            correct: q.correct,
+            marks: q.marks || 1,
+          },
+        });
+      }
+      console.log('Questions added successfully');
+    }
+    
     return NextResponse.json(exam);
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error creating practice exam:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 

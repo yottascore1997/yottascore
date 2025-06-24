@@ -36,7 +36,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       if (q.id && currentIds.includes(q.id)) {
         await prisma.practiceExamQuestion.update({
           where: { id: q.id },
-          data: { text: q.text, options: q.options, correct: q.correct },
+          data: { 
+            text: q.text, 
+            options: q.options, 
+            correct: q.correct,
+            marks: q.marks || 1,
+          },
         });
       } else {
         await prisma.practiceExamQuestion.create({
@@ -45,6 +50,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
             text: q.text,
             options: q.options,
             correct: q.correct,
+            marks: q.marks || 1,
           },
         });
       }

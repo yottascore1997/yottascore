@@ -41,23 +41,31 @@ export async function POST(request: Request, { params }: { params: { examId: str
       return NextResponse.json({ error: 'Not a participant in this exam' }, { status: 403 });
     }
     // Calculate results
+    let totalMarks = 0;
+    let earnedMarks = 0;
     let correctAnswers = 0;
     let wrongAnswers = 0;
     let unattempted = 0;
+    
     for (const question of exam.questions) {
       const selectedOptionIndex = answers[question.id];
+      totalMarks += question.marks;
+      
       if (selectedOptionIndex === undefined) {
         unattempted++;
         continue;
       }
+      
       if (selectedOptionIndex === question.correct) {
         correctAnswers++;
+        earnedMarks += question.marks;
       } else {
         wrongAnswers++;
       }
     }
+    
     const totalQuestions = exam.questions.length;
-    const score = (correctAnswers / totalQuestions) * 100;
+    const score = totalMarks > 0 ? (earnedMarks / totalMarks) * 100 : 0;
     // Save the result
     await prisma.practiceExamParticipant.update({
       where: {
@@ -77,7 +85,9 @@ export async function POST(request: Request, { params }: { params: { examId: str
       totalQuestions,
       correctAnswers,
       wrongAnswers,
-      unattempted
+      unattempted,
+      totalMarks,
+      earnedMarks
     });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

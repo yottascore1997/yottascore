@@ -192,6 +192,7 @@ model PracticeExam {
   id          String      @id @default(cuid())
   title       String
   description String?
+  instructions String?    @db.Text
   duration    Int         // in minutes
   spots       Int
   spotsLeft   Int
@@ -228,6 +229,7 @@ model PracticeExamQuestion {
   text        String?   @db.Text
   options     Json?     // Array of options
   correct     Int?      // Index of correct option
+  marks       Int       @default(1) // Marks for this question
   exam        PracticeExam? @relation(fields: [examId], references: [id])
   examId      String?
 }

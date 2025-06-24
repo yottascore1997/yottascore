@@ -29,6 +29,7 @@ export async function GET(req: Request, { params }: { params: { examId: string }
       id: exam.id,
       title: exam.title,
       description: exam.description,
+      instructions: exam.instructions,
       category: exam.category,
       subcategory: exam.subcategory,
       startTime: exam.startTime,

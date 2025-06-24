@@ -1,16 +1,14 @@
 {
   "/not-found": "app/not-found.js",
-  "/page": "app/page.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/api/socket/route": "app/api/socket/route.js",
-  "/api/student/posts/route": "app/api/student/posts/route.js",
-  "/api/student/posts/[postId]/like/route": "app/api/student/posts/[postId]/like/route.js",
+  "/page": "app/page.js",
   "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/socket/route": "app/api/socket/route.js",
   "/api/student/exams/route": "app/api/student/exams/route.js",
   "/api/student/wallet/route": "app/api/student/wallet/route.js",
   "/api/student/question-of-the-day/route": "app/api/student/question-of-the-day/route.js",
-  "/api/student/follow-requests/route": "app/api/student/follow-requests/route.js",
   "/student/dashboard/page": "app/student/dashboard/page.js",
-  "/student/feed/page": "app/student/feed/page.js",
-  "/student/follow-requests/page": "app/student/follow-requests/page.js"
+  "/student/practice-exams/page": "app/student/practice-exams/page.js",
+  "/student/practice-exams/[examId]/page": "app/student/practice-exams/[examId]/page.js",
+  "/student/practice-exams/[examId]/attempt/page": "app/student/practice-exams/[examId]/attempt/page.js"
 }

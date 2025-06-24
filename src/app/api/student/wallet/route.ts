@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { withCORS } from '@/lib/cors';
 
-export async function GET(req: Request) {
+export const GET = withCORS(async (req: Request) => {
   try {
     const token = req.headers.get('authorization')?.split(' ')[1];
     if (!token) {
@@ -32,4 +33,4 @@ export async function GET(req: Request) {
   } catch (error) {
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
-} 
+}); 
