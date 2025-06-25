@@ -1,1 +1,9 @@
-{}
+{
+  "/not-found": "app/not-found.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/api/admin/battle-quiz/route": "app/api/admin/battle-quiz/route.js",
+  "/student/practice-exams/[examId]/result/page": "app/student/practice-exams/[examId]/result/page.js",
+  "/student/dashboard/page": "app/student/dashboard/page.js",
+  "/admin/battle-quizzes/page": "app/admin/battle-quizzes/page.js",
+  "/admin/dashboard/page": "app/admin/dashboard/page.js"
+}

@@ -6,6 +6,7 @@ interface Question {
   id: string;
   text: string;
   options: string[];
+  marks: number;
 }
 
 export default function PracticeExamAttemptPage() {
@@ -64,8 +65,10 @@ export default function PracticeExamAttemptPage() {
         setSubmitting(false);
         return;
       }
-      // On success, redirect to details page with leaderboard tab active
-      router.push(`/student/practice-exams/${examId}?tab=leaderboard`);
+      
+      const data = await res.json();
+      // Redirect to the beautiful result page
+      router.push(data.redirectTo || `/student/practice-exams/${examId}/result`);
     } catch (err) {
       setError("Failed to submit");
       setSubmitting(false);

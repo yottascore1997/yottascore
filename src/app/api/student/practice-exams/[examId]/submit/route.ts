@@ -66,6 +66,7 @@ export async function POST(request: Request, { params }: { params: { examId: str
     
     const totalQuestions = exam.questions.length;
     const score = totalMarks > 0 ? (earnedMarks / totalMarks) * 100 : 0;
+    
     // Save the result
     await prisma.practiceExamParticipant.update({
       where: {
@@ -80,14 +81,22 @@ export async function POST(request: Request, { params }: { params: { examId: str
         completedAt: new Date()
       }
     });
+    
+    // Return detailed result data for the beautiful result page
     return NextResponse.json({
-      score,
-      totalQuestions,
-      correctAnswers,
-      wrongAnswers,
-      unattempted,
-      totalMarks,
-      earnedMarks
+      success: true,
+      redirectTo: `/student/practice-exams/${params.examId}/result`,
+      result: {
+        score,
+        totalQuestions,
+        correctAnswers,
+        wrongAnswers,
+        unattempted,
+        totalMarks,
+        earnedMarks,
+        answers,
+        completedAt: new Date().toISOString()
+      }
     });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

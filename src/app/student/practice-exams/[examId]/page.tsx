@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { jwtDecode } from 'jwt-decode';
+import Link from "next/link";
 
 interface Exam {
   id: string;
@@ -447,44 +448,86 @@ export default function PracticeExamDetailPage() {
             {attemptLoading ? (
               <div className="text-center text-gray-500">Loading attempt...</div>
             ) : attempt ? (
-              <div>
-                <div className="mb-2 font-semibold">Score: {attempt.score?.toFixed(2) ?? '-'}%</div>
-                <div className="mb-2 text-sm text-gray-600">Completed: {attempt.completedAt ? new Date(attempt.completedAt).toLocaleString() : '-'}</div>
-                <div className="mb-2 text-sm">Your Answers:</div>
-                <pre className="bg-gray-100 rounded p-2 text-xs overflow-x-auto">{JSON.stringify(attempt.answers, null, 2)}</pre>
+              <div className="space-y-4">
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Your Exam Result</h3>
+                      <p className="text-gray-600">Completed on {attempt.completedAt ? new Date(attempt.completedAt).toLocaleString() : '-'}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-blue-600">{attempt.score?.toFixed(1) ?? '-'}%</div>
+                      <div className="text-sm text-gray-500">Score</div>
+                    </div>
+                  </div>
+                  
+                  <Link 
+                    href={`/student/practice-exams/${examId}/result`}
+                    className="inline-flex items-center justify-center w-full py-3 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    View Detailed Analysis
+                  </Link>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">Quick Summary</h4>
+                  <div className="text-sm text-gray-600">
+                    <div>Score: {attempt.score?.toFixed(2) ?? '-'}%</div>
+                    <div>Completed: {attempt.completedAt ? new Date(attempt.completedAt).toLocaleString() : '-'}</div>
+                    <div>Questions Answered: {attempt.answers ? Object.keys(attempt.answers).length : 0}</div>
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="text-center text-gray-400">No attempt data yet.</div>
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No attempt data yet</h3>
+                <p className="text-gray-500">Complete the exam to see your detailed results and analysis.</p>
+              </div>
             )}
           </div>
         )}
       </div>
       {/* Sticky Attempt Button */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-center z-10">
-        <button
-          className={`w-full max-w-md py-3 rounded-lg font-bold text-lg shadow transition-colors ${exam.attempted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-700 text-white hover:bg-blue-800'}`}
-          disabled={exam.attempted}
-          onClick={async () => {
-            if (exam.attempted) return;
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/student/practice-exams/join', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ examId: exam.id }),
-            });
-            if (res.ok) {
-              router.push(`/student/practice-exams/${exam.id}/attempt`);
-            } else {
-              const data = await res.json();
-              alert(data.error || 'Failed to join exam');
-            }
-          }}
-        >
-          {exam.attempted ? 'Already Attempted' : 'Attempt'}
-        </button>
+        {exam.attempted ? (
+          <Link
+            href={`/student/practice-exams/${examId}/result`}
+            className="w-full max-w-md py-3 rounded-lg font-bold text-lg shadow transition-colors bg-gradient-to-r from-green-500 to-blue-600 text-white hover:from-green-600 hover:to-blue-700 text-center"
+          >
+            View Results
+          </Link>
+        ) : (
+          <button
+            className="w-full max-w-md py-3 rounded-lg font-bold text-lg shadow transition-colors bg-blue-700 text-white hover:bg-blue-800"
+            onClick={async () => {
+              const token = localStorage.getItem('token');
+              const res = await fetch('/api/student/practice-exams/join', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ examId: exam.id }),
+              });
+              if (res.ok) {
+                router.push(`/student/practice-exams/${exam.id}/attempt`);
+              } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to join exam');
+              }
+            }}
+          >
+            Attempt
+          </button>
+        )}
       </div>
     </div>
   );
