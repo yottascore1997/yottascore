@@ -9,6 +9,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const createLiveExamSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
+  instructions: z.string().optional(),
+  category: z.string().optional(),
   startTime: z.string(),
   endTime: z.string(),
   duration: z.number().min(1),
@@ -104,6 +106,8 @@ export async function POST(req: Request) {
     console.log('Creating live exam with data:', {
       title: validatedData.title,
       description: validatedData.description,
+      instructions: validatedData.instructions,
+      category: validatedData.category,
       startTime: new Date(validatedData.startTime),
       endTime: new Date(validatedData.endTime),
       duration: validatedData.duration,
@@ -120,6 +124,8 @@ export async function POST(req: Request) {
       data: {
         title: validatedData.title,
         description: validatedData.description,
+        instructions: validatedData.instructions,
+        category: validatedData.category,
         startTime: new Date(validatedData.startTime),
         endTime: new Date(validatedData.endTime),
         duration: validatedData.duration,

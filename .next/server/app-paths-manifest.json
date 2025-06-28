@@ -1,13 +1,5 @@
 {
-  "/page": "app/page.js",
-  "/auth/login/page": "app/auth/login/page.js",
-  "/api/student/wallet/route": "app/api/student/wallet/route.js",
-  "/api/student/exam-notifications/route": "app/api/student/exam-notifications/route.js",
-  "/api/student/exams/route": "app/api/student/exams/route.js",
-  "/api/student/posts/route": "app/api/student/posts/route.js",
-  "/api/student/stories/route": "app/api/student/stories/route.js",
-  "/api/student/practice-exams/route": "app/api/student/practice-exams/route.js",
-  "/api/student/profile/route": "app/api/student/profile/route.js",
-  "/student/dashboard/page": "app/student/dashboard/page.js",
-  "/student/feed/page": "app/student/feed/page.js"
+  "/api/student/live-exams/[examId]/leaderboard/route": "app/api/student/live-exams/[examId]/leaderboard/route.js",
+  "/api/student/live-exams/[examId]/winnings/route": "app/api/student/live-exams/[examId]/winnings/route.js",
+  "/student/dashboard/page": "app/student/dashboard/page.js"
 }

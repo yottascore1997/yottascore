@@ -24,14 +24,21 @@ const getHandler = async (req: Request) => {
         id: true,
         name: true,
         email: true,
-        rollNumber: true,
-        className: true,
-        section: true,
+        phoneNumber: true,
+        course: true,
+        year: true,
+        createdAt: true,
+        updatedAt: true,
+        wallet: true,
+        isPrivate: true,
+        profilePhoto: true,
+        bio: true,
       },
       orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json(students);
   } catch (error) {
+    console.error('Error fetching students:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 };
@@ -48,7 +55,7 @@ const postHandler = async (req: Request) => {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, email, password, rollNumber, className, section } = await req.json();
+    const { name, email, password, phoneNumber, course, year } = await req.json();
     if (!name || !email || !password) {
       return NextResponse.json({ message: 'Name, email, and password are required.' }, { status: 400 });
     }
@@ -63,24 +70,26 @@ const postHandler = async (req: Request) => {
       data: {
         name,
         email,
-        password: hashedPassword,
-        phoneNumber: '', // Optional, can be updated later
+        hashedPassword,
+        phoneNumber: phoneNumber || '',
         role: 'STUDENT',
-        rollNumber,
-        className,
-        section,
+        course: course || '',
+        year: year || '',
       },
       select: {
         id: true,
         name: true,
         email: true,
-        rollNumber: true,
-        className: true,
-        section: true,
+        phoneNumber: true,
+        course: true,
+        year: true,
+        createdAt: true,
+        wallet: true,
       },
     });
     return NextResponse.json(user);
   } catch (error) {
+    console.error('Error creating student:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 };

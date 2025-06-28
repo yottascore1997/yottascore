@@ -138,6 +138,8 @@ model LiveExam {
   id          String      @id @default(cuid())
   title       String
   description String?
+  instructions String?    @db.Text
+  category    String?
   duration    Int         // in minutes
   spots       Int
   spotsLeft   Int

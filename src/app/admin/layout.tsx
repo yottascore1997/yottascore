@@ -150,10 +150,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, {} as Record<string, typeof sidebarLinks>);
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="h-screen flex bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-72 bg-white/90 backdrop-blur-sm border-r border-gray-200/50 min-h-screen flex flex-col shadow-xl">
-        <div className="h-20 flex items-center justify-center border-b border-gray-200/50">
+      <aside className="w-72 bg-white/90 backdrop-blur-sm border-r border-gray-200/50 h-screen flex flex-col shadow-xl flex-shrink-0">
+        <div className="h-20 flex items-center justify-center border-b border-gray-200/50 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,7 +208,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200/50">
+        <div className="p-4 border-t border-gray-200/50 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
@@ -237,7 +237,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {children}
+        <div className="flex-1 overflow-y-auto">
+          {children}
+        </div>
       </div>
     </div>
   );
