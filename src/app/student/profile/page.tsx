@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,6 +43,10 @@ export default function ProfilePage() {
     isPrivate: false
   })
   const [isOwnProfile, setIsOwnProfile] = useState(true)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -103,7 +107,16 @@ export default function ProfilePage() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate form
+    if (!editForm.name.trim()) {
+      setError('Name is required')
+      return
+    }
+    
     setEditing(true)
+    setError(null) // Clear any previous errors
+    
     try {
       const token = localStorage.getItem('token')
       if (!token) {
@@ -121,11 +134,16 @@ export default function ProfilePage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update profile')
+        const errorText = await response.text()
+        throw new Error(errorText || 'Failed to update profile')
       }
 
+      const updatedProfile = await response.json()
+      setProfile(updatedProfile)
       setShowEdit(false)
-      fetchProfile()
+      
+      // Show success message (you can replace this with a toast notification)
+      alert('Profile updated successfully!')
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update profile')
     } finally {
@@ -192,7 +210,8 @@ export default function ProfilePage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to unfollow user')
+        const errorText = await response.text()
+        throw new Error(`Failed to unfollow user: ${errorText}`)
       }
 
       fetchProfile()
@@ -201,26 +220,132 @@ export default function ProfilePage() {
     }
   }
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        // Check file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+          alert('Image file size must be less than 5MB')
+          return
+        }
+        setSelectedPhoto(file)
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          setPhotoPreview(e.target?.result as string)
+        }
+        reader.readAsDataURL(file)
+      } else {
+        alert('Please select an image file')
+      }
+    }
+  }
+
+  const uploadPhoto = async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to upload photo')
+    }
+
+    const data = await response.json()
+    return data.url
+  }
+
+  const handlePhotoUpload = async () => {
+    if (!selectedPhoto) return
+
+    setUploadingPhoto(true)
+    try {
+      const photoUrl = await uploadPhoto(selectedPhoto)
+      setEditForm({ ...editForm, profilePhoto: photoUrl })
+      
+      // Update the profile state immediately to show the new photo
+      if (profile) {
+        setProfile({ ...profile, profilePhoto: photoUrl })
+      }
+      
+      setSelectedPhoto(null)
+      setPhotoPreview(null)
+      if (photoInputRef.current) {
+        photoInputRef.current.value = ''
+      }
+    } catch (error) {
+      setError('Failed to upload photo')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
   const debugFollows = async () => {
     if (!profile) return
 
     try {
       const token = localStorage.getItem('token')
-      if (!token) return
+      if (token) {
+        const response = await fetch(`/api/student/debug-follows?userId=${profile.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
 
-      const response = await fetch(`/api/student/debug-follows?userId=${profile.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
+        if (response.ok) {
+          const data = await response.json()
+          console.log('Debug Follow Data:', data)
+          alert(`Debug Info:\nUser: ${data.user.name}\nFollowers: ${data.user.followersCount}\nFollowing: ${data.user.followingCount}\n\nFollowers: ${data.followers.map((f: any) => f.name).join(', ')}\nFollowing: ${data.following.map((f: any) => f.name).join(', ')}`)
         }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('Debug Follow Data:', data)
-        alert(`Debug Info:\nUser: ${data.user.name}\nFollowers: ${data.user.followersCount}\nFollowing: ${data.user.followingCount}\n\nFollowers: ${data.followers.map((f: any) => f.name).join(', ')}\nFollowing: ${data.following.map((f: any) => f.name).join(', ')}`)
       }
     } catch (error) {
       console.error('Debug error:', error)
+    }
+  }
+
+  const explainFollowSystem = async () => {
+    if (!profile) return
+
+    try {
+      const token = localStorage.getItem('token')
+      if (token) {
+        const response = await fetch(`/api/student/follow-explanation?userId=${profile.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log('Follow Explanation:', data)
+          
+          const message = `
+${data.explanation.title}
+
+${data.explanation.description}
+
+Example: ${data.explanation.example}
+
+What happens when you follow someone:
+• ${data.whatHappensWhenYouFollow.step2}
+• ${data.whatHappensWhenYouFollow.step3}
+• ${data.whatHappensWhenYouFollow.step4}
+• ${data.whatHappensWhenYouFollow.step5}
+
+Current Relationship:
+• You follow ${data.targetUser.name}: ${data.relationship.iFollowThem ? 'Yes' : 'No'}
+• ${data.targetUser.name} follows you: ${data.relationship.theyFollowMe ? 'Yes' : 'No'}
+• Mutual follow: ${data.relationship.mutualFollow ? 'Yes' : 'No'}
+          `.trim()
+          
+          alert(message)
+        }
+      }
+    } catch (error) {
+      console.error('Follow explanation error:', error)
     }
   }
 
@@ -366,6 +491,14 @@ export default function ProfilePage() {
                   >
                     Debug
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={explainFollowSystem}
+                    className="rounded-full border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
+                  >
+                    How Follow Works
+                  </Button>
                 </div>
               </div>
 
@@ -390,14 +523,14 @@ export default function ProfilePage() {
                     <Users className="w-6 h-6 text-white" />
                   </div>
                   <div className="text-2xl font-bold text-gray-900 mb-1">{profile._count.followers}</div>
-                  <div className="text-sm text-gray-600 font-medium">Followers</div>
+                  <div className="text-sm text-gray-600 font-medium" title="People who follow this user">Followers</div>
                 </div>
                 <div className="text-center p-4 bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl border border-pink-200 hover:shadow-lg transition-shadow duration-200">
                   <div className="w-12 h-12 bg-gradient-to-r from-pink-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-3">
                     <Heart className="w-6 h-6 text-white" />
                   </div>
                   <div className="text-2xl font-bold text-gray-900 mb-1">{profile._count.following}</div>
-                  <div className="text-sm text-gray-600 font-medium">Following</div>
+                  <div className="text-sm text-gray-600 font-medium" title="People this user follows">Following</div>
                 </div>
               </div>
 
@@ -428,7 +561,7 @@ export default function ProfilePage() {
                       Follow
                     </Button>
                   )}
-                  {profile.isMutualFollower && (
+                  {profile.isFollowing && (
                     <Button
                       variant="outline"
                       onClick={() => router.push(`/student/messages?user=${profile.id}`)}
@@ -461,6 +594,90 @@ export default function ProfilePage() {
               </div>
               
               <form onSubmit={handleUpdateProfile} className="space-y-6">
+                {/* Error Display */}
+                {error && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-red-600 text-sm">{error}</p>
+                  </div>
+                )}
+                
+                {/* Profile Photo Upload */}
+                <div className="space-y-4">
+                  <label className="text-sm font-medium text-gray-700">Profile Photo</label>
+                  <div className="flex items-center space-x-4">
+                    <div className="relative">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 p-1">
+                        {(photoPreview || editForm.profilePhoto) ? (
+                          <img
+                            src={photoPreview || editForm.profilePhoto}
+                            alt="Profile"
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
+                            <span className="text-white text-xl font-bold">
+                              {editForm.name?.charAt(0).toUpperCase() || 'U'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => photoInputRef.current?.click()}
+                        className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
+                      >
+                        <Camera className="w-3 h-3 text-white" />
+                      </button>
+                      {(photoPreview || editForm.profilePhoto) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditForm({ ...editForm, profilePhoto: '' })
+                            setPhotoPreview(null)
+                            setSelectedPhoto(null)
+                            if (photoInputRef.current) {
+                              photoInputRef.current.value = ''
+                            }
+                          }}
+                          className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          <span className="text-white text-xs">×</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoSelect}
+                        className="hidden"
+                      />
+                      {selectedPhoto && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-600">{selectedPhoto.name}</p>
+                          <Button
+                            type="button"
+                            onClick={handlePhotoUpload}
+                            disabled={uploadingPhoto}
+                            size="sm"
+                            className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50"
+                          >
+                            {uploadingPhoto ? (
+                              <div className="flex items-center">
+                                <div className="animate-spin rounded-full h-3 w-3 border border-white border-t-transparent mr-2"></div>
+                                Uploading...
+                              </div>
+                            ) : (
+                              'Upload Photo'
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Full Name</label>

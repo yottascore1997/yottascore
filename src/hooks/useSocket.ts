@@ -1,105 +1,138 @@
-import { useEffect, useRef, useCallback } from 'react';
-import io, { Socket } from 'socket.io-client';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { io, Socket } from 'socket.io-client';
 
 // Use the current window location for the socket URL
 const SOCKET_URL = typeof window !== 'undefined' 
-  ? window.location.origin 
+  ? 'http://localhost:3001'
   : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
 
-export const useSocket = (onNotification?: (notification: any) => void) => {
-  const socketRef = useRef<Socket | null>(null);
+export function useSocket() {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!socketRef.current) {
-      console.log('Initializing Socket.IO client...', SOCKET_URL);
-      socketRef.current = io(SOCKET_URL, {
-        path: '/api/socket',
-        addTrailingSlash: false,
-        transports: ['polling', 'websocket'],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 10000,
-        forceNew: true,
-        withCredentials: true,
-        autoConnect: true,
-        upgrade: true
+    // Only create socket on client side
+    if (typeof window === 'undefined') return;
+
+    console.log('Connecting to Socket.IO server at:', SOCKET_URL);
+
+    // Get auth token
+    const token = localStorage.getItem('token');
+    console.log('Auth token available:', !!token);
+
+    const newSocket = io(SOCKET_URL, {
+      path: '/api/socket',
+      transports: ['polling', 'websocket'],
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      auth: {
+        token: token || undefined
+      }
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Socket connected:', newSocket.id);
+      setIsConnected(true);
+      setError(null);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Socket disconnected');
+      setIsConnected(false);
+    });
+
+    newSocket.on('connect_error', (err: any) => {
+      console.error('Socket connection error:', err);
+      setError('Failed to connect to game server. Make sure the Socket.IO server is running on port 3001.');
+      setIsConnected(false);
+    });
+
+    newSocket.on('error', (err: any) => {
+      console.error('Socket error:', err);
+      setError(err.message || 'Socket error occurred');
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+    };
+  }, []);
+
+  return { socket, isConnected, error };
+}
+
+export const useSocketWithNotification = (onNotification?: (notification: any) => void) => {
+  const socketRef = useRef<Socket | null>(null);
+
+  const connect = useCallback(() => {
+    if (socketRef.current?.connected) return;
+
+    const newSocket = io(SOCKET_URL, {
+      path: '/api/socket',
+      transports: ['polling', 'websocket'],
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Socket connected:', newSocket.id);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Socket disconnected');
+    });
+
+    newSocket.on('connect_error', (error: any) => {
+      console.error('Socket connection error:', error);
+    });
+
+    newSocket.on('disconnect', (reason: any) => {
+      console.log('Socket disconnected:', reason);
+    });
+
+    newSocket.on('error', (error: any) => {
+      console.error('Socket error:', error);
+    });
+
+    newSocket.on('reconnect_attempt', (attemptNumber: any) => {
+      console.log('Reconnection attempt:', attemptNumber);
+    });
+
+    newSocket.on('reconnect_failed', (error: any) => {
+      console.error('Reconnection failed:', error);
+    });
+
+    // Listen for notifications
+    if (onNotification) {
+      newSocket.on('notification', (data: any) => {
+        onNotification(data);
       });
 
-      socketRef.current.on('connect', () => {
-        console.log('Socket connected:', socketRef.current?.id);
-      });
-
-      socketRef.current.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
-        // Try to reconnect with a different transport
-        if (socketRef.current?.io?.opts?.transports?.[0] === 'polling') {
-          socketRef.current.io.opts.transports = ['websocket', 'polling'];
-        }
-      });
-
-      socketRef.current.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', reason);
-        if (reason === 'io server disconnect') {
-          // Server initiated disconnect, try to reconnect
-          socketRef.current?.connect();
-        }
-      });
-
-      socketRef.current.on('error', (error) => {
-        console.error('Socket error:', error);
-      });
-
-      socketRef.current.on('reconnect', (attemptNumber) => {
-        console.log('Socket reconnected after', attemptNumber, 'attempts');
-      });
-
-      socketRef.current.on('reconnect_error', (error) => {
-        console.error('Socket reconnection error:', error);
-      });
-
-      socketRef.current.on('reconnect_failed', () => {
-        console.error('Socket reconnection failed');
-      });
-
-      // Post notification events
-      socketRef.current.on('post_liked_notification', (data) => {
-        console.log('Post liked notification:', data);
-        if (onNotification) {
-          onNotification({
-            type: 'post_liked',
-            message: `${data.likerName} liked your post`,
-            data
-          });
-        }
-      });
-
-      socketRef.current.on('post_commented_notification', (data) => {
-        console.log('Post commented notification:', data);
-        if (onNotification) {
-          onNotification({
-            type: 'post_commented',
-            message: `${data.commenterName} commented on your post`,
-            data
-          });
-        }
+      newSocket.on('live_exam_notification', (data: any) => {
+        onNotification(data);
       });
     }
 
-    return () => {
-      if (socketRef.current) {
-        console.log('Cleaning up socket connection...');
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
+    socketRef.current = newSocket;
   }, [onNotification]);
 
-  const registerUser = useCallback((userId: string) => {
+  const disconnect = useCallback(() => {
     if (socketRef.current) {
-      socketRef.current.emit('register_user', userId);
+      socketRef.current.close();
+      socketRef.current = null;
     }
   }, []);
 
-  return { socket: socketRef.current, registerUser };
+  useEffect(() => {
+    connect();
+    return () => disconnect();
+  }, [connect, disconnect]);
+
+  return { socket: socketRef.current, connect, disconnect };
 }; 

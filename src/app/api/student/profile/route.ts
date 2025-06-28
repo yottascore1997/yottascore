@@ -109,15 +109,20 @@ export async function PATCH(req: Request) {
     const body = await req.json()
     const { name, course, year, bio, profilePhoto, isPrivate } = body
 
+    // Validate required fields
+    if (!name || name.trim().length === 0) {
+      return new NextResponse('Name is required', { status: 400 })
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: decoded.userId },
       data: {
-        name,
-        course,
-        year,
-        bio,
-        profilePhoto,
-        isPrivate
+        name: name.trim(),
+        course: course?.trim() || null,
+        year: year?.trim() || null,
+        bio: bio?.trim() || null,
+        profilePhoto: profilePhoto || null,
+        isPrivate: isPrivate || false
       },
       select: {
         id: true,
@@ -147,4 +152,9 @@ export async function PATCH(req: Request) {
     console.error('[PROFILE_PATCH]', error)
     return new NextResponse('Internal Error', { status: 500 })
   }
+}
+
+export async function PUT(req: Request) {
+  // Handle PUT requests the same as PATCH
+  return PATCH(req)
 } 

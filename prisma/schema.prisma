@@ -65,6 +65,18 @@ model User {
   timetables      Timetable[]
   timetableSlots  TimetableSlot[]
   
+  // Battle Quiz Relations
+  createdBattleQuizzes BattleQuiz[]
+  battleQuizParticipations BattleQuizParticipant[]
+  battleQuizWins BattleQuizWinner[]
+  player1Matches BattleQuizMatch[] @relation("Player1Matches")
+  player2Matches BattleQuizMatch[] @relation("Player2Matches")
+  wonMatches BattleQuizMatch[] @relation("WonMatches")
+  
+  // Question Bank Relations
+  createdQuestionCategories QuestionCategory[]
+  createdQuestionBankItems QuestionBankItem[]
+  
   // Social Media Features
   profilePhoto    String?
   course          String?
@@ -111,6 +123,15 @@ model User {
   // Direct Messages
   sentMessages    DirectMessage[] @relation("MessageSender")
   receivedMessages DirectMessage[] @relation("MessageReceiver")
+  
+  // Message Requests
+  sentMessageRequests MessageRequest[] @relation("MessageRequestSender")
+  receivedMessageRequests MessageRequest[] @relation("MessageRequestReceiver")
+  
+  // Stories
+  stories        Story[]
+  storyViews     StoryView[]
+  storyLikes     StoryLike[]
 }
 
 model LiveExam {
@@ -410,6 +431,25 @@ model DirectMessage {
   @@index([receiverId, senderId, createdAt])
 }
 
+model MessageRequest {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  messageType MessageType @default(TEXT)
+  fileUrl     String?   // For file attachments
+  status      MessageRequestStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+  respondedAt DateTime?
+  
+  // Relations
+  sender      User      @relation("MessageRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId    String
+  receiver    User      @relation("MessageRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  receiverId  String
+  
+  @@index([senderId, receiverId, createdAt])
+  @@index([receiverId, senderId, createdAt])
+}
+
 model Group {
   id          String    @id @default(cuid())
   name        String
@@ -637,7 +677,219 @@ enum EventType {
 
 enum ParticipationStatus {
   ATTENDING
+  NOT_ATTENDING
   MAYBE
-  DECLINED
-  NOT_RESPONDED
+}
+
+enum MessageRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// Battle Quiz Models
+model BattleQuiz {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  entryAmount Float
+  categoryId  String?   // Reference to question category
+  questionCount Int     @default(10) // Number of questions to pick randomly
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdById String
+  category    QuestionCategory? @relation(fields: [categoryId], references: [id])
+  questions   BattleQuizQuestion[]
+  participants BattleQuizParticipant[]
+  winners     BattleQuizWinner[]
+  matches     BattleQuizMatch[]
+}
+
+model BattleQuizQuestion {
+  id          String    @id @default(cuid())
+  text        String    @db.Text
+  options     Json      // Array of options
+  correct     Int       // Index of correct option
+  marks       Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  quiz        BattleQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId      String
+}
+
+model BattleQuizParticipant {
+  id        String    @id @default(cuid())
+  quizId    String
+  userId    String
+  matchId   String?
+  status    BattleParticipantStatus @default(WAITING)
+  score     Int       @default(0)
+  answers   Json
+  joinedAt  DateTime  @default(now())
+  
+  // Relations
+  quiz      BattleQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match     BattleQuizMatch? @relation(fields: [matchId], references: [id])
+}
+
+model BattleQuizWinner {
+  id          String    @id @default(cuid())
+  rank        Int
+  prizeAmount Float
+  paid        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  quiz        BattleQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+
+  @@unique([quizId, rank])
+}
+
+// Real-time Battle Quiz Matches
+model BattleQuizMatch {
+  id            String    @id @default(cuid())
+  quizId        String
+  player1Id     String
+  player2Id     String
+  status        BattleMatchStatus @default(WAITING)
+  currentRound  Int       @default(0)
+  totalRounds   Int       @default(5)
+  player1Score  Int       @default(0)
+  player2Score  Int       @default(0)
+  startTime     DateTime  @default(now())
+  endTime       DateTime?
+  winnerId      String?
+  prizeAmount   Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  quiz          BattleQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  player1       User      @relation("Player1Matches", fields: [player1Id], references: [id])
+  player2       User      @relation("Player2Matches", fields: [player2Id], references: [id])
+  winner        User?     @relation("WonMatches", fields: [winnerId], references: [id])
+  participants  BattleQuizParticipant[]
+}
+
+enum BattleMatchStatus {
+  WAITING
+  STARTING
+  PLAYING
+  FINISHED
+  CANCELLED
+}
+
+// Question Bank System
+model QuestionCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  color       String?   // For UI styling
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdById String
+  questions   QuestionBankItem[]
+  battleQuizzes BattleQuiz[]
+}
+
+model QuestionBankItem {
+  id          String    @id @default(cuid())
+  text        String    @db.Text
+  options     Json      // Array of options
+  correct     Int       // Index of correct option
+  explanation String?   @db.Text // Explanation for the correct answer
+  difficulty  QuestionDifficulty @default(MEDIUM)
+  tags        Json?     // Array of tags for better organization
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  category    QuestionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdById String
+}
+
+enum QuestionDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum BattleParticipantStatus {
+  WAITING
+  READY
+  PLAYING
+  FINISHED
+}
+
+model Story {
+  id          String    @id @default(cuid())
+  mediaUrl    String    // URL to image/video
+  mediaType   StoryMediaType @default(IMAGE)
+  caption     String?   @db.Text
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime  // 24 hours from creation
+  
+  // Relations
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  
+  // Views
+  views       StoryView[]
+  
+  // Likes
+  likes       StoryLike[]
+  
+  @@index([authorId, createdAt])
+  @@index([expiresAt])
+}
+
+model StoryView {
+  id          String    @id @default(cuid())
+  viewedAt    DateTime  @default(now())
+  
+  // Relations
+  story       Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  storyId     String
+  viewer      User      @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  viewerId    String
+  
+  @@unique([storyId, viewerId])
+  @@index([storyId, viewedAt])
+}
+
+model StoryLike {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  
+  // Relations
+  story       Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  storyId     String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  
+  @@unique([storyId, userId])
+  @@index([storyId, createdAt])
+}
+
+enum StoryMediaType {
+  IMAGE
+  VIDEO
 }

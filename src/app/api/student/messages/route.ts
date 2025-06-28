@@ -106,7 +106,7 @@ export async function POST(req: Request) {
       return new NextResponse('Receiver ID and content are required', { status: 400 })
     }
 
-    // Check if users follow each other (mutual followers)
+    // Check if sender follows the receiver
     const iFollowThem = await prisma.follow.findUnique({
       where: {
         followerId_followingId: {
@@ -116,6 +116,14 @@ export async function POST(req: Request) {
       },
     });
 
+    if (!iFollowThem) {
+      return new NextResponse(
+        'You can only message users you follow',
+        { status: 403 }
+      );
+    }
+
+    // Check if they follow me back (mutual followers)
     const theyFollowMe = await prisma.follow.findUnique({
       where: {
         followerId_followingId: {
@@ -125,40 +133,65 @@ export async function POST(req: Request) {
       },
     });
 
-    if (!iFollowThem || !theyFollowMe) {
-      return new NextResponse(
-        'You can only message users who follow you back',
-        { status: 403 }
-      );
-    }
-
-    const message = await prisma.directMessage.create({
-      data: {
-        content,
-        messageType,
-        fileUrl,
-        senderId: decoded.userId,
-        receiverId
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            profilePhoto: true
-          }
+    if (theyFollowMe) {
+      // Mutual followers - send direct message
+      const message = await prisma.directMessage.create({
+        data: {
+          content,
+          messageType,
+          fileUrl,
+          senderId: decoded.userId,
+          receiverId
         },
-        receiver: {
-          select: {
-            id: true,
-            name: true,
-            profilePhoto: true
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              profilePhoto: true
+            }
+          },
+          receiver: {
+            select: {
+              id: true,
+              name: true,
+              profilePhoto: true
+            }
           }
         }
-      }
-    })
+      })
 
-    return NextResponse.json(message)
+      return NextResponse.json({ type: 'direct', message })
+    } else {
+      // One-way follow - send message request
+      const messageRequest = await prisma.messageRequest.create({
+        data: {
+          content,
+          messageType,
+          fileUrl,
+          senderId: decoded.userId,
+          receiverId
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              profilePhoto: true
+            }
+          },
+          receiver: {
+            select: {
+              id: true,
+              name: true,
+              profilePhoto: true
+            }
+          }
+        }
+      })
+
+      return NextResponse.json({ type: 'request', messageRequest })
+    }
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })

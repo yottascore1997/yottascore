@@ -30,25 +30,23 @@ export async function GET(req: Request) {
     }
 
     // Fetch all battle quizzes
-    const battleQuizzes = await prisma.liveExam.findMany({
+    const quizzes = await prisma.battleQuiz.findMany({
       where: {
         createdById: decoded.userId,
       },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        startTime: true,
-        duration: true,
-        spots: true,
-        spotsLeft: true,
-        entryFee: true,
-        prizePool: true,
-        isLive: true,
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            color: true
+          }
+        },
         _count: {
           select: {
             participants: true,
-            winners: true
+            winners: true,
+            questions: true
           }
         }
       },
@@ -57,8 +55,8 @@ export async function GET(req: Request) {
       }
     });
 
-    console.log(`Found ${battleQuizzes.length} battle quizzes`);
-    return NextResponse.json(battleQuizzes);
+    console.log(`Found ${quizzes.length} battle quizzes`);
+    return NextResponse.json(quizzes);
   } catch (error) {
     console.error('[BATTLE_QUIZ_GET] Detailed error:', error);
     
@@ -82,19 +80,105 @@ export async function GET(req: Request) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { title, description, entryAmount } = await req.json();
-    if (!title || !entryAmount) {
-      return NextResponse.json({ message: 'Title and entry amount are required.' }, { status: 400 });
+    // Check authentication
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    if (decoded.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { title, description, entryAmount, categoryId, questionCount = 10 } = await req.json();
+    if (!title || !entryAmount || !categoryId) {
+      return NextResponse.json({ message: 'Title, entry amount, and category are required.' }, { status: 400 });
+    }
+
+    // Verify category exists and belongs to admin
+    const category = await prisma.questionCategory.findFirst({
+      where: {
+        id: categoryId,
+        createdById: decoded.userId,
+        isActive: true
+      }
+    });
+
+    if (!category) {
+      return NextResponse.json({ message: 'Category not found or access denied.' }, { status: 404 });
+    }
+
+    // Check if category has enough questions
+    const availableQuestions = await prisma.questionBankItem.count({
+      where: {
+        categoryId,
+        isActive: true
+      }
+    });
+
+    if (availableQuestions < questionCount) {
+      return NextResponse.json({ 
+        message: `Category has only ${availableQuestions} questions available. Please select ${availableQuestions} or fewer questions.` 
+      }, { status: 400 });
+    }
+
+    // Create the quiz
     const quiz = await prisma.battleQuiz.create({
       data: {
         title,
         description,
-        entryAmount,
+        entryAmount: parseFloat(entryAmount),
+        categoryId,
+        questionCount,
+        createdById: decoded.userId,
       },
     });
-    return NextResponse.json(quiz);
+
+    // Pick random questions from the category
+    const allQuestions = await prisma.questionBankItem.findMany({
+      where: {
+        categoryId,
+        isActive: true
+      },
+      select: {
+        id: true,
+        text: true,
+        options: true,
+        correct: true
+      }
+    });
+
+    // Shuffle and pick random questions
+    const shuffled = allQuestions.sort(() => 0.5 - Math.random());
+    const randomQuestions = shuffled.slice(0, questionCount);
+
+    // Add the random questions to the quiz
+    for (const question of randomQuestions) {
+      await prisma.battleQuizQuestion.create({
+        data: {
+          quizId: quiz.id,
+          text: question.text,
+          options: question.options,
+          correct: question.correct,
+          marks: 1,
+        },
+      });
+    }
+
+    return NextResponse.json({
+      ...quiz,
+      questionsAdded: randomQuestions.length
+    });
   } catch (error: any) {
+    console.error('Battle Quiz creation error:', error);
     return NextResponse.json({ message: error.message || 'Failed to create quiz.' }, { status: 500 });
   }
 } 

@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Home, Search, PlusSquare, Heart, User, Users, Bell, BookOpen, Calendar, Wallet, Trophy, MessageCircle } from 'lucide-react';
+import { Home, Search, PlusSquare, Heart, User, Users, Bell, BookOpen, Calendar, Wallet, Trophy, MessageCircle, Zap } from 'lucide-react';
 import { useSocket } from '@/hooks/useSocket';
 import { NotificationContainer } from '@/components/NotificationToast';
 
@@ -10,6 +10,7 @@ const studentLinks = [
   { name: 'Dashboard', href: '/student/dashboard', icon: Home },
   { name: 'Live Exams', href: '/student/live-exams', icon: BookOpen },
   { name: 'Practice Exams', href: '/student/practice-exams', icon: Trophy },
+  { name: 'Battle Quiz', href: '/student/battle-quiz', icon: Zap },
   { name: 'Exam Notifications', href: '/student/notifications', icon: Bell },
   { name: 'My Attempts', href: '/student/attempts', icon: BookOpen },
   { name: 'Wallet', href: '/student/wallet', icon: Wallet },

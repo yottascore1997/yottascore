@@ -24,6 +24,19 @@ interface Message {
   createdAt: string
   sender: User
   receiver: User
+  isRequest?: boolean
+  requestId?: string
+}
+
+interface MessageRequest {
+  id: string
+  content: string
+  messageType: string
+  fileUrl: string | null
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
+  createdAt: string
+  sender: User
+  receiver: User
 }
 
 interface Conversation {
@@ -38,13 +51,15 @@ export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
+  const [messageRequests, setMessageRequests] = useState<MessageRequest[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showMessageRequests, setShowMessageRequests] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const socket = useSocket()
+  const { socket, isConnected, error: socketError } = useSocket()
   const [isTyping, setIsTyping] = useState(false)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   // Refs to hold the most current state for our socket listeners, avoiding stale closures
@@ -56,13 +71,14 @@ export default function MessagesPage() {
 
   useEffect(() => {
     fetchConversations()
+    fetchMessageRequests()
   }, [])
 
   useEffect(() => {
     if (selectedUser) {
       fetchMessages(selectedUser.id)
     }
-  }, [selectedUser])
+  }, [selectedUser, messageRequests])
 
   // Handle user parameter from URL
   useEffect(() => {
@@ -100,10 +116,10 @@ export default function MessagesPage() {
   
   // Register user with socket server
   useEffect(() => {
-    if (socket && currentUser) {
+    if (socket && isConnected && currentUser) {
       socket.emit('register_user', currentUser.id)
     }
-  }, [socket, currentUser])
+  }, [socket, isConnected, currentUser])
 
   // Keep refs updated with the latest state
   useEffect(() => {
@@ -114,7 +130,10 @@ export default function MessagesPage() {
 
   // Centralized real-time event handler setup
   useEffect(() => {
-    if (!socket) return
+    if (!socket || !isConnected) {
+      console.log('Socket not connected, real-time features disabled')
+      return
+    }
 
     // --- Listener for new messages ---
     const handleNewMessage = (newMessage: Message) => {
@@ -146,11 +165,11 @@ export default function MessagesPage() {
       socket.off('new_message', handleNewMessage)
       socket.off('messages_were_read', handleMessagesRead)
     }
-  }, [socket]) // This effect now runs only once when the socket is ready
+  }, [socket, isConnected]) // This effect now runs when socket is ready and connected
 
   // Effect to mark messages as read when a chat is opened
   useEffect(() => {
-    if (socket && selectedUserRef.current && currentUserRef.current) {
+    if (socket && isConnected && selectedUserRef.current && currentUserRef.current) {
       const unreadMessages = messagesRef.current.filter(
         (msg) => msg.receiver.id === currentUserRef.current?.id && !msg.isRead
       )
@@ -189,7 +208,7 @@ export default function MessagesPage() {
         markAsRead()
       }
     }
-  }, [selectedUser, messages]) // This effect now correctly depends on selectedUser
+  }, [selectedUser, messages, socket, isConnected]) // This effect now correctly depends on selectedUser
 
   const fetchConversations = async () => {
     try {
@@ -230,6 +249,28 @@ export default function MessagesPage() {
       if (response.ok) {
         const data = await response.json()
         setMessages(data)
+        
+        // If no direct messages, check for message requests from this user
+        if (data.length === 0) {
+          const pendingRequest = messageRequests.find(req => 
+            req.sender.id === userId && req.status === 'PENDING'
+          )
+          if (pendingRequest) {
+            // Show the pending request as a message in the chat
+            setMessages([{
+              id: `request-${pendingRequest.id}`,
+              content: pendingRequest.content,
+              messageType: pendingRequest.messageType,
+              fileUrl: pendingRequest.fileUrl,
+              isRead: false,
+              createdAt: pendingRequest.createdAt,
+              sender: pendingRequest.sender,
+              receiver: pendingRequest.receiver,
+              isRequest: true, // Flag to identify this as a request
+              requestId: pendingRequest.id
+            }])
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching messages:', error)
@@ -263,8 +304,95 @@ export default function MessagesPage() {
     }
   }
 
+  const fetchMessageRequests = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      const response = await fetch('/api/student/message-requests', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setMessageRequests(data)
+      }
+    } catch (error) {
+      console.error('Error fetching message requests:', error)
+    }
+  }
+
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/student/message-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          requestId,
+          action: 'accept'
+        })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        // Remove the request from the list
+        setMessageRequests(prev => prev.filter(req => req.id !== requestId))
+        // Refresh conversations to show the new conversation
+        fetchConversations()
+        
+        // Update messages state - replace the request message with the actual message
+        if (result.message) {
+          setMessages(prev => prev.map(msg => 
+            msg.requestId === requestId ? result.message : msg
+          ))
+        }
+      }
+    } catch (error) {
+      console.error('Error accepting message request:', error)
+    }
+  }
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/student/message-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          requestId,
+          action: 'reject'
+        })
+      })
+
+      if (response.ok) {
+        // Remove the request from the list
+        setMessageRequests(prev => prev.filter(req => req.id !== requestId))
+        // Remove the request message from the chat
+        setMessages(prev => prev.filter(msg => msg.requestId !== requestId))
+      }
+    } catch (error) {
+      console.error('Error rejecting message request:', error)
+    }
+  }
+
   const sendMessage = async () => {
-    if (!selectedUser || !newMessage.trim() || !socket || !currentUser) return
+    if (!selectedUser || !newMessage.trim() || !currentUser) return
 
     setSending(true)
     const chatId = [currentUser.id, selectedUser.id].sort().join('-')
@@ -306,13 +434,40 @@ export default function MessagesPage() {
         throw new Error('Server responded with an error')
       }
       
-      const savedMessage = await response.json()
+      const result = await response.json()
 
-      // 3. Replace the optimistic message with the real one from the server
-      setMessages(prev => prev.map(msg => (msg.id === tempId ? savedMessage : msg)))
-      
-      // 4. Emit the saved message to the other user via WebSocket
-      socket.emit('private_message', { message: savedMessage })
+      if (result.type === 'direct') {
+        // 3. Replace the optimistic message with the real one from the server
+        setMessages(prev => prev.map(msg => (msg.id === tempId ? result.message : msg)))
+        
+        // 4. Emit the saved message to the other user via WebSocket (only if connected)
+        if (socket && isConnected) {
+          socket.emit('private_message', { message: result.message })
+        }
+      } else if (result.type === 'request') {
+        // Message was sent as a request - remove the optimistic message
+        setMessages(prev => prev.filter(msg => msg.id !== tempId))
+        // Show a notification that the message was sent as a request
+        const notification = document.createElement('div')
+        notification.className = 'fixed top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded z-50'
+        notification.innerHTML = `
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium">Message sent as a request</p>
+              <p class="text-sm">The recipient will need to accept it to start the conversation.</p>
+            </div>
+          </div>
+        `
+        document.body.appendChild(notification)
+        setTimeout(() => {
+          document.body.removeChild(notification)
+        }, 5000)
+      }
 
     } catch (error) {
       console.error('Error sending message:', error)
@@ -384,7 +539,7 @@ export default function MessagesPage() {
   };
 
   const sendFileMessage = async (fileUrl: string, fileType: string, fileName: string) => {
-    if (!selectedUser || !socket || !currentUser) return;
+    if (!selectedUser || !currentUser || !fileUrl) return;
     
     const messageType = fileType.startsWith('image/') ? 'IMAGE' : 'FILE';
     const content = messageType === 'IMAGE' ? 'Image' : fileName;
@@ -420,7 +575,11 @@ export default function MessagesPage() {
       
       const savedMessage = await response.json();
       setMessages(prev => prev.map(msg => (msg.id === tempId ? savedMessage : msg)));
-      socket.emit('private_message', { message: savedMessage });
+      
+      // Emit the saved message to the other user via WebSocket (only if connected)
+      if (socket && isConnected) {
+        socket.emit('private_message', { message: savedMessage });
+      }
 
     } catch (error) {
       console.error("Error sending file message:", error);
@@ -461,6 +620,28 @@ export default function MessagesPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Loading messages...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show socket connection error if socket failed to connect
+  if (socketError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-8 h-8 bg-red-500 rounded-full"></div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Connection Error</h3>
+          <p className="text-gray-600 mb-4">{socketError}</p>
+          <p className="text-sm text-gray-500">Real-time messaging may not work properly.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Retry Connection
+          </button>
         </div>
       </div>
     )
@@ -519,7 +700,11 @@ export default function MessagesPage() {
               >
                 <div
                   className={`max-w-xs lg:max-w-md rounded-2xl ${
-                    isOwn ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'
+                    message.isRequest 
+                      ? 'bg-yellow-50 border-2 border-yellow-200' 
+                      : isOwn 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-100 text-gray-900'
                   } ${message.messageType === 'IMAGE' ? 'p-1' : 'px-4 py-2'}`}
                 >
                   {message.messageType === 'IMAGE' && message.fileUrl && (
@@ -527,7 +712,7 @@ export default function MessagesPage() {
                       src={message.fileUrl}
                       alt="Sent image"
                       className="rounded-xl max-w-xs cursor-pointer"
-                      onClick={() => window.open(message.fileUrl, '_blank')}
+                      onClick={() => message.fileUrl && window.open(message.fileUrl, '_blank')}
                     />
                   )}
                   {message.messageType === 'FILE' && message.fileUrl && (
@@ -542,16 +727,49 @@ export default function MessagesPage() {
                     </a>
                   )}
                   {message.messageType === 'TEXT' && (
-                    <p className="text-sm">{message.content}</p>
+                    <p className={`text-sm ${message.isRequest ? 'text-gray-700' : ''}`}>
+                      {message.content}
+                    </p>
                   )}
+                  
+                  {/* Show accept/reject buttons for message requests */}
+                  {message.isRequest && !isOwn && (
+                    <div className="mt-3 flex space-x-2">
+                      <Button
+                        onClick={() => handleAcceptRequest(message.requestId!)}
+                        size="sm"
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-xs"
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        onClick={() => handleRejectRequest(message.requestId!)}
+                        variant="outline"
+                        size="sm"
+                        className="border-gray-300 hover:border-red-500 hover:text-red-600 px-3 py-1 text-xs"
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                  
                   <div className="flex items-end space-x-1">
-                    {isOwn && (
+                    {isOwn && !message.isRequest && (
                       <span className="text-xs text-blue-200">
                         {message.isRead ? '✓✓' : '✓'}
                       </span>
                     )}
+                    {message.isRequest && (
+                      <span className="text-xs text-yellow-600 font-medium">
+                        Message Request
+                      </span>
+                    )}
                     <p className={`text-xs mt-1 text-right ${
-                      isOwn ? 'text-blue-100' : 'text-gray-500'
+                      message.isRequest 
+                        ? 'text-yellow-600' 
+                        : isOwn 
+                          ? 'text-blue-100' 
+                          : 'text-gray-500'
                     }`}>
                       {formatTime(message.createdAt)}
                     </p>
@@ -624,6 +842,59 @@ export default function MessagesPage() {
           <Plus className="h-6 w-6 text-blue-500" />
         </Button>
       </div>
+
+      {/* Message Requests */}
+      {messageRequests.length > 0 && (
+        <div className="px-4 pb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-gray-900">Message Requests</h2>
+            <span className="text-sm text-gray-500">{messageRequests.length} pending</span>
+          </div>
+          <div className="space-y-3">
+            {messageRequests.map((request) => (
+              <div key={request.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-start space-x-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
+                    {request.sender.profilePhoto ? (
+                      <img 
+                        src={request.sender.profilePhoto} 
+                        alt={request.sender.name}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-lg">{request.sender.name.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="font-semibold text-gray-900">{request.sender.name}</h3>
+                      <span className="text-xs text-gray-500">{formatTime(request.createdAt)}</span>
+                    </div>
+                    <p className="text-gray-700 text-sm mb-3">{request.content}</p>
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={() => handleAcceptRequest(request.id)}
+                        size="sm"
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1"
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        onClick={() => handleRejectRequest(request.id)}
+                        variant="outline"
+                        size="sm"
+                        className="border-gray-300 hover:border-red-500 hover:text-red-600 px-4 py-1"
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Conversations */}
       <div className="flex-1">

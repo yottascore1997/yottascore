@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { format } from 'date-fns'
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Image, Video, Hash, Loader2 } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Image, Video, Hash, Loader2, Upload, X } from 'lucide-react'
 import CommentSection from '@/components/CommentSection'
+import StoryBar from '@/components/StoryBar'
+import CreateStoryModal from '@/components/CreateStoryModal'
+import StoryViewer from '@/components/StoryViewer'
 import Link from 'next/link'
-import { useSocket } from '@/hooks/useSocket'
 
 interface PostAuthor {
   id: string
@@ -41,6 +43,9 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showCreatePost, setShowCreatePost] = useState(false)
+  const [showCreateStory, setShowCreateStory] = useState(false)
+  const [selectedStoryGroup, setSelectedStoryGroup] = useState<any>(null)
+  const [storyRefreshTrigger, setStoryRefreshTrigger] = useState(0)
   const [newPost, setNewPost] = useState({
     content: '',
     imageUrl: '',
@@ -48,28 +53,19 @@ export default function FeedPage() {
     hashtags: '',
     isPrivate: false
   })
+  const [uploading, setUploading] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [videoPreview, setVideoPreview] = useState<string | null>(null)
   const [activeCommentSection, setActiveCommentSection] = useState<string | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-
-  // Initialize socket connection
-  const { registerUser } = useSocket()
 
   useEffect(() => {
     fetchPosts()
-    
-    // Register user with socket
-    const token = localStorage.getItem('token')
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        if (payload.userId) {
-          registerUser(payload.userId)
-        }
-      } catch (error) {
-        console.error('Error decoding token:', error)
-      }
-    }
-  }, [registerUser])
+  }, [])
 
   const fetchPosts = async () => {
     try {
@@ -98,13 +94,123 @@ export default function FeedPage() {
     }
   }
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        // Check file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+          alert('Image file size must be less than 5MB')
+          return
+        }
+        setSelectedImage(file)
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          setImagePreview(e.target?.result as string)
+        }
+        reader.readAsDataURL(file)
+      } else {
+        alert('Please select an image file')
+      }
+    }
+  }
+
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.type.startsWith('video/')) {
+        // Check file size (50MB limit)
+        if (file.size > 50 * 1024 * 1024) {
+          alert('Video file size must be less than 50MB')
+          return
+        }
+        setSelectedVideo(file)
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          setVideoPreview(e.target?.result as string)
+        }
+        reader.readAsDataURL(file)
+      } else {
+        alert('Please select a video file')
+      }
+    }
+  }
+
+  const removeImage = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+    if (imageInputRef.current) {
+      imageInputRef.current.value = ''
+    }
+  }
+
+  const removeVideo = () => {
+    setSelectedVideo(null)
+    setVideoPreview(null)
+    if (videoInputRef.current) {
+      videoInputRef.current.value = ''
+    }
+  }
+
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to upload file')
+    }
+
+    const data = await response.json()
+    return data.url
+  }
+
+  const resetForm = () => {
+    setNewPost({
+      content: '',
+      imageUrl: '',
+      videoUrl: '',
+      hashtags: '',
+      isPrivate: false
+    })
+    setSelectedImage(null)
+    setSelectedVideo(null)
+    setImagePreview(null)
+    setVideoPreview(null)
+    if (imageInputRef.current) {
+      imageInputRef.current.value = ''
+    }
+    if (videoInputRef.current) {
+      videoInputRef.current.value = ''
+    }
+  }
+
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault()
+    setUploading(true)
+    
     try {
       const token = localStorage.getItem('token')
       if (!token) {
         router.push('/auth/login')
         return
+      }
+
+      let imageUrl = newPost.imageUrl
+      let videoUrl = newPost.videoUrl
+
+      // Upload image if selected
+      if (selectedImage) {
+        imageUrl = await uploadFile(selectedImage)
+      }
+
+      // Upload video if selected
+      if (selectedVideo) {
+        videoUrl = await uploadFile(selectedVideo)
       }
 
       const hashtags = newPost.hashtags
@@ -120,8 +226,8 @@ export default function FeedPage() {
         },
         body: JSON.stringify({
           content: newPost.content,
-          imageUrl: newPost.imageUrl || undefined,
-          videoUrl: newPost.videoUrl || undefined,
+          imageUrl: imageUrl || undefined,
+          videoUrl: videoUrl || undefined,
           hashtags,
           isPrivate: newPost.isPrivate
         })
@@ -132,16 +238,12 @@ export default function FeedPage() {
       }
 
       setShowCreatePost(false)
-      setNewPost({
-        content: '',
-        imageUrl: '',
-        videoUrl: '',
-        hashtags: '',
-        isPrivate: false
-      })
+      resetForm()
       fetchPosts()
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to create post')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -230,15 +332,68 @@ export default function FeedPage() {
         </Button>
       </div>
 
+      {/* Story Bar */}
+      <div className="px-4 py-3 bg-white border-b border-gray-100">
+        <StoryBar 
+          onAddStory={() => setShowCreateStory(true)}
+          onViewStory={(storyGroup) => setSelectedStoryGroup(storyGroup)}
+          refreshTrigger={storyRefreshTrigger}
+        />
+      </div>
+
+      {/* Create Story Modal */}
+      {showCreateStory && (
+        <CreateStoryModal 
+          isOpen={showCreateStory}
+          onClose={() => setShowCreateStory(false)}
+          onStoryCreated={() => {
+            setShowCreateStory(false)
+            setStoryRefreshTrigger(prev => prev + 1) // Refresh stories
+          }}
+        />
+      )}
+
+      {/* Story Viewer Modal */}
+      {selectedStoryGroup && (
+        <StoryViewer
+          storyGroup={selectedStoryGroup}
+          onClose={() => {
+            setSelectedStoryGroup(null)
+            setStoryRefreshTrigger(prev => prev + 1) // Refresh stories after viewing
+          }}
+          onNext={() => {
+            // Navigate to next user's stories if available
+            setSelectedStoryGroup(null)
+            setStoryRefreshTrigger(prev => prev + 1) // Refresh stories
+          }}
+          onPrevious={() => {
+            // Navigate to previous user's stories if available
+            setSelectedStoryGroup(null)
+            setStoryRefreshTrigger(prev => prev + 1) // Refresh stories
+          }}
+        />
+      )}
+
       {/* Create Post Modal */}
       {showCreatePost && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowCreatePost(false)
+              resetForm()
+            }
+          }}
+        >
           <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900">Create Post</h2>
                 <button
-                  onClick={() => setShowCreatePost(false)}
+                  onClick={() => {
+                    setShowCreatePost(false)
+                    resetForm()
+                  }}
                   className="text-gray-500 hover:text-gray-700"
                 >
                   <MoreHorizontal className="w-6 h-6" />
@@ -246,6 +401,12 @@ export default function FeedPage() {
               </div>
               
               <form onSubmit={handleCreatePost} className="space-y-4">
+                {uploading && (
+                  <div className="flex items-center justify-center p-3 bg-blue-50 rounded-lg">
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-blue-600" />
+                    <span className="text-sm text-blue-600">Uploading files...</span>
+                  </div>
+                )}
                 <div>
                   <Textarea
                     value={newPost.content}
@@ -257,26 +418,112 @@ export default function FeedPage() {
                   />
                 </div>
                 
+                {/* Image Upload Section */}
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-xl">
                     <Image className="w-5 h-5 text-gray-500" />
-                    <Input
-                      value={newPost.imageUrl}
-                      onChange={(e) => setNewPost({ ...newPost, imageUrl: e.target.value })}
-                      placeholder="Add image URL"
-                      className="border-0 bg-transparent focus:ring-0"
+                    <div className="flex-1">
+                      {selectedImage ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600 truncate">{selectedImage.name}</span>
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => imageInputRef.current?.click()}
+                          className="text-left text-gray-500 hover:text-gray-700 w-full"
+                        >
+                          Upload Image
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
                     />
                   </div>
+                  <p className="text-xs text-gray-500 px-3">Supported: JPG, PNG, GIF (Max 5MB)</p>
                   
+                  {/* Image Preview */}
+                  {imagePreview && (
+                    <div className="relative">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Video Upload Section */}
                   <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-xl">
                     <Video className="w-5 h-5 text-gray-500" />
-                    <Input
-                      value={newPost.videoUrl}
-                      onChange={(e) => setNewPost({ ...newPost, videoUrl: e.target.value })}
-                      placeholder="Add video URL"
-                      className="border-0 bg-transparent focus:ring-0"
+                    <div className="flex-1">
+                      {selectedVideo ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600 truncate">{selectedVideo.name}</span>
+                          <button
+                            type="button"
+                            onClick={removeVideo}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => videoInputRef.current?.click()}
+                          className="text-left text-gray-500 hover:text-gray-700 w-full"
+                        >
+                          Upload Video
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoSelect}
+                      className="hidden"
                     />
                   </div>
+                  <p className="text-xs text-gray-500 px-3">Supported: MP4, AVI, MOV (Max 50MB)</p>
+                  
+                  {/* Video Preview */}
+                  {videoPreview && (
+                    <div className="relative">
+                      <video
+                        src={videoPreview}
+                        controls
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeVideo}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                   
                   <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-xl">
                     <Hash className="w-5 h-5 text-gray-500" />
@@ -306,16 +553,28 @@ export default function FeedPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowCreatePost(false)}
+                    onClick={() => {
+                      setShowCreatePost(false)
+                      resetForm()
+                    }}
                     className="flex-1"
+                    disabled={uploading}
                   >
                     Cancel
                   </Button>
                   <Button 
                     type="submit"
                     className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                    disabled={uploading}
                   >
-                    Post
+                    {uploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      'Post'
+                    )}
                   </Button>
                 </div>
               </form>
@@ -377,6 +636,13 @@ export default function FeedPage() {
                 <p className="text-gray-800">{post.content}</p>
                 {post.imageUrl && (
                   <img src={post.imageUrl} alt="Post content" className="mt-3 rounded-lg w-full" />
+                )}
+                {post.videoUrl && (
+                  <video 
+                    src={post.videoUrl} 
+                    controls 
+                    className="mt-3 rounded-lg w-full" 
+                  />
                 )}
               </div>
   

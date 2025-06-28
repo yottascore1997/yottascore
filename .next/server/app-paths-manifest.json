@@ -1,9 +1,13 @@
 {
-  "/not-found": "app/not-found.js",
+  "/page": "app/page.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/api/admin/battle-quiz/route": "app/api/admin/battle-quiz/route.js",
-  "/student/practice-exams/[examId]/result/page": "app/student/practice-exams/[examId]/result/page.js",
+  "/api/student/wallet/route": "app/api/student/wallet/route.js",
+  "/api/student/exam-notifications/route": "app/api/student/exam-notifications/route.js",
+  "/api/student/exams/route": "app/api/student/exams/route.js",
+  "/api/student/posts/route": "app/api/student/posts/route.js",
+  "/api/student/stories/route": "app/api/student/stories/route.js",
+  "/api/student/practice-exams/route": "app/api/student/practice-exams/route.js",
+  "/api/student/profile/route": "app/api/student/profile/route.js",
   "/student/dashboard/page": "app/student/dashboard/page.js",
-  "/admin/battle-quizzes/page": "app/admin/battle-quizzes/page.js",
-  "/admin/dashboard/page": "app/admin/dashboard/page.js"
+  "/student/feed/page": "app/student/feed/page.js"
 }

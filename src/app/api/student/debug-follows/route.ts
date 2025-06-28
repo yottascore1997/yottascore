@@ -39,6 +39,7 @@ export async function GET(req: Request) {
         },
         followers: {
           select: {
+            id: true,
             follower: {
               select: {
                 id: true,
@@ -49,6 +50,7 @@ export async function GET(req: Request) {
         },
         following: {
           select: {
+            id: true,
             following: {
               select: {
                 id: true,
@@ -64,6 +66,30 @@ export async function GET(req: Request) {
       return new NextResponse('User not found', { status: 404 })
     }
 
+    // Get all follow relationships for this user to verify data integrity
+    const allFollows = await prisma.follow.findMany({
+      where: {
+        OR: [
+          { followerId: userId },
+          { followingId: userId }
+        ]
+      },
+      include: {
+        follower: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        following: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    })
+
     return NextResponse.json({
       user: {
         id: user.id,
@@ -78,7 +104,24 @@ export async function GET(req: Request) {
       following: user.following.map(f => ({
         id: f.following.id,
         name: f.following.name
-      }))
+      })),
+      allFollows: allFollows.map(f => ({
+        id: f.id,
+        follower: {
+          id: f.follower.id,
+          name: f.follower.name
+        },
+        following: {
+          id: f.following.id,
+          name: f.following.name
+        },
+        relationship: `${f.follower.name} follows ${f.following.name}`
+      })),
+      explanation: {
+        followers: "People who follow this user (they have this user as followingId)",
+        following: "People this user follows (they have this user as followerId)",
+        allFollows: "All follow relationships involving this user"
+      }
     })
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
