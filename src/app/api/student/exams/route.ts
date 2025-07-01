@@ -53,6 +53,7 @@ export async function GET(req: Request) {
         description: true,
         instructions: true,
         category: true,
+        imageUrl: true,
         startTime: true,
         endTime: true,
         duration: true,

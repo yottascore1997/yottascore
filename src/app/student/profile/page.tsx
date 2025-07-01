@@ -46,6 +46,8 @@ export default function ProfilePage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [showErrorMessage, setShowErrorMessage] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -143,7 +145,8 @@ export default function ProfilePage() {
       setShowEdit(false)
       
       // Show success message (you can replace this with a toast notification)
-      alert('Profile updated successfully!')
+      setShowSuccessMessage(true)
+      setTimeout(() => setShowSuccessMessage(false), 3000)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update profile')
     } finally {
@@ -220,7 +223,7 @@ export default function ProfilePage() {
     }
   }
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       if (file.type.startsWith('image/')) {
@@ -229,12 +232,64 @@ export default function ProfilePage() {
           alert('Image file size must be less than 5MB')
           return
         }
+        
         setSelectedPhoto(file)
         const reader = new FileReader()
         reader.onload = (e) => {
           setPhotoPreview(e.target?.result as string)
         }
         reader.readAsDataURL(file)
+        
+        // Auto-upload if not in edit mode
+        if (!showEdit) {
+          setUploadingPhoto(true)
+          try {
+            const photoUrl = await uploadPhoto(file)
+            
+            // Save the profile photo URL to the database
+            const token = localStorage.getItem('token')
+            if (!token) {
+              router.push('/auth/login')
+              return
+            }
+
+            const updateResponse = await fetch('/api/student/profile', {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                ...editForm,
+                profilePhoto: photoUrl
+              })
+            })
+
+            if (!updateResponse.ok) {
+              throw new Error('Failed to save profile photo')
+            }
+
+            const updatedProfile = await updateResponse.json()
+            setProfile(updatedProfile)
+            setEditForm({ ...editForm, profilePhoto: photoUrl })
+            
+            setSelectedPhoto(null)
+            setPhotoPreview(null)
+            if (photoInputRef.current) {
+              photoInputRef.current.value = ''
+            }
+            
+            // Show success message
+            setShowSuccessMessage(true)
+            setTimeout(() => setShowSuccessMessage(false), 3000)
+          } catch (error) {
+            console.error('Photo upload error:', error)
+            setShowErrorMessage(true)
+            setTimeout(() => setShowErrorMessage(false), 5000)
+          } finally {
+            setUploadingPhoto(false)
+          }
+        }
       } else {
         alert('Please select an image file')
       }
@@ -264,12 +319,33 @@ export default function ProfilePage() {
     setUploadingPhoto(true)
     try {
       const photoUrl = await uploadPhoto(selectedPhoto)
-      setEditForm({ ...editForm, profilePhoto: photoUrl })
       
-      // Update the profile state immediately to show the new photo
-      if (profile) {
-        setProfile({ ...profile, profilePhoto: photoUrl })
+      // Save the profile photo URL to the database
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
       }
+
+      const updateResponse = await fetch('/api/student/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...editForm,
+          profilePhoto: photoUrl
+        })
+      })
+
+      if (!updateResponse.ok) {
+        throw new Error('Failed to save profile photo')
+      }
+
+      const updatedProfile = await updateResponse.json()
+      setProfile(updatedProfile)
+      setEditForm({ ...editForm, profilePhoto: photoUrl })
       
       setSelectedPhoto(null)
       setPhotoPreview(null)
@@ -277,7 +353,9 @@ export default function ProfilePage() {
         photoInputRef.current.value = ''
       }
     } catch (error) {
-      setError('Failed to upload photo')
+      console.error('Photo upload error:', error)
+      setShowErrorMessage(true)
+      setTimeout(() => setShowErrorMessage(false), 5000)
     } finally {
       setUploadingPhoto(false)
     }
@@ -396,6 +474,26 @@ Current Relationship:
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Success Notification */}
+      {showSuccessMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center space-x-2 animate-in slide-in-from-right duration-300">
+          <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center">
+            <span className="text-green-500 text-sm">✓</span>
+          </div>
+          <span className="font-medium">Profile photo updated successfully!</span>
+        </div>
+      )}
+
+      {/* Error Notification */}
+      {showErrorMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center space-x-2 animate-in slide-in-from-right duration-300">
+          <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center">
+            <span className="text-red-500 text-sm">✕</span>
+          </div>
+          <span className="font-medium">Failed to upload profile photo. Please try again.</span>
+        </div>
+      )}
+
       {/* Profile Header */}
       <div className="relative overflow-hidden">
         {/* Background Pattern */}
@@ -426,8 +524,17 @@ Current Relationship:
                       )}
                     </div>
                     {isOwnProfile && (
-                      <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-200">
-                        <Camera className="w-4 h-4 text-white" />
+                      <button 
+                        onClick={() => photoInputRef.current?.click()}
+                        disabled={uploadingPhoto}
+                        title="Change profile photo"
+                        className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {uploadingPhoto ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        ) : (
+                          <Camera className="w-4 h-4 text-white" />
+                        )}
                       </button>
                     )}
                   </div>
@@ -577,6 +684,15 @@ Current Relationship:
           </div>
         </div>
       </div>
+
+      {/* Hidden file input for profile photo upload */}
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handlePhotoSelect}
+        className="hidden"
+      />
 
       {/* Edit Profile Modal */}
       {showEdit && (

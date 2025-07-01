@@ -1,5 +1,13 @@
 {
-  "/api/student/live-exams/[examId]/leaderboard/route": "app/api/student/live-exams/[examId]/leaderboard/route.js",
-  "/api/student/live-exams/[examId]/winnings/route": "app/api/student/live-exams/[examId]/winnings/route.js",
-  "/student/dashboard/page": "app/student/dashboard/page.js"
+  "/auth/login/page": "app/auth/login/page.js",
+  "/api/student/practice-exams/route": "app/api/student/practice-exams/route.js",
+  "/api/student/practice-exams/[examId]/route": "app/api/student/practice-exams/[examId]/route.js",
+  "/api/student/practice-exams/[examId]/leaderboard/route": "app/api/student/practice-exams/[examId]/leaderboard/route.js",
+  "/api/student/my-exams/route": "app/api/student/my-exams/route.js",
+  "/api/student/profile/route": "app/api/student/profile/route.js",
+  "/api/student/posts/route": "app/api/student/posts/route.js",
+  "/admin/practice-exams/create/page": "app/admin/practice-exams/create/page.js",
+  "/admin/practice-exams/[id]/edit/page": "app/admin/practice-exams/[id]/edit/page.js",
+  "/student/dashboard/page": "app/student/dashboard/page.js",
+  "/student/my-exams/page": "app/student/my-exams/page.js"
 }

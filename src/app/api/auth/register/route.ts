@@ -11,7 +11,7 @@ const handler = async (req: Request) => {
     const body = await req.json()
     console.log('Registration request body:', body)
 
-    const { email, name, password, phoneNumber } = body
+    const { email, name, password, phoneNumber, referralCode } = body
 
     // Validate required fields
     if (!email || !name || !password || !phoneNumber) {
@@ -35,11 +35,37 @@ const handler = async (req: Request) => {
       )
     }
 
+    // Validate referral code if provided
+    let referrerId = null;
+    if (referralCode) {
+      const referrer = await prisma.user.findUnique({
+        where: { referralCode },
+        select: { id: true }
+      });
+      
+      if (!referrer) {
+        return NextResponse.json(
+          { message: 'Invalid referral code' },
+          { status: 400 }
+        );
+      }
+      
+      // Prevent self-referral
+      if (referrer.id === email) {
+        return NextResponse.json(
+          { message: 'Cannot use your own referral code' },
+          { status: 400 }
+        );
+      }
+      
+      referrerId = referrer.id;
+    }
+
     // Hash password
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
-    // Create new user
+    // Create new user with referral info
     const user = await prisma.user.create({
       data: {
         email,
@@ -47,10 +73,53 @@ const handler = async (req: Request) => {
         hashedPassword,
         phoneNumber,
         role: 'STUDENT', // Default role is student
+        referredBy: referralCode || null,
       },
     })
 
     console.log('User created successfully:', { id: user.id, email: user.email })
+
+    // If referral code was used, process the referral
+    if (referralCode && referrerId) {
+      try {
+        // Use transaction to ensure data consistency
+        await prisma.$transaction(async (tx) => {
+          // Create referral record
+          await tx.referral.create({
+            data: {
+              referrerId,
+              referredId: user.id,
+              code: referralCode
+            }
+          });
+
+          // Update referrer's stats
+          await tx.user.update({
+            where: { id: referrerId },
+            data: {
+              referralCount: { increment: 1 },
+              totalReferralEarnings: { increment: 100 },
+              wallet: { increment: 100 }
+            }
+          });
+
+          // Create transaction record for referrer
+          await tx.transaction.create({
+            data: {
+              userId: referrerId,
+              amount: 100,
+              type: 'REFERRAL_BONUS',
+              status: 'COMPLETED'
+            }
+          });
+        });
+
+        console.log('Referral processed successfully:', { referrerId, referredId: user.id });
+      } catch (referralError) {
+        console.error('Error processing referral:', referralError);
+        // Don't fail registration if referral processing fails
+      }
+    }
 
     // Generate JWT token
     const token = jwt.sign(

@@ -111,6 +111,7 @@ export default function CreateLiveExam() {
     description: '',
     instructions: '',
     category: '',
+    imageUrl: '',
     duration: 0,
     spots: 0,
     entryFee: 0,
@@ -125,6 +126,11 @@ export default function CreateLiveExam() {
   const [importLoading, setImportLoading] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Image upload states
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imageUploading, setImageUploading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -284,15 +290,7 @@ export default function CreateLiveExam() {
   };
 
   const downloadTemplate = () => {
-    const templateData = [
-      ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer'],
-      ['What is 2 + 2?', '3', '4', '5', '6', 'B'],
-      ['Which planet is closest to the Sun?', 'Venus', 'Mercury', 'Earth', 'Mars', 'B'],
-      ['What is the capital of India?', 'Mumbai', 'Delhi', 'Kolkata', 'Chennai', 'B']
-    ];
-
-    let csvContent = templateData.map(row => row.join(',')).join('\n');
-    
+    const csvContent = 'question,option1,option2,option3,option4,correctAnswer\nSample Question,Option A,Option B,Option C,Option D,0';
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -302,6 +300,65 @@ export default function CreateLiveExam() {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+  };
+
+  // Image upload handler
+  const handleImageUpload = async (file: File) => {
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file');
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB');
+      return;
+    }
+
+    setImageUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setFormData(prev => ({ ...prev, imageUrl: data.url }));
+        setImagePreview(data.url);
+        setImageFile(file);
+      } else {
+        throw new Error('Failed to upload image');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setFormData(prev => ({ ...prev, imageUrl: '' }));
   };
 
   return (
@@ -399,6 +456,101 @@ export default function CreateLiveExam() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Exam Logo Upload Card */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-pink-500 to-rose-600 rounded-full flex items-center justify-center">
+                  <Upload className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Exam Logo</h2>
+                  <p className="text-gray-600">Upload an image to represent your exam (optional)</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {/* Image Upload Area */}
+                <div className="flex items-center justify-center">
+                  <div className="w-full max-w-md">
+                    {!imagePreview ? (
+                      <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-blue-400 transition-colors duration-200">
+                        <div className="w-16 h-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Upload className="w-8 h-8 text-blue-500" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Exam Logo</h3>
+                        <p className="text-gray-600 mb-4">PNG, JPG, or JPEG up to 5MB</p>
+                        <label className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-xl hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 cursor-pointer">
+                          <Upload className="w-5 h-5 mr-2" />
+                          Choose Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                            disabled={imageUploading}
+                          />
+                        </label>
+                        {imageUploading && (
+                          <div className="mt-4 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                            <span className="ml-2 text-sm text-gray-600">Uploading...</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <div className="w-full h-48 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl overflow-hidden border-2 border-gray-200">
+                          <img
+                            src={imagePreview}
+                            alt="Exam logo preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                        <div className="mt-3 text-center">
+                          <p className="text-sm text-gray-600">Image uploaded successfully</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                              fileInput?.click();
+                            }}
+                            className="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                          >
+                            Change Image
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Image Guidelines */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Image Guidelines
+                  </h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Recommended size: 400x400 pixels or larger</li>
+                    <li>• Supported formats: PNG, JPG, JPEG</li>
+                    <li>• Maximum file size: 5MB</li>
+                    <li>• Square images work best for logos</li>
+                  </ul>
+                </div>
+              </div>
             </div>
 
             {/* Basic Information Card */}

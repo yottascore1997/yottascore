@@ -132,6 +132,16 @@ model User {
   stories        Story[]
   storyViews     StoryView[]
   storyLikes     StoryLike[]
+  
+  // Referral System
+  referralCode   String?     @unique
+  referredBy     String?     // Referral code of the user who referred this user
+  referralCount  Int         @default(0)
+  totalReferralEarnings Float @default(0)
+  
+  // Referral Relations
+  referrals      Referral[]  @relation("ReferrerReferrals")
+  referredByUser Referral[]  @relation("ReferredUserReferrals")
 }
 
 model LiveExam {
@@ -140,6 +150,7 @@ model LiveExam {
   description String?
   instructions String?    @db.Text
   category    String?
+  imageUrl    String?     // URL for exam logo/image
   duration    Int         // in minutes
   spots       Int
   spotsLeft   Int
@@ -894,4 +905,16 @@ model StoryLike {
 enum StoryMediaType {
   IMAGE
   VIDEO
+}
+
+model Referral {
+  id          String    @id @default(cuid())
+  referrer    User      @relation("ReferrerReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
+  referrerId  String
+  referred    User      @relation("ReferredUserReferrals", fields: [referredId], references: [id], onDelete: Cascade)
+  referredId  String
+  code        String    @unique
+  joinedAt    DateTime  @default(now())
+
+  @@unique([referrerId, referredId])
 }

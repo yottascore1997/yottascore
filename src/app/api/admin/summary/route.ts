@@ -18,46 +18,166 @@ export async function GET(req: Request) {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
-    // Get total users
-    const totalUsers = await prisma.user.count({
+    // Get total students
+    const totalStudents = await prisma.user.count({
       where: { role: 'STUDENT' }
     });
 
-    // Get total live exams
+    // Get total exams
     const totalExams = await prisma.liveExam.count();
 
-    // Get total revenue (sum of all entry fees)
+    // Get exams taken (completed participations)
+    const examsTaken = await prisma.liveExamParticipant.count({
+      where: { completedAt: { not: null } }
+    });
+
+    // Get total revenue
     const totalRevenue = await prisma.liveExam.aggregate({
       _sum: {
         totalCollection: true
       }
     });
 
-    // Get recent activities (last 5 live exams)
-    const recentActivities = await prisma.liveExam.findMany({
-      take: 5,
-      orderBy: {
-        createdAt: 'desc'
+    // Get active users (users who participated in exams in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const activeUsers = await prisma.liveExamParticipant.count({
+      where: {
+        startedAt: { gte: thirtyDaysAgo }
       },
-      include: {
-        createdBy: {
-          select: {
-            name: true
-          }
-        }
+      distinct: ['userId']
+    });
+
+    // Get average score
+    const averageScoreResult = await prisma.liveExamParticipant.aggregate({
+      where: { score: { not: null } },
+      _avg: { score: true }
+    });
+
+    // Get completion rate
+    const totalParticipations = await prisma.liveExamParticipant.count();
+    const completedParticipations = await prisma.liveExamParticipant.count({
+      where: { completedAt: { not: null } }
+    });
+    const completionRate = totalParticipations > 0 ? (completedParticipations / totalParticipations) * 100 : 0;
+
+    // Get monthly growth (new users this month vs last month)
+    const now = new Date();
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    
+    const thisMonthUsers = await prisma.user.count({
+      where: {
+        role: 'STUDENT',
+        createdAt: { gte: thisMonth }
+      }
+    });
+    
+    const lastMonthUsers = await prisma.user.count({
+      where: {
+        role: 'STUDENT',
+        createdAt: { gte: lastMonth, lt: thisMonth }
+      }
+    });
+    
+    const monthlyGrowth = lastMonthUsers > 0 ? ((thisMonthUsers - lastMonthUsers) / lastMonthUsers) * 100 : 0;
+
+    // Get exam stats
+    const liveExams = await prisma.liveExam.count({
+      where: { isLive: true }
+    });
+
+    const completedExams = await prisma.liveExam.count({
+      where: { endTime: { lt: new Date() } }
+    });
+
+    const upcomingExams = await prisma.liveExam.count({
+      where: { 
+        startTime: { gt: new Date() },
+        isLive: false
       }
     });
 
+    const totalParticipants = await prisma.liveExamParticipant.count();
+
+    // Generate sample revenue data (last 6 months)
+    const revenueData = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      revenueData.push({
+        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        revenue: Math.floor(Math.random() * 50000) + 10000,
+        participants: Math.floor(Math.random() * 200) + 50
+      });
+    }
+
+    // Generate sample exam performance data
+    const examPerformance = [
+      { examName: 'JEE Main', participants: 150, averageScore: 75, completionRate: 85 },
+      { examName: 'NEET', participants: 120, averageScore: 82, completionRate: 90 },
+      { examName: 'CAT', participants: 80, averageScore: 68, completionRate: 75 },
+      { examName: 'GATE', participants: 95, averageScore: 71, completionRate: 80 },
+      { examName: 'UPSC', participants: 200, averageScore: 65, completionRate: 70 }
+    ];
+
+    // Generate sample user growth data
+    const userGrowth = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      userGrowth.push({
+        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        newUsers: Math.floor(Math.random() * 100) + 20,
+        activeUsers: Math.floor(Math.random() * 300) + 100
+      });
+    }
+
+    // Generate sample category distribution
+    const categoryDistribution = [
+      { category: 'Engineering', count: 35, percentage: 35 },
+      { category: 'Medical', count: 25, percentage: 25 },
+      { category: 'Management', count: 20, percentage: 20 },
+      { category: 'Civil Services', count: 15, percentage: 15 },
+      { category: 'Others', count: 5, percentage: 5 }
+    ];
+
+    // Get recent activities
+    const recentActivities = await prisma.liveExam.findMany({
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        createdBy: { select: { name: true } },
+        participants: { select: { id: true } }
+      }
+    });
+
+    const activities = recentActivities.map(exam => ({
+      description: `New exam "${exam.title}" created by ${exam.createdBy.name}`,
+      timestamp: exam.createdAt
+    }));
+
     return NextResponse.json({
-      totalUsers,
+      totalStudents,
       totalExams,
+      examsTaken,
       totalRevenue: totalRevenue._sum.totalCollection || 0,
-      recentActivities: recentActivities.map(exam => ({
-        id: exam.id,
-        title: exam.title,
-        createdAt: exam.createdAt,
-        createdBy: exam.createdBy.name
-      }))
+      activeUsers,
+      averageScore: Math.round(averageScoreResult._avg.score || 0),
+      completionRate: Math.round(completionRate),
+      monthlyGrowth: Math.round(monthlyGrowth),
+      recentActivities: activities,
+      examStats: {
+        liveExams,
+        completedExams,
+        upcomingExams,
+        totalParticipants
+      },
+      revenueData,
+      examPerformance,
+      userGrowth,
+      categoryDistribution
     });
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {

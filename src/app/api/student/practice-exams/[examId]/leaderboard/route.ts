@@ -14,6 +14,7 @@ export async function GET(request: Request, { params }: { params: { examId: stri
     if (!decoded || decoded.role !== 'STUDENT') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+    
     const participants = await prisma.practiceExamParticipant.findMany({
       where: { examId: params.examId },
       include: { user: { select: { name: true, id: true } } },
@@ -22,13 +23,81 @@ export async function GET(request: Request, { params }: { params: { examId: stri
         { completedAt: 'asc' }
       ]
     });
-    const leaderboard = participants.map((p, i) => ({
+
+    // Calculate time taken and create enhanced leaderboard
+    const enhancedParticipants = participants.map(p => {
+      let timeTaken = null;
+      if (p.startedAt && p.completedAt) {
+        const startTime = new Date(p.startedAt).getTime();
+        const endTime = new Date(p.completedAt).getTime();
+        timeTaken = Math.round((endTime - startTime) / 1000); // Time in seconds
+      }
+      
+      return {
+        ...p,
+        timeTaken
+      };
+    });
+
+    // Sort by score first, then by time taken (faster = better)
+    const sortedParticipants = enhancedParticipants.sort((a, b) => {
+      // First sort by score (descending)
+      if (a.score !== b.score) {
+        return (b.score || 0) - (a.score || 0);
+      }
+      
+      // If scores are equal, sort by time taken (ascending - faster is better)
+      if (a.timeTaken !== null && b.timeTaken !== null) {
+        return a.timeTaken - b.timeTaken;
+      }
+      
+      // If one has no time taken, prioritize the one with time
+      if (a.timeTaken !== null && b.timeTaken === null) return -1;
+      if (a.timeTaken === null && b.timeTaken !== null) return 1;
+      
+      // If both have no time taken, sort by completion time (earlier = better)
+      if (a.completedAt && b.completedAt) {
+        return new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime();
+      }
+      
+      return 0;
+    });
+
+    // Create the full leaderboard with ranks
+    const fullLeaderboard = sortedParticipants.map((p, i) => ({
       rank: i + 1,
       name: p.user?.name || 'Anonymous',
       userId: p.user?.id,
-      score: p.score || 0
+      score: p.score || 0,
+      timeTaken: p.timeTaken,
+      completedAt: p.completedAt,
+      isCurrentUser: p.userId === decoded.userId
     }));
-    return NextResponse.json(leaderboard);
+
+    // Find current user's entry
+    const currentUserEntry = fullLeaderboard.find(p => p.isCurrentUser);
+    
+    // Create the response structure
+    const response = {
+      currentUser: currentUserEntry ? {
+        rank: currentUserEntry.rank,
+        name: currentUserEntry.name,
+        userId: currentUserEntry.userId,
+        score: currentUserEntry.score,
+        timeTaken: currentUserEntry.timeTaken,
+        completedAt: currentUserEntry.completedAt
+      } : null,
+      leaderboard: fullLeaderboard.map(p => ({
+        rank: p.rank,
+        name: p.name,
+        userId: p.userId,
+        score: p.score,
+        timeTaken: p.timeTaken,
+        completedAt: p.completedAt
+      }))
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

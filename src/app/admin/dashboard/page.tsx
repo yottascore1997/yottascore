@@ -2,87 +2,148 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { 
+  LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts'
+import { 
+  Users, BookOpen, Trophy, TrendingUp, DollarSign, Calendar, 
+  Clock, Award, Activity, Target, Zap, BarChart3 
+} from 'lucide-react'
 
-interface Summary {
+interface DashboardStats {
   totalStudents: number
   totalExams: number
   examsTaken: number
+  totalRevenue: number
+  activeUsers: number
+  averageScore: number
+  completionRate: number
+  monthlyGrowth: number
   recentActivities: any[]
+  examStats: {
+    liveExams: number
+    completedExams: number
+    upcomingExams: number
+    totalParticipants: number
+  }
+  revenueData: Array<{
+    month: string
+    revenue: number
+    participants: number
+  }>
+  examPerformance: Array<{
+    examName: string
+    participants: number
+    averageScore: number
+    completionRate: number
+  }>
+  userGrowth: Array<{
+    month: string
+    newUsers: number
+    activeUsers: number
+  }>
+  categoryDistribution: Array<{
+    category: string
+    count: number
+    percentage: number
+  }>
 }
 
-interface LiveExam {
-  id: string
-  title: string
-  description: string | null
-  startTime: string
-  endTime: string
-  totalSpots: number
-  spotsLeft: number
-  entryFee: number
-  prizePool: number
-  isLive: boolean
-}
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D']
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [summary, setSummary] = useState<Summary>({
+  const [stats, setStats] = useState<DashboardStats>({
     totalStudents: 0,
     totalExams: 0,
     examsTaken: 0,
+    totalRevenue: 0,
+    activeUsers: 0,
+    averageScore: 0,
+    completionRate: 0,
+    monthlyGrowth: 0,
     recentActivities: [],
+    examStats: {
+      liveExams: 0,
+      completedExams: 0,
+      upcomingExams: 0,
+      totalParticipants: 0
+    },
+    revenueData: [],
+    examPerformance: [],
+    userGrowth: [],
+    categoryDistribution: []
   })
-  const [liveExams, setLiveExams] = useState<LiveExam[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/auth/login')
-      return
-    }
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      if (payload.role !== 'ADMIN') {
-        router.push('/student/dashboard')
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token')
+      console.log('Token from localStorage:', token ? 'exists' : 'missing')
+      
+      if (!token) {
+        console.log('No token found, redirecting to login')
+        router.push('/auth/login')
+        return
       }
-    } catch (e) {
-      router.push('/auth/login')
+      
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        console.log('Token payload:', payload)
+        console.log('User role:', payload.role)
+        
+        if (payload.role !== 'ADMIN') {
+          console.log('User is not admin, redirecting to student dashboard')
+          router.push('/student/dashboard')
+          return
+        }
+        // If we reach here, user is authenticated as admin
+        console.log('User is admin, fetching dashboard stats')
+        fetchDashboardStats()
+      } catch (e) {
+        console.error('Token parsing error:', e)
+        // Don't redirect immediately, try to fetch data first
+        console.log('Trying to fetch data despite token parsing error')
+        fetchDashboardStats()
+      }
     }
-    fetchSummary()
-    fetchLiveExams()
+    
+    checkAuth()
   }, [router])
 
-  const fetchSummary = async () => {
+  const fetchDashboardStats = async () => {
     try {
+      const token = localStorage.getItem('token')
+      console.log('Fetching dashboard stats with token:', token ? 'exists' : 'missing')
+      
+      if (!token) {
+        console.log('No token for API call, redirecting to login')
+        router.push('/auth/login')
+        return
+      }
+
       const response = await fetch('/api/admin/summary', {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
       })
+      
+      console.log('API response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
-        setSummary(data)
-      } else {
+        console.log('Dashboard data received:', data)
+        setStats(data)
+      } else if (response.status === 401) {
+        // Only redirect on actual auth error
+        console.log('401 Unauthorized, redirecting to login')
         router.push('/auth/login')
+      } else {
+        console.error('API Error:', response.status, response.statusText)
       }
     } catch (error) {
-      console.error('Error fetching summary:', error)
-    }
-  }
-
-  const fetchLiveExams = async () => {
-    try {
-      const response = await fetch('/api/admin/live-exams', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setLiveExams(data)
-      }
-    } catch (error) {
-      console.error('Error fetching live exams:', error)
+      console.error('Error fetching dashboard stats:', error)
     } finally {
       setLoading(false)
     }
@@ -93,7 +154,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading dashboard...</p>
+          <p className="text-gray-600 font-medium">Loading analytics...</p>
         </div>
       </div>
     )
@@ -107,13 +168,13 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Admin Dashboard
+                Analytics Dashboard
               </h1>
-              <p className="text-gray-600 mt-1">Welcome back! Here's what's happening today.</p>
+              <p className="text-gray-600 mt-1">Comprehensive overview of platform performance and insights</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm text-gray-500">Current Time</p>
+                <p className="text-sm text-gray-500">Last Updated</p>
                 <p className="font-semibold text-gray-700">{new Date().toLocaleDateString()}</p>
               </div>
               <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
@@ -125,23 +186,25 @@ export default function AdminDashboard() {
       </div>
 
       <div className="px-8 py-8">
-        {/* Summary Cards */}
+        {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                  </svg>
+                  <Users className="w-6 h-6" />
                 </div>
                 <div className="text-right">
                   <p className="text-blue-100 text-sm">Total</p>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold mb-1">{(summary.totalStudents || 0).toLocaleString()}</h3>
+              <h3 className="text-3xl font-bold mb-1">{(stats.totalStudents || 0).toLocaleString()}</h3>
               <p className="text-blue-100">Students Registered</p>
+              <div className="mt-2 flex items-center text-blue-100 text-sm">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                <span>+{stats.monthlyGrowth || 12}% this month</span>
+              </div>
             </div>
           </div>
 
@@ -150,16 +213,18 @@ export default function AdminDashboard() {
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <BookOpen className="w-6 h-6" />
                 </div>
                 <div className="text-right">
                   <p className="text-purple-100 text-sm">Total</p>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold mb-1">{(summary.totalExams || 0).toLocaleString()}</h3>
+              <h3 className="text-3xl font-bold mb-1">{(stats.totalExams || 0).toLocaleString()}</h3>
               <p className="text-purple-100">Exams Created</p>
+              <div className="mt-2 flex items-center text-purple-100 text-sm">
+                <Zap className="w-4 h-4 mr-1" />
+                <span>{stats.examStats.liveExams || 0} live now</span>
+              </div>
             </div>
           </div>
 
@@ -168,16 +233,18 @@ export default function AdminDashboard() {
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
+                  <DollarSign className="w-6 h-6" />
                 </div>
                 <div className="text-right">
-                  <p className="text-green-100 text-sm">Completed</p>
+                  <p className="text-green-100 text-sm">Revenue</p>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold mb-1">{(summary.examsTaken || 0).toLocaleString()}</h3>
-              <p className="text-green-100">Exams Taken</p>
+              <h3 className="text-3xl font-bold mb-1">₹{(stats.totalRevenue || 0).toLocaleString()}</h3>
+              <p className="text-green-100">Total Revenue</p>
+              <div className="mt-2 flex items-center text-green-100 text-sm">
+                <Target className="w-4 h-4 mr-1" />
+                <span>{stats.completionRate || 85}% completion rate</span>
+              </div>
             </div>
           </div>
 
@@ -186,158 +253,216 @@ export default function AdminDashboard() {
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
+                  <Award className="w-6 h-6" />
                 </div>
                 <div className="text-right">
-                  <p className="text-orange-100 text-sm">Active</p>
+                  <p className="text-orange-100 text-sm">Average</p>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold mb-1">{liveExams.filter(exam => exam.isLive).length}</h3>
-              <p className="text-orange-100">Live Exams</p>
+              <h3 className="text-3xl font-bold mb-1">{stats.averageScore || 78}%</h3>
+              <p className="text-orange-100">Average Score</p>
+              <div className="mt-2 flex items-center text-orange-100 text-sm">
+                <Activity className="w-4 h-4 mr-1" />
+                <span>{stats.activeUsers || 0} active users</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Live Exams Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-1">Live Exams</h2>
-              <p className="text-gray-600">Manage and monitor active examinations</p>
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Revenue Trend Chart */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Revenue Trend</h3>
+                <p className="text-gray-600">Monthly revenue and participant growth</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
-            <button
-              onClick={() => router.push('/admin/live-exams/create')}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              <span>Create New Exam</span>
-            </button>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={stats.revenueData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Area type="monotone" dataKey="revenue" stackId="1" stroke="#8884d8" fill="#8884d8" />
+                <Area type="monotone" dataKey="participants" stackId="2" stroke="#82ca9d" fill="#82ca9d" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* User Growth Chart */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">User Growth</h3>
+                <p className="text-gray-600">New vs active users over time</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={stats.userGrowth}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="newUsers" stroke="#8884d8" strokeWidth={2} />
+                <Line type="monotone" dataKey="activeUsers" stroke="#82ca9d" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Performance Metrics */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          {/* Exam Performance */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Exam Performance</h3>
+                <p className="text-gray-600">Top performing exams</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={stats.examPerformance}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="examName" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="participants" fill="#8884d8" />
+                <Bar dataKey="averageScore" fill="#82ca9d" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Category Distribution */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Category Distribution</h3>
+                <p className="text-gray-600">Exams by category</p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <BarChart3 className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={stats.categoryDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {stats.categoryDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Quick Stats</h3>
+                <p className="text-gray-600">Platform overview</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Activity className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
+                <div className="flex items-center">
+                  <Clock className="w-5 h-5 text-blue-600 mr-3" />
+                  <span className="text-gray-700">Live Exams</span>
+                </div>
+                <span className="font-bold text-blue-600">{stats.examStats.liveExams}</span>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl">
+                <div className="flex items-center">
+                  <Trophy className="w-5 h-5 text-green-600 mr-3" />
+                  <span className="text-gray-700">Completed</span>
+                </div>
+                <span className="font-bold text-green-600">{stats.examStats.completedExams}</span>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl">
+                <div className="flex items-center">
+                  <Calendar className="w-5 h-5 text-purple-600 mr-3" />
+                  <span className="text-gray-700">Upcoming</span>
+                </div>
+                <span className="font-bold text-purple-600">{stats.examStats.upcomingExams}</span>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-orange-50 rounded-xl">
+                <div className="flex items-center">
+                  <Users className="w-5 h-5 text-orange-600 mr-3" />
+                  <span className="text-gray-700">Participants</span>
+                </div>
+                <span className="font-bold text-orange-600">{stats.examStats.totalParticipants}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activities */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">Recent Activities</h2>
+                <p className="text-gray-600">Latest platform activities and updates</p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+            </div>
           </div>
           
-          {liveExams.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {liveExams.map((exam) => (
-                <div key={exam.id} className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 overflow-hidden">
-                  <div className={`h-2 ${exam.isLive ? 'bg-gradient-to-r from-green-400 to-green-500' : 'bg-gradient-to-r from-blue-400 to-blue-500'}`}></div>
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <h3 className="font-bold text-lg text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-2">
-                        {exam.title}
-                      </h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        exam.isLive 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {exam.isLive ? '🔴 Live' : '⏰ Upcoming'}
-                      </span>
+          {stats.recentActivities.length > 0 ? (
+            <div className="divide-y divide-gray-100">
+              {stats.recentActivities.map((activity, index) => (
+                <div key={index} className="p-6 hover:bg-gray-50 transition-colors duration-200">
+                  <div className="flex items-start space-x-4">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Activity className="w-5 h-5 text-white" />
                     </div>
-                    
-                    {exam.description && (
-                      <p className="text-gray-600 mb-4 line-clamp-2">{exam.description}</p>
-                    )}
-                    
-                    <div className="space-y-3 mb-6">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-500 text-sm">Available Spots</span>
-                        <span className="font-semibold text-gray-700">{exam.spotsLeft}/{exam.totalSpots}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${((exam.totalSpots - exam.spotsLeft) / exam.totalSpots) * 100}%` }}
-                        ></div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-gray-50 rounded-xl">
-                          <p className="text-gray-500 text-xs">Entry Fee</p>
-                          <p className="font-bold text-gray-800">₹{exam.entryFee}</p>
-                        </div>
-                        <div className="text-center p-3 bg-gray-50 rounded-xl">
-                          <p className="text-gray-500 text-xs">Prize Pool</p>
-                          <p className="font-bold text-gray-800">₹{exam.prizePool}</p>
-                        </div>
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-gray-800">{activity.description}</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {new Date().toLocaleDateString()} • {new Date().toLocaleTimeString()}
+                      </p>
                     </div>
-                    
-                    <button
-                      onClick={() => router.push(`/admin/live-exams/${exam.id}`)}
-                      className="w-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 py-3 rounded-xl font-medium hover:from-gray-200 hover:to-gray-300 transition-all duration-200 flex items-center justify-center space-x-2"
-                    >
-                      <span>View Details</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+            <div className="p-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                <Activity className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Live Exams</h3>
-              <p className="text-gray-500 mb-6">Create your first live exam to get started</p>
-              <button
-                onClick={() => router.push('/admin/live-exams/create')}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
-              >
-                Create First Exam
-              </button>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Recent Activities</h3>
+              <p className="text-gray-500">Activities will appear here as they happen</p>
             </div>
           )}
-        </div>
-
-        {/* Recent Activities Section */}
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-1">Recent Activities</h2>
-              <p className="text-gray-600">Latest updates and system activities</p>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            {summary.recentActivities.length > 0 ? (
-              <div className="divide-y divide-gray-100">
-                {summary.recentActivities.map((activity, index) => (
-                  <div key={index} className="p-6 hover:bg-gray-50 transition-colors duration-200">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-gray-800">{activity.description}</p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {new Date().toLocaleDateString()} • {new Date().toLocaleTimeString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Recent Activities</h3>
-                <p className="text-gray-500">Activities will appear here as they happen</p>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

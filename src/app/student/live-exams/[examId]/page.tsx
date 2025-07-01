@@ -34,6 +34,21 @@ interface Result {
   unattempted: number;
 }
 
+interface LeaderboardEntry {
+  rank: number;
+  name: string;
+  userId: string;
+  score: number;
+  timeTaken?: number | null;
+  completedAt?: string | null;
+  prizeAmount?: number;
+}
+
+interface LeaderboardResponse {
+  currentUser: LeaderboardEntry | null;
+  leaderboard: LeaderboardEntry[];
+}
+
 function getTimeLeft(endTime?: string) {
   if (!endTime) return '00:00:00';
   const end = new Date(endTime).getTime();
@@ -46,6 +61,16 @@ function getTimeLeft(endTime?: string) {
   return `${hours.toString().padStart(2, '0')}:${minutes
     .toString()
     .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function formatTimeTaken(seconds: number | null): string {
+  if (!seconds) return 'N/A';
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (minutes > 0) {
+    return `${minutes}m ${remainingSeconds}s`;
+  }
+  return `${remainingSeconds}s`;
 }
 
 export default function LiveExamDetailPage() {
@@ -64,7 +89,7 @@ export default function LiveExamDetailPage() {
   const [now, setNow] = useState(Date.now());
 
   // Tab data states
-  const [leaderboard, setLeaderboard] = useState<any[] | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardResponse | null>(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [winnings, setWinnings] = useState<any[] | null>(null);
   const [winningsLoading, setWinningsLoading] = useState(false);
@@ -122,7 +147,7 @@ export default function LiveExamDetailPage() {
         const data = await res.json();
         setLeaderboard(data);
       } catch (e) {
-        setLeaderboard([]);
+        setLeaderboard(null);
       } finally {
         setLeaderboardLoading(false);
       }
@@ -361,23 +386,110 @@ export default function LiveExamDetailPage() {
           <div className="bg-white rounded-lg shadow p-4">
             {leaderboardLoading ? (
               <div className="text-center text-gray-500">Loading leaderboard...</div>
-            ) : leaderboard && leaderboard.length > 0 ? (
+            ) : leaderboard && leaderboard.currentUser ? (
+              <div className="space-y-6">
+                {/* Current User's Rank - Highlighted at Top */}
+                <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-xl p-4 border-2 border-purple-300">
+                  <div className="text-center mb-3">
+                    <h3 className="text-lg font-bold text-purple-800 mb-1">Your Rank</h3>
+                    <div className="text-2xl font-extrabold text-purple-900">#{leaderboard.currentUser.rank}</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <div className="text-sm text-gray-600">Name</div>
+                      <div className="font-semibold text-purple-800">{leaderboard.currentUser.name}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Score</div>
+                      <div className="font-semibold text-purple-800">{leaderboard.currentUser.score}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Time Taken</div>
+                      <div className="font-semibold text-purple-800">
+                        {formatTimeTaken(leaderboard.currentUser.timeTaken)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Prize</div>
+                      <div className="font-semibold text-green-700 flex items-center justify-center">
+                        {leaderboard.currentUser.prizeAmount && leaderboard.currentUser.prizeAmount > 0 ? (
+                          <>
+                            <FaRupeeSign className="mr-1" />
+                            {leaderboard.currentUser.prizeAmount}
+                          </>
+                        ) : (
+                          '-'
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Full Leaderboard */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-3">Complete Leaderboard</h3>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="py-2 text-left">Rank</th>
+                        <th className="py-2 text-left">Name</th>
+                        <th className="py-2 text-left">Score</th>
+                        <th className="py-2 text-left">Time Taken</th>
+                        <th className="py-2 text-left">Prize</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leaderboard.leaderboard.map((row, i) => (
+                        <tr key={i} className={`border-b ${userId && row.userId === userId ? 'bg-purple-100 font-bold' : ''}`}>
+                          <td className="py-2">#{row.rank}</td>
+                          <td className="py-2">{row.name}</td>
+                          <td className="py-2">{row.score}</td>
+                          <td className="py-2">{formatTimeTaken(row.timeTaken)}</td>
+                          <td className="py-2 flex items-center">
+                            {row.prizeAmount > 0 ? (
+                              <>
+                                <FaRupeeSign className="mr-1 text-green-600" />
+                                {row.prizeAmount}
+                              </>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : leaderboard && leaderboard.leaderboard && leaderboard.leaderboard.length > 0 ? (
+              // Fallback for old API structure or when user hasn't participated
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
                     <th className="py-2 text-left">Rank</th>
                     <th className="py-2 text-left">Name</th>
                     <th className="py-2 text-left">Score</th>
+                    <th className="py-2 text-left">Time Taken</th>
                     <th className="py-2 text-left">Prize</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.map((row, i) => (
+                  {leaderboard.leaderboard.map((row, i) => (
                     <tr key={i} className={`border-b ${userId && row.userId === userId ? 'bg-purple-100 font-bold' : ''}`}>
                       <td className="py-2">#{row.rank}</td>
                       <td className="py-2">{row.name}</td>
                       <td className="py-2">{row.score}</td>
-                      <td className="py-2 flex items-center">{row.prizeAmount > 0 ? (<><FaRupeeSign className="mr-1 text-green-600" />{row.prizeAmount}</>) : '-'}</td>
+                      <td className="py-2">{formatTimeTaken(row.timeTaken)}</td>
+                      <td className="py-2 flex items-center">
+                        {row.prizeAmount > 0 ? (
+                          <>
+                            <FaRupeeSign className="mr-1 text-green-600" />
+                            {row.prizeAmount}
+                          </>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
