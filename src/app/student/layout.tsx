@@ -16,6 +16,7 @@ const studentLinks = [
   { name: 'Wallet', href: '/student/wallet', icon: Wallet },
   { name: 'Refer & Earn', href: '/student/referral', icon: Gift },
   { name: 'Timetable', href: '/student/timetable', icon: Calendar },
+  { name: 'Support', href: '/student/support', icon: MessageCircle },
   // Social Media Features
   { name: 'Social Feed', href: '/student/feed', icon: Home },
   { name: 'Profile', href: '/student/profile', icon: User },

@@ -142,6 +142,11 @@ model User {
   // Referral Relations
   referrals      Referral[]  @relation("ReferrerReferrals")
   referredByUser Referral[]  @relation("ReferredUserReferrals")
+  
+  // Support Ticket Relations
+  supportTickets SupportTicket[]
+  assignedTickets SupportTicket[] @relation("AssignedTickets")
+  ticketReplies  SupportTicketReply[]
 }
 
 model LiveExam {
@@ -917,4 +922,91 @@ model Referral {
   joinedAt    DateTime  @default(now())
 
   @@unique([referrerId, referredId])
+}
+
+// Support Ticket System
+model SupportTicket {
+  id          String    @id @default(cuid())
+  ticketId    String    @unique // Auto-generated ticket ID like "TKT-2024-001"
+  title       String
+  description String    @db.Text
+  issueType   TicketIssueType
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus @default(OPEN)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  resolvedAt  DateTime?
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  assignedTo  User?     @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  assignedToId String?
+  replies     SupportTicketReply[]
+  attachments SupportTicketAttachment[]
+  
+  @@index([userId, createdAt])
+  @@index([status, priority])
+  @@index([assignedToId])
+}
+
+model SupportTicketReply {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  isInternal  Boolean   @default(false) // Internal notes not visible to user
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId    String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  attachments SupportTicketAttachment[]
+  
+  @@index([ticketId, createdAt])
+}
+
+model SupportTicketAttachment {
+  id          String    @id @default(cuid())
+  fileName    String
+  fileUrl     String
+  fileSize    Int       // File size in bytes
+  mimeType    String
+  createdAt   DateTime  @default(now())
+  
+  // Relations
+  ticket      SupportTicket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId    String?
+  reply       SupportTicketReply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
+  replyId     String?
+  
+  @@index([ticketId])
+  @@index([replyId])
+}
+
+enum TicketIssueType {
+  TECHNICAL_ISSUE
+  PAYMENT_PROBLEM
+  EXAM_ACCESS
+  ACCOUNT_ISSUE
+  FEATURE_REQUEST
+  BUG_REPORT
+  GENERAL_INQUIRY
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_USER
+  RESOLVED
+  CLOSED
 }
