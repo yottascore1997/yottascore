@@ -1,8 +1,8 @@
 {
-  "/api/student/support-tickets/route": "app/api/student/support-tickets/route.js",
-  "/api/student/battle-quiz/route": "app/api/student/battle-quiz/route.js",
-  "/api/student/support-tickets/[id]/route": "app/api/student/support-tickets/[id]/route.js",
-  "/api/student/profile/route": "app/api/student/profile/route.js",
-  "/api/student/posts/route": "app/api/student/posts/route.js",
-  "/student/support/[id]/page": "app/student/support/[id]/page.js"
+  "/api/student/my-exams/route": "app/api/student/my-exams/route.js",
+  "/student/dashboard/page": "app/student/dashboard/page.js",
+  "/student/feed/page": "app/student/feed/page.js",
+  "/admin/dashboard/page": "app/admin/dashboard/page.js",
+  "/student/groups/page": "app/student/groups/page.js",
+  "/student/profile/page": "app/student/profile/page.js"
 }
