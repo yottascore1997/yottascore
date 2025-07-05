@@ -26,6 +26,7 @@ export async function GET(
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
+    const since = searchParams.get('since') // New parameter for efficient polling
 
     // Check if users follow each other
     const iFollowThem = await prisma.follow.findUnique({
@@ -53,14 +54,24 @@ export async function GET(
       );
     }
 
+    // Build where clause with optional since parameter
+    const whereClause: any = {
+      OR: [
+        { senderId: decoded.userId, receiverId: userId },
+        { senderId: userId, receiverId: decoded.userId }
+      ]
+    };
+
+    // If since parameter is provided, only fetch messages after that timestamp
+    if (since) {
+      whereClause.createdAt = {
+        gt: new Date(since)
+      };
+    }
+
     // Get messages between the two users
     const messages = await prisma.directMessage.findMany({
-      where: {
-        OR: [
-          { senderId: decoded.userId, receiverId: userId },
-          { senderId: userId, receiverId: decoded.userId }
-        ]
-      },
+      where: whereClause,
       include: {
         sender: {
           select: {
@@ -82,19 +93,21 @@ export async function GET(
       },
       skip: (page - 1) * limit,
       take: limit
-    })
+    });
 
-    // Mark messages as read
-    await prisma.directMessage.updateMany({
-      where: {
-        senderId: userId,
-        receiverId: decoded.userId,
-        isRead: false
-      },
-      data: {
-        isRead: true
-      }
-    })
+    // Only mark messages as read if we're not using the since parameter (full load)
+    if (!since) {
+      await prisma.directMessage.updateMany({
+        where: {
+          senderId: userId,
+          receiverId: decoded.userId,
+          isRead: false
+        },
+        data: {
+          isRead: true
+        }
+      });
+    }
 
     return NextResponse.json(messages.reverse()) // Return in chronological order
   } catch (error) {

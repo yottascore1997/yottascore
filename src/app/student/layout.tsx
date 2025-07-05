@@ -47,26 +47,23 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                       pathname.startsWith('/student/follow-requests') ||
                       pathname.startsWith('/student/messages');
 
-  const { registerUser } = useSocket((notification) => {
-    // Handle incoming notifications
-    setNotifications(prev => [...prev, notification]);
-  });
+  const { socket, isConnected } = useSocket();
 
   useEffect(() => {
     // Register user with socket when component mounts
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && socket && isConnected) {
       try {
         // Decode JWT to get user ID (you might want to store this in a more accessible way)
         const payload = JSON.parse(atob(token.split('.')[1]));
         if (payload.userId) {
-          registerUser(payload.userId);
+          socket.emit('register_user', payload.userId);
         }
       } catch (error) {
         console.error('Error decoding token:', error);
       }
     }
-  }, [registerUser]);
+  }, [socket, isConnected]);
 
   const addNotification = (notification: any) => {
     setNotifications(prev => [...prev, notification]);

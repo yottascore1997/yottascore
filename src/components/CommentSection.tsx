@@ -36,7 +36,13 @@ export default function CommentSection({ postId, initialComments = [], onComment
   const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
 
+  // Fetch comments when component mounts
+  useEffect(() => {
+    fetchComments()
+  }, [postId])
+
   const fetchComments = async () => {
+    setLoading(true)
     try {
       const token = localStorage.getItem('token')
       if (!token) {
@@ -51,13 +57,16 @@ export default function CommentSection({ postId, initialComments = [], onComment
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch comments')
+        console.error('Failed to fetch comments:', response.status, response.statusText)
+        // Keep existing comments if any, don't clear them
+        return
       }
 
       const data = await response.json()
       setComments(data)
     } catch (error) {
       console.error('Error fetching comments:', error)
+      // Keep existing comments if any, don't clear them
     } finally {
       setLoading(false)
     }
@@ -130,7 +139,14 @@ export default function CommentSection({ postId, initialComments = [], onComment
       </div>
 
       {/* Comments List */}
-      {comments.length > 0 && (
+      {loading ? (
+        <div className="px-4 pb-4">
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-sm text-gray-500">Loading comments...</span>
+          </div>
+        </div>
+      ) : comments.length > 0 ? (
         <div className="px-4 pb-4">
           {/* Show more comments button */}
           {comments.length > 3 && !showAllComments && (
@@ -204,6 +220,12 @@ export default function CommentSection({ postId, initialComments = [], onComment
               Show less
             </button>
           )}
+        </div>
+      ) : (
+        <div className="px-4 pb-4">
+          <div className="text-center py-4">
+            <span className="text-sm text-gray-500">No comments yet. Be the first to comment!</span>
+          </div>
         </div>
       )}
     </div>

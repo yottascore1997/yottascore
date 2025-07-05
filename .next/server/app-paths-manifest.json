@@ -1,8 +1,11 @@
 {
-  "/api/student/my-exams/route": "app/api/student/my-exams/route.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/student/exams/route": "app/api/student/exams/route.js",
+  "/api/student/wallet/route": "app/api/student/wallet/route.js",
+  "/api/student/question-of-the-day/route": "app/api/student/question-of-the-day/route.js",
   "/student/dashboard/page": "app/student/dashboard/page.js",
+  "/student/profile/page": "app/student/profile/page.js",
   "/student/feed/page": "app/student/feed/page.js",
-  "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/student/groups/page": "app/student/groups/page.js",
-  "/student/profile/page": "app/student/profile/page.js"
+  "/student/messages/page": "app/student/messages/page.js"
 }

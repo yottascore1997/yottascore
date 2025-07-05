@@ -288,6 +288,11 @@ export default function FeedPage() {
     setActiveCommentSection(prev => (prev === postId ? null : postId))
   }
 
+  const handleCommentAdded = () => {
+    // Refresh posts to update comment counts
+    fetchPosts()
+  }
+
   const timeSince = (date: string) => {
     const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
     let interval = seconds / 31536000
@@ -674,7 +679,11 @@ export default function FeedPage() {
               {/* Comment Section */}
               {activeCommentSection === post.id && (
                 <div className="p-4 bg-gray-50 border-t border-gray-200">
-                  <CommentSection postId={post.id} />
+                  <CommentSection 
+                    postId={post.id} 
+                    initialComments={post.comments}
+                    onCommentAdded={handleCommentAdded}
+                  />
                 </div>
               )}
             </div>

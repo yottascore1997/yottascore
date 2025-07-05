@@ -137,6 +137,12 @@ export default function MessagesPage() {
 
     // --- Listener for new messages ---
     const handleNewMessage = (newMessage: Message) => {
+      // Check if newMessage and sender exist before accessing properties
+      if (!newMessage || !newMessage.sender) {
+        console.warn('Received message with missing sender:', newMessage)
+        return
+      }
+      
       // If this chat is currently open, add the message to the state
       if (selectedUserRef.current && newMessage.sender.id === selectedUserRef.current.id) {
         setMessages(prev => [...prev, newMessage])
@@ -151,9 +157,14 @@ export default function MessagesPage() {
     const handleMessagesRead = ({ readerId }: { readerId: string }) => {
       if (selectedUserRef.current && selectedUserRef.current.id === readerId) {
         setMessages(prev =>
-          prev.map(msg =>
-            msg.sender.id === currentUserRef.current?.id ? { ...msg, isRead: true } : msg
-          )
+          prev.map(msg => {
+            // Check if msg and sender exist before accessing properties
+            if (!msg || !msg.sender) {
+              console.warn('Message with missing sender found in handleMessagesRead:', msg);
+              return msg; // Return unchanged message
+            }
+            return msg.sender.id === currentUserRef.current?.id ? { ...msg, isRead: true } : msg;
+          })
         )
       }
     }
@@ -171,7 +182,14 @@ export default function MessagesPage() {
   useEffect(() => {
     if (socket && isConnected && selectedUserRef.current && currentUserRef.current) {
       const unreadMessages = messagesRef.current.filter(
-        (msg) => msg.receiver.id === currentUserRef.current?.id && !msg.isRead
+        (msg) => {
+          // Check if msg and receiver exist before accessing properties
+          if (!msg || !msg.receiver) {
+            console.warn('Message with missing receiver found in unreadMessages filter:', msg);
+            return false; // Skip this message
+          }
+          return msg.receiver.id === currentUserRef.current?.id && !msg.isRead;
+        }
       )
 
       if (unreadMessages.length > 0) {
@@ -196,9 +214,14 @@ export default function MessagesPage() {
 
             // 3. Update the state locally for the current user
             setMessages(prev => 
-              prev.map(msg => 
-                msg.receiver.id === currentUserRef.current?.id ? { ...msg, isRead: true } : msg
-              )
+              prev.map(msg => {
+                // Check if msg and receiver exist before accessing properties
+                if (!msg || !msg.receiver) {
+                  console.warn('Message with missing receiver found in setMessages:', msg);
+                  return msg; // Return unchanged message
+                }
+                return msg.receiver.id === currentUserRef.current?.id ? { ...msg, isRead: true } : msg;
+              })
             )
 
           } catch (error) {
@@ -252,9 +275,14 @@ export default function MessagesPage() {
         
         // If no direct messages, check for message requests from this user
         if (data.length === 0) {
-          const pendingRequest = messageRequests.find(req => 
-            req.sender.id === userId && req.status === 'PENDING'
-          )
+          const pendingRequest = messageRequests.find(req => {
+            // Check if req and sender exist before accessing properties
+            if (!req || !req.sender) {
+              console.warn('Message request with missing sender found:', req);
+              return false; // Skip this request
+            }
+            return req.sender.id === userId && req.status === 'PENDING';
+          })
           if (pendingRequest) {
             // Show the pending request as a message in the chat
             setMessages([{
@@ -440,10 +468,12 @@ export default function MessagesPage() {
         // 3. Replace the optimistic message with the real one from the server
         setMessages(prev => prev.map(msg => (msg.id === tempId ? result.message : msg)))
         
-        // 4. Emit the saved message to the other user via WebSocket (only if connected)
+        // 4. Emit WebSocket event for real-time delivery
         if (socket && isConnected) {
-          socket.emit('private_message', { message: result.message })
+          socket.emit('private_message', { message: result.message });
+          console.log('Emitted private_message event:', result.message.id);
         }
+
       } else if (result.type === 'request') {
         // Message was sent as a request - remove the optimistic message
         setMessages(prev => prev.filter(msg => msg.id !== tempId))
@@ -576,9 +606,10 @@ export default function MessagesPage() {
       const savedMessage = await response.json();
       setMessages(prev => prev.map(msg => (msg.id === tempId ? savedMessage : msg)));
       
-      // Emit the saved message to the other user via WebSocket (only if connected)
+      // Emit WebSocket event for real-time delivery
       if (socket && isConnected) {
         socket.emit('private_message', { message: savedMessage });
+        console.log('Emitted private_message event for file:', savedMessage.id);
       }
 
     } catch (error) {
@@ -613,6 +644,120 @@ export default function MessagesPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Manual refresh function
+  const refreshMessages = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`/api/student/messages/${selectedUser.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const newMessages = await response.json();
+        setMessages(newMessages);
+        fetchConversations();
+      }
+    } catch (error) {
+      console.error('Error refreshing messages:', error);
+    }
+  };
+
+  // Real-time message updates using WebSocket events (no polling)
+  useEffect(() => {
+    console.log('Setting up WebSocket listeners:', { 
+      socket: !!socket, 
+      isConnected, 
+      currentUser: !!currentUser 
+    });
+    
+    if (!socket || !isConnected || !currentUser) return;
+
+    // Listen for new messages in real-time
+    const handleNewMessage = (message: Message) => {
+      console.log('Received new_message event:', message);
+      
+      // Check if message and sender/receiver exist before accessing properties
+      if (!message || !message.sender || !message.receiver) {
+        console.warn('Received message with missing sender or receiver:', message);
+        return;
+      }
+      
+      // If this message is for the currently open chat
+      if (selectedUser && 
+          (message.sender.id === selectedUser.id || message.receiver.id === selectedUser.id)) {
+        console.log('Message is for current chat, adding to messages');
+        setMessages(prev => {
+          // Check if message already exists to avoid duplicates
+          const exists = prev.some(msg => msg.id === message.id);
+          if (!exists) {
+            return [...prev, message];
+          }
+          console.log('Message already exists, not adding duplicate');
+          return prev;
+        });
+        
+        // Update conversations list to show latest message
+        fetchConversations();
+      } else if (!selectedUser) {
+        // If no chat is open, just update conversations
+        console.log('No chat open, updating conversations');
+        fetchConversations();
+      } else {
+        console.log('Message not for current chat, ignoring');
+      }
+    };
+
+    // Listen for message read receipts
+    const handleMessageRead = (data: { readerId: string, otherUserId: string }) => {
+      if (selectedUser && data.otherUserId === selectedUser.id) {
+        setMessages(prev =>
+          prev.map(msg => {
+            // Check if msg and sender exist before accessing properties
+            if (!msg || !msg.sender) {
+              console.warn('Message with missing sender found in handleMessageRead:', msg);
+              return msg; // Return unchanged message
+            }
+            return msg.sender.id === currentUser.id ? { ...msg, isRead: true } : msg;
+          })
+        );
+      }
+    };
+
+    // Listen for typing indicators
+    const handleTypingStart = () => {
+      if (selectedUser) {
+        setIsTyping(true);
+      }
+    };
+
+    const handleTypingStop = () => {
+      if (selectedUser) {
+        setIsTyping(false);
+      }
+    };
+
+
+
+    console.log('Registering socket event listeners');
+    socket.on('new_message', handleNewMessage);
+    socket.on('messages_were_read', handleMessageRead);
+    socket.on('user_typing', handleTypingStart);
+    socket.on('user_stopped_typing', handleTypingStop);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+      socket.off('messages_were_read', handleMessageRead);
+      socket.off('user_typing', handleTypingStart);
+      socket.off('user_stopped_typing', handleTypingStop);
+    };
+  }, [socket, isConnected, currentUser, selectedUser]);
 
   if (loading) {
     return (
@@ -685,12 +830,33 @@ export default function MessagesPage() {
                 </p>
               </div>
             </div>
+            
+
+            
+            {/* Refresh Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refreshMessages}
+              className="p-2 rounded-full text-gray-500 hover:text-blue-600"
+              title="Refresh messages"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </Button>
           </div>
         </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {messages.map((message, index) => {
+            // Check if message and sender exist before accessing properties
+            if (!message || !message.sender) {
+              console.warn('Message with missing sender found:', message);
+              return null; // Skip rendering this message
+            }
+            
             const isOwn = message.sender.id !== selectedUser.id
             
             return (

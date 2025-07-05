@@ -2,7 +2,6 @@ import { Server as NetServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma'; // Use the correctly initialized prisma client
-import { setSocketServer } from '@/lib/socket';
 
 export type NextApiResponseWithSocket = NextApiResponse & {
   socket: {
@@ -17,6 +16,88 @@ const matches: Record<string, string> = {}; // Store matched pairs
 const quizAnswers: Record<string, { [socketId: string]: number[] }> = {}; // quizId -> { socketId: answers[] }
 const quizQuestions: Record<string, any[]> = {}; // quizId -> questions[]
 const userSockets: Record<string, string> = {}; // { userId: socketId }
+
+// Global variable to store the socket server instance
+let globalIo: SocketIOServer | null = null;
+
+export const setSocketServer = (io: SocketIOServer) => {
+  globalIo = io;
+};
+
+export const getSocketServer = (): SocketIOServer | null => {
+  return globalIo;
+};
+
+export const initSocket = (res: NextApiResponseWithSocket) => {
+  if (!res.socket.server.io) {
+    console.log('Initializing Socket.IO server...');
+    
+    const io = new SocketIOServer(res.socket.server, {
+      path: '/api/socket',
+      addTrailingSlash: false,
+      cors: {
+        origin: '*',
+        methods: ['GET', 'POST'],
+        credentials: true
+      },
+    });
+
+    io.on('connection', (socket) => {
+      console.log('Client connected:', socket.id);
+
+      // Handle user authentication
+      socket.on('authenticate', (data) => {
+        console.log('User authentication:', data);
+        // You can add JWT verification here
+      });
+
+      // Handle joining rooms
+      socket.on('join-room', (roomId) => {
+        socket.join(roomId);
+        console.log(`User ${socket.id} joined room: ${roomId}`);
+      });
+
+      // Handle leaving rooms
+      socket.on('leave-room', (roomId) => {
+        socket.leave(roomId);
+        console.log(`User ${socket.id} left room: ${roomId}`);
+      });
+
+      // Handle battle quiz events
+      socket.on('join-battle', (data) => {
+        console.log('Join battle request:', data);
+        // Handle battle joining logic here
+      });
+
+      socket.on('submit-answer', (data) => {
+        console.log('Answer submitted:', data);
+        // Handle answer submission logic here
+      });
+
+      // Handle live exam events
+      socket.on('join-live-exam', (examId) => {
+        socket.join(`exam-${examId}`);
+        console.log(`User ${socket.id} joined live exam: ${examId}`);
+      });
+
+      // Handle chat messages
+      socket.on('send-message', (data) => {
+        console.log('Message received:', data);
+        // Broadcast message to room
+        socket.to(data.roomId).emit('new-message', data);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+      });
+    });
+
+    res.socket.server.io = io;
+    setSocketServer(io); // Store the instance globally
+    console.log('Socket.IO server initialized successfully');
+  }
+  return res.socket.server.io;
+};
 
 export function initSocketServer(res: NextApiResponseWithSocket) {
   if (!res.socket.server.io) {
@@ -54,6 +135,13 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
 
       socket.on('private_message', (data) => {
         const { message } = data;
+        
+        // Check if message and receiver exist before accessing properties
+        if (!message || !message.receiver) {
+          console.warn('Received private_message with missing receiver:', message);
+          return;
+        }
+        
         const receiverId = message.receiver.id;
         const receiverSocketId = userSockets[receiverId];
 

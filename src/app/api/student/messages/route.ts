@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import jwt from 'jsonwebtoken'
+import { getSocketServer } from '@/lib/socket-server'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
@@ -16,14 +17,29 @@ export async function GET(req: Request) {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
     const currentUserId = decoded.userId
 
-    // 1. Find all messages involving the current user
+    // Get the last update time from query params for efficient polling
+    const { searchParams } = new URL(req.url)
+    const lastUpdate = searchParams.get('lastUpdate')
+
+    // 1. Find all messages involving the current user (with optional time filter)
+    const whereClause: any = {
+      OR: [{ senderId: currentUserId }, { receiverId: currentUserId }],
+    };
+
+    // If lastUpdate is provided, only fetch messages after that time
+    if (lastUpdate) {
+      whereClause.createdAt = {
+        gt: new Date(lastUpdate)
+      };
+    }
+
     const messages = await prisma.directMessage.findMany({
-      where: {
-        OR: [{ senderId: currentUserId }, { receiverId: currentUserId }],
-      },
+      where: whereClause,
       orderBy: {
         createdAt: 'desc',
       },
+      // Limit results for better performance
+      take: lastUpdate ? 100 : 1000,
     })
 
     // 2. Group messages by the other participant to build the conversation list
@@ -47,7 +63,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // 3. Get user details for each conversation partner
+    // 3. Get user details for each conversation partner (batch query for efficiency)
     const partnerIds = Array.from(conversationPartners.keys())
     if (partnerIds.length === 0) {
       return NextResponse.json([])
@@ -74,7 +90,12 @@ export async function GET(req: Request) {
       }
     }).sort((a, b) => new Date(b.latestMessage.createdAt).getTime() - new Date(a.latestMessage.createdAt).getTime())
 
-    return NextResponse.json(conversations)
+    // Add cache headers for better performance
+    const response = NextResponse.json(conversations)
+    response.headers.set('Cache-Control', 'private, max-age=30') // Cache for 30 seconds
+    response.headers.set('X-Last-Update', new Date().toISOString())
+    
+    return response
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
@@ -160,6 +181,8 @@ export async function POST(req: Request) {
           }
         }
       })
+
+
 
       return NextResponse.json({ type: 'direct', message })
     } else {
