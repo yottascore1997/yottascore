@@ -37,6 +37,20 @@ export function useSocket() {
       console.log('Socket connected:', newSocket.id);
       setIsConnected(true);
       setError(null);
+      
+      // Register user with socket server
+      if (token) {
+        try {
+          // Decode JWT to get userId
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload.userId) {
+            newSocket.emit('register_user', payload.userId);
+            console.log('User registered with socket server:', payload.userId);
+          }
+        } catch (error) {
+          console.error('Error decoding token:', error);
+        }
+      }
     });
 
     newSocket.on('disconnect', () => {

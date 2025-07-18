@@ -20,7 +20,12 @@ interface BattleQuiz {
   entryAmount: number;
   categoryId: string;
   questionCount: number;
+  timePerQuestion: number;
   isActive: boolean;
+  isPrivate: boolean;
+  roomCode?: string;
+  maxPlayers: number;
+  status: 'WAITING' | 'ACTIVE' | 'FINISHED';
   createdAt: string;
   updatedAt: string;
   category?: {
@@ -32,6 +37,7 @@ interface BattleQuiz {
     participants: number;
     winners: number;
     questions: number;
+    matches: number;
   };
 }
 
@@ -45,7 +51,10 @@ export default function AdminBattleQuizzes() {
     description: "",
     entryAmount: "",
     categoryId: "",
-    questionCount: 10
+    questionCount: 10,
+    timePerQuestion: 15,
+    isPrivate: false,
+    maxPlayers: 2
   });
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -133,7 +142,10 @@ export default function AdminBattleQuizzes() {
           description: form.description,
           entryAmount: parseFloat(form.entryAmount),
           categoryId: form.categoryId,
-          questionCount: form.questionCount
+          questionCount: form.questionCount,
+          timePerQuestion: form.timePerQuestion,
+          isPrivate: form.isPrivate,
+          maxPlayers: form.maxPlayers
         }),
       });
       
@@ -146,7 +158,10 @@ export default function AdminBattleQuizzes() {
           description: "", 
           entryAmount: "", 
           categoryId: categories[0]?.id || "",
-          questionCount: 10
+          questionCount: 10,
+          timePerQuestion: 15,
+          isPrivate: false,
+          maxPlayers: 2
         });
         
         // Refresh the quiz list
@@ -231,11 +246,73 @@ export default function AdminBattleQuizzes() {
             Manage Question Bank
           </button>
           <button
+            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors"
+            onClick={() => window.location.href = '/admin/battle-quizzes/leaderboard'}
+          >
+            View Leaderboard
+          </button>
+          <button
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
             onClick={() => setShowModal(true)}
           >
             Create New Quiz
           </button>
+        </div>
+      </div>
+
+      {/* Battle Quiz Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Quizzes</p>
+              <p className="text-2xl font-semibold text-gray-900">{quizzes.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Active Quizzes</p>
+              <p className="text-2xl font-semibold text-gray-900">{quizzes.filter(q => q.isActive).length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Participants</p>
+              <p className="text-2xl font-semibold text-gray-900">{quizzes.reduce((sum, q) => sum + q._count.participants, 0)}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Matches</p>
+              <p className="text-2xl font-semibold text-gray-900">{quizzes.reduce((sum, q) => sum + q._count.matches, 0)}</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -296,9 +373,34 @@ export default function AdminBattleQuizzes() {
                     <div className="flex items-center space-x-6 mt-3 text-sm text-gray-500">
                       <span>Entry: ₹{quiz.entryAmount}</span>
                       <span>{quiz.questionCount} Questions</span>
+                      <span>{quiz.timePerQuestion}s per Q</span>
                       <span>{quiz._count.participants} Participants</span>
                       <span>{quiz._count.winners} Winners</span>
+                      <span>{quiz._count.matches} Matches</span>
                       <span>Created: {new Date(quiz.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    {quiz.isPrivate && quiz.roomCode && (
+                      <div className="mt-2 text-sm text-blue-600">
+                        <span className="font-medium">Private Room:</span> {quiz.roomCode}
+                      </div>
+                    )}
+                    <div className="mt-2 flex items-center space-x-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        quiz.isPrivate 
+                          ? 'bg-purple-100 text-purple-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {quiz.isPrivate ? 'Private Room' : 'Public Quiz'}
+                      </span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        quiz.status === 'ACTIVE' 
+                          ? 'bg-green-100 text-green-800'
+                          : quiz.status === 'FINISHED'
+                          ? 'bg-gray-100 text-gray-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {quiz.status}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -394,6 +496,60 @@ export default function AdminBattleQuizzes() {
                   Questions will be randomly selected from the chosen category
                 </p>
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Time Per Question (seconds)</label>
+                <input
+                  type="number"
+                  className="w-full border rounded px-3 py-2"
+                  value={form.timePerQuestion}
+                  onChange={e => setForm(f => ({ ...f, timePerQuestion: parseInt(e.target.value) || 15 }))}
+                  required
+                  min={5}
+                  max={60}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Quiz Type</label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="quizType"
+                      checked={!form.isPrivate}
+                      onChange={() => setForm(f => ({ ...f, isPrivate: false }))}
+                      className="mr-2"
+                    />
+                    <span>Public Battle Quiz (Auto-matchmaking)</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="quizType"
+                      checked={form.isPrivate}
+                      onChange={() => setForm(f => ({ ...f, isPrivate: true }))}
+                      className="mr-2"
+                    />
+                    <span>Private Room (Invite friends)</span>
+                  </label>
+                </div>
+              </div>
+              {form.isPrivate && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Max Players</label>
+                  <input
+                    type="number"
+                    className="w-full border rounded px-3 py-2"
+                    value={form.maxPlayers}
+                    onChange={e => setForm(f => ({ ...f, maxPlayers: parseInt(e.target.value) || 2 }))}
+                    required
+                    min={2}
+                    max={4}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Maximum number of players in private room
+                  </p>
+                </div>
+              )}
               {error && <div className="text-red-600 text-sm">{error}</div>}
               <div className="flex justify-end gap-2 mt-4">
                 <button 

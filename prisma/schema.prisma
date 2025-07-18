@@ -72,6 +72,8 @@ model User {
   player1Matches BattleQuizMatch[] @relation("Player1Matches")
   player2Matches BattleQuizMatch[] @relation("Player2Matches")
   wonMatches BattleQuizMatch[] @relation("WonMatches")
+  battleQuizLeaderboard BattleQuizLeaderboard?
+  battleStats UserBattleStats?
   
   // Question Bank Relations
   createdQuestionCategories QuestionCategory[]
@@ -713,7 +715,12 @@ model BattleQuiz {
   entryAmount Float
   categoryId  String?   // Reference to question category
   questionCount Int     @default(10) // Number of questions to pick randomly
+  timePerQuestion Int   @default(15) // Time limit per question in seconds
   isActive    Boolean   @default(true)
+  isPrivate   Boolean   @default(false) // For private room matches
+  roomCode    String?   @unique // For private room invites
+  maxPlayers  Int       @default(2) // For future expansion to team battles
+  status      BattleQuizStatus @default(WAITING) // Quiz status
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
@@ -733,6 +740,8 @@ model BattleQuizQuestion {
   options     Json      // Array of options
   correct     Int       // Index of correct option
   marks       Int       @default(1)
+  difficulty  QuestionDifficulty @default(MEDIUM)
+  explanation String?   @db.Text
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
@@ -748,7 +757,8 @@ model BattleQuizParticipant {
   matchId   String?
   status    BattleParticipantStatus @default(WAITING)
   score     Int       @default(0)
-  answers   Json
+  answers   Json      // Store answers with timestamps
+  responseTimes Json? // Store response time for each question
   joinedAt  DateTime  @default(now())
   
   // Relations
@@ -785,10 +795,14 @@ model BattleQuizMatch {
   totalRounds   Int       @default(5)
   player1Score  Int       @default(0)
   player2Score  Int       @default(0)
+  player1Answers Json?    // Store answers with timestamps
+  player2Answers Json?    // Store answers with timestamps
   startTime     DateTime  @default(now())
   endTime       DateTime?
   winnerId      String?
   prizeAmount   Float?
+  isPrivate     Boolean   @default(false)
+  roomCode      String?   // For private matches
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
@@ -800,10 +814,78 @@ model BattleQuizMatch {
   participants  BattleQuizParticipant[]
 }
 
+// Global Leaderboard System
+model BattleQuizLeaderboard {
+  id          String    @id @default(cuid())
+  userId      String
+  totalMatches Int      @default(0)
+  wins        Int       @default(0)
+  losses      Int       @default(0)
+  draws       Int       @default(0)
+  totalScore  Int       @default(0)
+  averageScore Float    @default(0)
+  winStreak   Int       @default(0)
+  bestWinStreak Int     @default(0)
+  totalPrizeMoney Float @default(0)
+  level       Int       @default(1)
+  experience  Int       @default(0)
+  lastUpdated DateTime  @default(now())
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId])
+  @@index([totalScore])
+  @@index([wins])
+  @@index([level])
+}
+
+// User Stats for Battle Quiz
+model UserBattleStats {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  totalMatches      Int       @default(0)
+  wins              Int       @default(0)
+  losses            Int       @default(0)
+  draws             Int       @default(0)
+  winRate           Float     @default(0)
+  totalScore        Int       @default(0)
+  averageScore      Float     @default(0)
+  fastestAnswer     Int?      // Fastest answer time in milliseconds
+  totalPrizeMoney   Float     @default(0)
+  currentStreak     Int       @default(0)
+  bestStreak        Int       @default(0)
+  level             Int       @default(1)
+  experience        Int       @default(0)
+  experienceToNext  Int       @default(100)
+  favoriteCategory  String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 enum BattleMatchStatus {
   WAITING
   STARTING
   PLAYING
+  FINISHED
+  CANCELLED
+  TIMEOUT
+}
+
+enum BattleParticipantStatus {
+  WAITING
+  READY
+  PLAYING
+  FINISHED
+  DISCONNECTED
+}
+
+enum BattleQuizStatus {
+  WAITING
+  ACTIVE
   FINISHED
   CANCELLED
 }
@@ -848,13 +930,6 @@ enum QuestionDifficulty {
   EASY
   MEDIUM
   HARD
-}
-
-enum BattleParticipantStatus {
-  WAITING
-  READY
-  PLAYING
-  FINISHED
 }
 
 model Story {

@@ -46,7 +46,8 @@ export async function GET(req: Request) {
           select: {
             participants: true,
             winners: true,
-            questions: true
+            questions: true,
+            matches: true
           }
         }
       },
@@ -98,9 +99,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { title, description, entryAmount, categoryId, questionCount = 10 } = await req.json();
+    const { 
+      title, 
+      description, 
+      entryAmount, 
+      categoryId, 
+      questionCount = 10,
+      timePerQuestion = 15,
+      isPrivate = false,
+      maxPlayers = 2
+    } = await req.json();
     if (!title || !entryAmount || !categoryId) {
       return NextResponse.json({ message: 'Title, entry amount, and category are required.' }, { status: 400 });
+    }
+
+    // Generate room code for private quizzes
+    let roomCode = null;
+    if (isPrivate) {
+      roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     }
 
     // Verify category exists and belongs to admin
@@ -138,6 +154,11 @@ export async function POST(req: NextRequest) {
         entryAmount: parseFloat(entryAmount),
         categoryId,
         questionCount,
+        timePerQuestion,
+        isPrivate,
+        maxPlayers,
+        roomCode,
+        status: 'WAITING',
         createdById: decoded.userId,
       },
     });

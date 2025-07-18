@@ -1,60 +1,223 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import { withCORS } from '@/lib/cors';
+import { prisma } from '@/lib/prisma';
 
-export const GET = withCORS(async (req: Request) => {
+// GET - Fetch battle quiz leaderboard and user stats
+export async function GET(request: NextRequest) {
   try {
-    const token = req.headers.get('authorization')?.split(' ')[1];
+    const token = request.headers.get('authorization')?.split(' ')[1];
     if (!token) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
     const decoded = await verifyToken(token);
     if (!decoded) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's wallet balance
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: { wallet: true }
-    });
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type');
 
-    // Get active battle quizzes
-    const quizzes = await prisma.battleQuiz.findMany({
-      where: {
-        isActive: true,
-      },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            color: true
+    if (type === 'leaderboard') {
+      // Fetch global leaderboard
+      const leaderboard = await prisma.user.findMany({
+        where: {
+          battleStats: {
+            isNot: null
           }
         },
+        select: {
+          id: true,
+          name: true,
+          profilePhoto: true,
+          battleStats: {
+            select: {
+              wins: true,
+              totalMatches: true,
+              winRate: true,
+              level: true,
+              currentStreak: true
+            }
+          }
+        },
+        orderBy: [
+          { battleStats: { level: 'desc' } },
+          { battleStats: { wins: 'desc' } },
+          { battleStats: { winRate: 'desc' } }
+        ],
+        take: 50
+      });
+
+      return NextResponse.json(leaderboard.map((user, index) => ({
+        rank: index + 1,
+        user: {
+          id: user.id,
+          name: user.name,
+          profilePhoto: user.profilePhoto
+        },
+        stats: user.battleStats!
+      })));
+    }
+
+    if (type === 'stats') {
+      // Fetch user's battle stats
+      const userStats = await prisma.userBattleStats.findUnique({
+        where: { userId: decoded.userId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              wallet: true
+            }
+          }
+        }
+      });
+
+      if (!userStats) {
+        // Create default stats for new user
+        const defaultStats = await prisma.userBattleStats.create({
+          data: {
+            userId: decoded.userId,
+            totalMatches: 0,
+            wins: 0,
+            losses: 0,
+            winRate: 0,
+            level: 1,
+            experience: 0,
+            currentStreak: 0,
+            longestStreak: 0,
+            totalPrizeMoney: 0,
+            averageResponseTime: 0,
+            fastestAnswer: 0,
+            totalCorrectAnswers: 0
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                wallet: true
+              }
+            }
+          }
+        });
+
+        return NextResponse.json({
+          user: defaultStats.user,
+          battleStats: defaultStats
+        });
+      }
+
+      return NextResponse.json({
+        user: userStats.user,
+        battleStats: userStats
+      });
+    }
+
+    // Default: return available categories for battle quiz
+    const categories = await prisma.questionCategory.findMany({
+      select: {
+        id: true,
+        name: true,
+        color: true,
         _count: {
           select: {
-            participants: true,
-            winners: true
+            questions: true
           }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
+      where: {
+        questions: {
+          some: {}
+        }
+      }
+    });
+
+    return NextResponse.json(categories.map((cat: any) => ({
+      id: cat.id,
+      name: cat.name,
+      color: cat.color,
+      questionCount: cat._count.questions
+    })));
+
+  } catch (error) {
+    console.error('Error in battle quiz API:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Create private room
+export async function POST(request: NextRequest) {
+  try {
+    const token = request.headers.get('authorization')?.split(' ')[1];
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const decoded = await verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { categoryId, timePerQuestion = 15, questionCount = 10 } = body;
+
+    // Generate unique room code
+    const roomCode = generateRoomCode();
+
+    // Create private room
+    const room = await prisma.battleQuiz.create({
+      data: {
+        title: `Private Room ${roomCode}`,
+        description: 'Private battle room',
+        entryAmount: 0, // Free for private rooms
+        categoryId,
+        questionCount,
+        timePerQuestion,
+        isPrivate: true,
+        roomCode,
+        maxPlayers: 2,
+        createdById: decoded.userId,
+        status: 'WAITING'
+      }
+    });
+
+    // Add creator as participant
+    await prisma.battleQuizParticipant.create({
+      data: {
+        battleQuizId: room.id,
+        userId: decoded.userId,
+        status: 'JOINED',
+        isHost: true
       }
     });
 
     return NextResponse.json({
-      quizzes,
-      walletBalance: user?.wallet || 0
+      roomCode: room.roomCode,
+      roomId: room.id,
+      categoryId,
+      timePerQuestion,
+      questionCount
     });
 
   } catch (error) {
-    console.error('Battle quiz fetch error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('Error creating private room:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
-}); 
+}
+
+function generateRoomCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+} 
