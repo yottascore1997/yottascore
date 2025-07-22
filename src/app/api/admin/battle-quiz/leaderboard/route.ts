@@ -18,9 +18,9 @@ interface User {
       title: string;
     };
   }>;
-  battleQuizWinnings: Array<{
+  battleQuizWins: Array<{
     id: string;
-    amount: number;
+    prizeAmount: number;
   }>;
 }
 
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
             battleQuiz: true
           }
         },
-        battleQuizWinnings: true
+        battleQuizWins: true
       }
     }) as User[];
 
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       const totalWins = participations.filter((p) => p.isWinner).length;
       const totalLosses = totalMatches - totalWins;
       const winRate = totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
-      const totalEarnings = user.battleQuizWinnings.reduce((sum: number, w) => sum + w.amount, 0);
+      const totalEarnings = user.battleQuizWins.reduce((sum: number, w) => sum + w.prizeAmount, 0);
 
       // Calculate streaks
       let currentStreak = 0;
