@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Search, MessageCircle, Send, ArrowLeft, Plus, Paperclip, Loader2, File } from 'lucide-react'
 import { useSocket } from '@/hooks/useSocket'
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 
 interface User {
   id: string
@@ -45,7 +48,7 @@ interface Conversation {
   unreadCount: number
 }
 
-export default function MessagesPage() {
+function MessagesPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -1128,5 +1131,13 @@ export default function MessagesPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MessagesPageContent />
+    </Suspense>
   )
 } 

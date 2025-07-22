@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disable static generation for pages that use dynamic features
+  experimental: {
+    appDir: true,
+  },
+  
+  // Configure dynamic routes
   async headers() {
     return [
       {
@@ -21,6 +27,11 @@ const nextConfig = {
         ],
       },
     ];
+  },
+  
+  // Disable static generation for problematic pages
+  async generateStaticParams() {
+    return [];
   },
 };
 

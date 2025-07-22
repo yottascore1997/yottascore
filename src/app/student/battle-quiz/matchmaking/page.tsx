@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,9 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 
 interface User {
   id: string;
@@ -31,7 +34,7 @@ interface MatchmakingState {
   estimatedWait: number;
 }
 
-export default function MatchmakingPage() {
+function MatchmakingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { socket, isConnected } = useSocket();
@@ -393,5 +396,13 @@ export default function MatchmakingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MatchmakingPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MatchmakingPageContent />
+    </Suspense>
   );
 } 
