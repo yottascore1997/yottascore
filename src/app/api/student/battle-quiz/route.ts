@@ -86,11 +86,11 @@ export async function GET(request: NextRequest) {
             level: 1,
             experience: 0,
             currentStreak: 0,
-            longestStreak: 0,
+            bestStreak: 0,
             totalPrizeMoney: 0,
-            averageResponseTime: 0,
+            averageScore: 0,
             fastestAnswer: 0,
-            totalCorrectAnswers: 0
+            totalScore: 0
           },
           include: {
             user: {
@@ -189,10 +189,9 @@ export async function POST(request: NextRequest) {
     // Add creator as participant
     await prisma.battleQuizParticipant.create({
       data: {
-        battleQuizId: room.id,
+        quizId: room.id,
         userId: decoded.userId,
-        status: 'JOINED',
-        isHost: true
+        status: 'JOINED'
       }
     });
 

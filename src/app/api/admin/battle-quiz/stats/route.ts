@@ -38,19 +38,19 @@ export async function GET(request: NextRequest) {
       }),
       
       // Total matches (participations)
-      prisma.battleQuizParticipation.count({
+      prisma.battleQuizParticipant.count({
         where: {
-          battleQuiz: {
+          quiz: {
             createdById: decoded.userId
           }
         }
       }),
       
       // Total unique participants
-      prisma.battleQuizParticipation.groupBy({
+      prisma.battleQuizParticipant.groupBy({
         by: ['userId'],
         where: {
-          battleQuiz: {
+          quiz: {
             createdById: decoded.userId
           }
         },
@@ -60,38 +60,34 @@ export async function GET(request: NextRequest) {
       }).then(result => result.length),
       
       // Total winnings distributed
-      prisma.battleQuizWinning.aggregate({
+      prisma.battleQuizWinner.aggregate({
         where: {
-          battleQuiz: {
+          quiz: {
             createdById: decoded.userId
           }
         },
         _sum: {
-          amount: true
+          prizeAmount: true
         }
-      }).then(result => result._sum.amount || 0),
+      }).then(result => result._sum.prizeAmount || 0),
       
-      // Average win rate
-      prisma.battleQuizParticipation.groupBy({
-        by: ['userId'],
+      // Average win rate - we'll calculate this differently since there's no isWinner field
+      prisma.battleQuizParticipant.count({
         where: {
-          battleQuiz: {
+          quiz: {
             createdById: decoded.userId
           }
-        },
-        _count: {
-          id: true
-        },
-        _sum: {
-          isWinner: true
         }
-      }).then(results => {
-        if (results.length === 0) return 0;
-        
-        const totalMatches = results.reduce((sum, r) => sum + r._count.id, 0);
-        const totalWins = results.reduce((sum, r) => sum + (r._sum.isWinner || 0), 0);
-        
-        return totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
+      }).then(totalMatches => {
+        return prisma.battleQuizWinner.count({
+          where: {
+            quiz: {
+              createdById: decoded.userId
+            }
+          }
+        }).then(totalWins => {
+          return totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
+        });
       })
     ]);
 

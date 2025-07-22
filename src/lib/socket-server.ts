@@ -867,15 +867,17 @@ class BattleQuizSocketServer {
     try {
       const match = await prisma.battleQuizMatch.create({
         data: {
-          battleQuizId: 'temp', // You might want to create a proper battle quiz record
+          quizId: 'temp', // You might want to create a proper battle quiz record
           player1Id: player1.userId,
           player2Id: player2.userId,
           player1Score: score1,
           player2Score: score2,
           winnerId: winner === 'draw' ? null : (winner === 'player1' ? player1.userId : player2.userId),
-          totalQuestions: game.questions.length,
-          timePerQuestion: game.timePerQuestion,
-          categoryId: game.categoryId
+          status: 'FINISHED',
+          currentRound: 5,
+          totalRounds: 5,
+          startTime: new Date(),
+          endTime: new Date()
         }
       });
 
@@ -937,7 +939,7 @@ class BattleQuizSocketServer {
           experience: { increment: won ? 50 : 10 },
           totalPrizeMoney: { increment: won ? 10 : 0 },
           currentStreak: won ? { increment: 1 } : { set: 0 },
-          longestStreak: won ? { increment: 0 } : { increment: 0 } // This needs proper logic
+          bestStreak: won ? { increment: 0 } : { increment: 0 } // This needs proper logic
         },
         create: {
           userId,
@@ -948,11 +950,11 @@ class BattleQuizSocketServer {
           level: 1,
           experience: won ? 50 : 10,
           currentStreak: won ? 1 : 0,
-          longestStreak: won ? 1 : 0,
+          bestStreak: won ? 1 : 0,
           totalPrizeMoney: won ? 10 : 0,
-          averageResponseTime: 0,
+          averageScore: 0,
           fastestAnswer: 0,
-          totalCorrectAnswers: 0
+          totalScore: 0
         }
       });
     } catch (error) {
