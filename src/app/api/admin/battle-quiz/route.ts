@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
         data: {
           quizId: quiz.id,
           text: question.text,
-          options: question.options,
+          options: question.options || [],
           correct: question.correct,
           marks: 1,
         },
