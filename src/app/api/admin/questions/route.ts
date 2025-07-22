@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search') || '';
 
   const where = search
-    ? { question: { contains: search, mode: 'insensitive' } }
+    ? { text: { contains: search, mode: 'insensitive' } }
     : {};
 
   const [total, questions] = await Promise.all([
@@ -35,20 +35,18 @@ export async function GET(req: NextRequest) {
 // POST: Add a new question
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { question, options, correctAnswer, marks, category, examId } = body;
+  const { text, options, correct, examId } = body;
 
-  if (!question || !options || correctAnswer == null || !marks) {
+  if (!text || !options || correct == null) {
     return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
   }
 
   const newQuestion = await prisma.question.create({
     data: {
-      question,
+      text,
       options,
-      correctAnswer,
-      marks,
+      correct,
       examId: examId || undefined,
-      // You can add category if you have it in your schema
     },
   });
 
@@ -61,7 +59,7 @@ export async function DELETE(req: NextRequest) {
   // Try to get id from query param or body
   const { searchParams } = new URL(req.url);
   if (searchParams.has('id')) {
-    id = Number(searchParams.get('id'));
+    id = searchParams.get('id');
   } else {
     const body = await req.json().catch(() => null);
     id = body?.id;

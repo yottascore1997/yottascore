@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const statusStats = stats.reduce((acc, stat) => {
+    const statusStats = stats.reduce((acc: Record<string, number>, stat: any) => {
       acc[stat.status] = stat._count.status;
       return acc;
     }, {} as Record<string, number>);

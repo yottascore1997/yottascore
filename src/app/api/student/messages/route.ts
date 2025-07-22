@@ -81,14 +81,14 @@ export async function GET(req: Request) {
     })
 
     // 4. Combine partner details with conversation data
-    const conversations = partners.map(partner => {
+    const conversations = partners.map((partner: any) => {
       const convoData = conversationPartners.get(partner.id)!
       return {
         user: partner,
         latestMessage: convoData.latestMessage,
         unreadCount: convoData.unreadCount,
       }
-    }).sort((a, b) => new Date(b.latestMessage.createdAt).getTime() - new Date(a.latestMessage.createdAt).getTime())
+    }).sort((a: any, b: any) => new Date(b.latestMessage.createdAt).getTime() - new Date(a.latestMessage.createdAt).getTime())
 
     // Add cache headers for better performance
     const response = NextResponse.json(conversations)

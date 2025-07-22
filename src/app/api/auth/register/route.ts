@@ -83,7 +83,7 @@ const handler = async (req: Request) => {
     if (referralCode && referrerId) {
       try {
         // Use transaction to ensure data consistency
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
           // Create referral record
           await tx.referral.create({
             data: {
@@ -137,7 +137,7 @@ const handler = async (req: Request) => {
     console.error('Registration error details:', error)
     
     // Check for Prisma errors
-    if (error.code === 'P2002') {
+    if ((error as any).code === 'P2002') {
       return NextResponse.json(
         { message: 'Email already exists' },
         { status: 400 }
@@ -145,7 +145,7 @@ const handler = async (req: Request) => {
     }
 
     return NextResponse.json(
-      { message: 'Internal server error', error: error.message },
+      { message: 'Internal server error', error: (error as any).message },
       { status: 500 }
     )
   }

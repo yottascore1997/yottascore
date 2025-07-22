@@ -42,12 +42,17 @@ export async function GET(req: Request) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const activeUsers = await prisma.liveExamParticipant.count({
+    const activeUsersResult = await prisma.liveExamParticipant.groupBy({
+      by: ['userId'],
       where: {
         startedAt: { gte: thirtyDaysAgo }
       },
-      distinct: ['userId']
+      _count: {
+        userId: true
+      }
     });
+    
+    const activeUsers = activeUsersResult.length;
 
     // Get average score
     const averageScoreResult = await prisma.liveExamParticipant.aggregate({
@@ -153,7 +158,7 @@ export async function GET(req: Request) {
       }
     });
 
-    const activities = recentActivities.map(exam => ({
+    const activities = recentActivities.map((exam: any) => ({
       description: `New exam "${exam.title}" created by ${exam.createdBy.name}`,
       timestamp: exam.createdAt
     }));

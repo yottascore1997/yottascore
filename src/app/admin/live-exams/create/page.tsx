@@ -691,7 +691,7 @@ export default function CreateLiveExam() {
                         <div className="pl-12">
                           <DateTimePicker
                             value={formData.startTime}
-                            onChange={(date) => setFormData(prev => ({ ...prev, startTime: date }))}
+                            onChange={(date) => setFormData(prev => ({ ...prev, startTime: date || new Date() }))}
                           />
                         </div>
                       </div>
@@ -706,7 +706,7 @@ export default function CreateLiveExam() {
                         <div className="pl-12">
                           <DateTimePicker
                             value={formData.endTime}
-                            onChange={(date) => setFormData(prev => ({ ...prev, endTime: date }))}
+                            onChange={(date) => setFormData(prev => ({ ...prev, endTime: date || new Date() }))}
                           />
                         </div>
                       </div>

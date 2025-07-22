@@ -58,7 +58,7 @@ export const initSocket = (res: NextApiResponseWithSocket) => {
           // Get user details
           const user = await prisma.user.findUnique({
             where: { id: decoded.userId },
-            select: { id: true, name: true, level: true }
+            select: { id: true, name: true }
           });
 
           if (!user) {
@@ -69,11 +69,11 @@ export const initSocket = (res: NextApiResponseWithSocket) => {
           const userSocket: UserSocket = {
             userId: user.id,
             socketId: socket.id,
-            name: user.name,
-            level: user.level || 1
+            name: user.name || 'Anonymous User',
+            level: 1 // Default level
           };
 
-          this.userSockets.set(user.id, userSocket);
+          userSockets[user.id] = socket.id;
           socket.data.user = userSocket;
 
           socket.emit('authenticated', { user: userSocket });
@@ -277,8 +277,8 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
           const yourAnswers = quizAnswers[quizId][socket.id];
           const oppAnswers = quizAnswers[quizId][opponentId];
 
-          const yourScore = yourAnswers.reduce((acc, ans, idx) => acc + (ans === correctAnswers[idx] ? 1 : 0), 0);
-          const opponentScore = oppAnswers.reduce((acc, ans, idx) => acc + (ans === correctAnswers[idx] ? 1 : 0), 0);
+          const yourScore = yourAnswers.reduce((acc: number, ans: number, idx: number) => acc + (ans === correctAnswers[idx] ? 1 : 0), 0);
+          const opponentScore = oppAnswers.reduce((acc: number, ans: number, idx: number) => acc + (ans === correctAnswers[idx] ? 1 : 0), 0);
 
           let winner: 'you' | 'opponent' | 'draw' = 'draw';
           if (yourScore > opponentScore) winner = 'you';
@@ -396,7 +396,7 @@ class BattleQuizSocketServer {
           // Get user details
           const user = await prisma.user.findUnique({
             where: { id: decoded.userId },
-            select: { id: true, name: true, level: true }
+            select: { id: true, name: true }
           });
 
           if (!user) {
@@ -407,8 +407,8 @@ class BattleQuizSocketServer {
           const userSocket: UserSocket = {
             userId: user.id,
             socketId: socket.id,
-            name: user.name,
-            level: user.level || 1
+            name: user.name || 'Anonymous User',
+            level: 1 // Default level
           };
 
           this.userSockets.set(user.id, userSocket);
@@ -431,7 +431,7 @@ class BattleQuizSocketServer {
         }
 
         // Remove from any existing queue
-        this.matchmakingQueue = this.matchmakingQueue.filter(q => q.userId !== user.userId);
+        this.matchmakingQueue = this.matchmakingQueue.filter((q: MatchmakingQueue) => q.userId !== user.userId);
 
         // Add to queue
         const queueEntry: MatchmakingQueue = {
@@ -456,7 +456,7 @@ class BattleQuizSocketServer {
         const user = socket.data.user;
         if (!user) return;
 
-        this.matchmakingQueue = this.matchmakingQueue.filter(q => q.userId !== user.userId);
+        this.matchmakingQueue = this.matchmakingQueue.filter((q: MatchmakingQueue) => q.userId !== user.userId);
         socket.emit('matchmaking_cancelled');
       });
 
@@ -513,7 +513,7 @@ class BattleQuizSocketServer {
         const room = this.privateRooms.get(data.roomCode);
         if (!room) return;
 
-        room.players = room.players.filter(p => p.userId !== user.userId);
+        room.players = room.players.filter((p: UserSocket) => p.userId !== user.userId);
         socket.leave(data.roomCode);
 
         if (room.players.length === 0) {
@@ -633,7 +633,7 @@ class BattleQuizSocketServer {
         console.log('User disconnected:', user.name);
 
         // Remove from matchmaking queue
-        this.matchmakingQueue = this.matchmakingQueue.filter(q => q.userId !== user.userId);
+        this.matchmakingQueue = this.matchmakingQueue.filter((q: MatchmakingQueue) => q.userId !== user.userId);
 
         // Remove from private rooms
         this.privateRooms.forEach((room, roomCode) => {
@@ -675,7 +675,7 @@ class BattleQuizSocketServer {
 
     if (opponent) {
       // Remove both from queue
-      this.matchmakingQueue = this.matchmakingQueue.filter(q => 
+      this.matchmakingQueue = this.matchmakingQueue.filter((q: MatchmakingQueue) => 
         q.userId !== userId && q.userId !== opponent.userId
       );
 
@@ -767,14 +767,13 @@ class BattleQuizSocketServer {
   private async fetchQuestions(categoryId?: string, count: number = 10) {
     const whereClause = categoryId ? { categoryId } : {};
     
-    const questions = await prisma.question.findMany({
+    const questions = await prisma.questionBankItem.findMany({
       where: whereClause,
       select: {
         id: true,
         text: true,
         options: true,
         correct: true,
-        marks: true,
         difficulty: true
       },
       take: count
@@ -894,7 +893,7 @@ class BattleQuizSocketServer {
         experienceGained: winner === 'player1' ? 50 : 10,
         levelUp: false,
         stats: {
-          correctAnswers: game.answers[player1.userId]?.filter((ans, idx) => 
+          correctAnswers: game.answers[player1.userId]?.filter((ans: number, idx: number) => 
             ans === game.questions[idx]?.correct
           ).length || 0,
           averageResponseTime: this.calculateAverageResponseTime(game.responseTimes[player1.userId]),
@@ -910,7 +909,7 @@ class BattleQuizSocketServer {
         myScore: score2,
         opponentScore: score1,
         stats: {
-          correctAnswers: game.answers[player2.userId]?.filter((ans, idx) => 
+          correctAnswers: game.answers[player2.userId]?.filter((ans: number, idx: number) => 
             ans === game.questions[idx]?.correct
           ).length || 0,
           averageResponseTime: this.calculateAverageResponseTime(game.responseTimes[player2.userId]),
@@ -964,13 +963,13 @@ class BattleQuizSocketServer {
 
   private calculateAverageResponseTime(responseTimes: number[]): number {
     if (!responseTimes || responseTimes.length === 0) return 0;
-    return responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
+    return responseTimes.reduce((sum: number, time: number) => sum + time, 0) / responseTimes.length;
   }
 
   private getRoomData(room: PrivateRoom) {
     return {
       roomCode: room.roomCode,
-      host: room.players.find(p => p.userId === room.hostId),
+      host: room.players.find((p: any) => p.userId === room.hostId),
       players: room.players,
       maxPlayers: room.maxPlayers,
       status: room.status,

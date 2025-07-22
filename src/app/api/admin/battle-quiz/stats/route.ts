@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         _count: {
           userId: true
         }
-      }).then(result => result.length),
+      }).then((result: any) => result.length),
       
       // Total winnings distributed
       prisma.battleQuizWinner.aggregate({
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         _sum: {
           prizeAmount: true
         }
-      }).then(result => result._sum.prizeAmount || 0),
+      }).then((result: any) => result._sum.prizeAmount || 0),
       
       // Average win rate - we'll calculate this differently since there's no isWinner field
       prisma.battleQuizParticipant.count({
@@ -78,14 +78,14 @@ export async function GET(request: NextRequest) {
             createdById: decoded.userId
           }
         }
-      }).then(totalMatches => {
+      }).then((totalMatches: number) => {
         return prisma.battleQuizWinner.count({
           where: {
             quiz: {
               createdById: decoded.userId
             }
           }
-        }).then(totalWins => {
+        }).then((totalWins: number) => {
           return totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
         });
       })

@@ -44,7 +44,7 @@ export async function GET(req: Request) {
 
       console.log('[MY_EXAMS_GET] Live attempts found:', liveAttempts.length)
 
-      const transformedLiveAttempts = liveAttempts.map(attempt => ({
+      const transformedLiveAttempts = liveAttempts.map((attempt: any) => ({
         id: attempt.id,
         examId: attempt.examId,
         examName: attempt.exam.title,
@@ -83,7 +83,7 @@ export async function GET(req: Request) {
 
       console.log('[MY_EXAMS_GET] Practice attempts found:', practiceAttempts.length)
 
-      const transformedPracticeAttempts = practiceAttempts.map(attempt => ({
+      const transformedPracticeAttempts = practiceAttempts.map((attempt: any) => ({
         id: attempt.id,
         examId: attempt.examId,
         examName: attempt.exam.title,
@@ -122,7 +122,7 @@ export async function GET(req: Request) {
 
       console.log('[MY_EXAMS_GET] Battle attempts found:', battleAttempts.length)
 
-      const transformedBattleAttempts = battleAttempts.map(attempt => ({
+      const transformedBattleAttempts = battleAttempts.map((attempt: any) => ({
         id: attempt.id,
         examId: attempt.quizId,
         examName: attempt.quiz.title,

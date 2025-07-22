@@ -35,7 +35,7 @@ export default function StudentPracticeExamsPage() {
       if (res.ok) {
         const data = await res.json();
         setExams(data);
-        const cats = Array.from(new Set(data.map((e: PracticeExam) => e.category)));
+        const cats = Array.from(new Set(data.map((e: PracticeExam) => e.category))) as string[];
         setCategories(cats);
         setSelectedCategory(cats[0] || "");
       }

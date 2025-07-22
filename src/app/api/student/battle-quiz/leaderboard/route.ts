@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     });
 
     // Transform the data to match the expected format
-    const transformedLeaderboard = leaderboard.map((entry, index) => ({
+    const transformedLeaderboard = leaderboard.map((entry: any, index: number) => ({
       rank: index + 1,
       user: {
         id: entry.user.id,

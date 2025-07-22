@@ -41,7 +41,7 @@ export async function GET(req: Request) {
     });
 
     // Transform the data to match the expected format
-    const transformedCategories = categories.map(category => ({
+    const transformedCategories = categories.map((category: any) => ({
       id: category.id,
       name: category.name,
       color: category.color,

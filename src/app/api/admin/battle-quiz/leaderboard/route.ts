@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Add ranks
-    sortedData = sortedData.map((user, index) => ({
+    sortedData = sortedData.map((user: any, index: number) => ({
       ...user,
       rank: index + 1
     }));

@@ -91,7 +91,7 @@ export async function GET(req: Request) {
         totalReferralBonus: totalReferrals * 100 // ₹100 per referral
       },
       topReferrers,
-      recentReferrals: recentReferrals.map(ref => ({
+      recentReferrals: recentReferrals.map((ref: any) => ({
         id: ref.id,
         code: ref.code,
         joinedAt: ref.joinedAt,

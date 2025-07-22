@@ -32,7 +32,7 @@ export async function GET(req: Request) {
       }
     })
 
-    const followingIds = following.map(f => f.followingId)
+    const followingIds = following.map((f: any) => f.followingId)
 
     // Get stories from followed users that haven't expired
     const stories = await prisma.story.findMany({
@@ -76,7 +76,7 @@ export async function GET(req: Request) {
     })
 
     // Group stories by author
-    const storiesByUser = stories.reduce((acc, story) => {
+    const storiesByUser = stories.reduce((acc: any, story: any) => {
       const authorId = story.author.id
       if (!acc[authorId]) {
         acc[authorId] = {

@@ -24,7 +24,7 @@ export async function GET(req: Request) {
         }
       }
     });
-    const examsWithAttempted = exams.map(exam => ({
+    const examsWithAttempted = exams.map((exam: any) => ({
       id: exam.id,
       title: exam.title,
       category: exam.category,

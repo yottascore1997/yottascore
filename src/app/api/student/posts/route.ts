@@ -86,7 +86,7 @@ export async function GET(req: Request) {
 
     // For each post, check if the current user has liked it
     const postsWithLikeStatus = await Promise.all(
-      posts.map(async (post) => {
+      posts.map(async (post: any) => {
         const like = await prisma.like.findUnique({
           where: {
             userId_postId: {

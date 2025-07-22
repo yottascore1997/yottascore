@@ -51,7 +51,7 @@ export const POST = withCORS(async (
     }
 
     // Find the question
-    const question = match.quiz.questions.find(q => q.id === questionId);
+    const question = match.quiz.questions.find((q: any) => q.id === questionId);
     if (!question) {
       return NextResponse.json({ message: 'Question not found.' }, { status: 404 });
     }

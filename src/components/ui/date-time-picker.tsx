@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 interface DateTimePickerProps {
   value: Date;
-  onChange: (date: Date) => void;
+  onChange: (date: Date | null) => void;
   className?: string;
   showTimeSelect?: boolean;
   minDate?: Date;

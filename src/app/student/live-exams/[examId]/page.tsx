@@ -63,7 +63,7 @@ function getTimeLeft(endTime?: string) {
     .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-function formatTimeTaken(seconds: number | null): string {
+function formatTimeTaken(seconds: number | null | undefined): string {
   if (!seconds) return 'N/A';
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
@@ -446,7 +446,7 @@ export default function LiveExamDetailPage() {
                           <td className="py-2">{row.score}</td>
                           <td className="py-2">{formatTimeTaken(row.timeTaken)}</td>
                           <td className="py-2 flex items-center">
-                            {row.prizeAmount > 0 ? (
+                            {(row.prizeAmount ?? 0) > 0 ? (
                               <>
                                 <FaRupeeSign className="mr-1 text-green-600" />
                                 {row.prizeAmount}
@@ -481,7 +481,7 @@ export default function LiveExamDetailPage() {
                       <td className="py-2">{row.score}</td>
                       <td className="py-2">{formatTimeTaken(row.timeTaken)}</td>
                       <td className="py-2 flex items-center">
-                        {row.prizeAmount > 0 ? (
+                        {(row.prizeAmount ?? 0) > 0 ? (
                           <>
                             <FaRupeeSign className="mr-1 text-green-600" />
                             {row.prizeAmount}

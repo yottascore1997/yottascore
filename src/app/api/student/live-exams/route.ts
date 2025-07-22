@@ -34,7 +34,7 @@ export const GET = withCORS(async (req: Request) => {
     });
 
     // Add attempted: true/false for each exam
-    const examsWithAttempted = liveExams.map(exam => ({
+    const examsWithAttempted = liveExams.map((exam: any) => ({
       ...exam,
       attempted: exam.participants.length > 0 && !!exam.participants[0].completedAt
     }));

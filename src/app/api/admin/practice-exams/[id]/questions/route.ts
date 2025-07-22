@@ -25,8 +25,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       where: { examId: params.id },
       select: { id: true },
     });
-    const currentIds = current.map(q => q.id);
-    const incomingIds = questions.filter(q => q.id).map(q => q.id);
+    const currentIds = current.map((q: any) => q.id);
+    const incomingIds = questions.filter((q: any) => q.id).map((q: any) => q.id);
     // Delete removed
     await prisma.practiceExamQuestion.deleteMany({
       where: { examId: params.id, id: { notIn: incomingIds.length ? incomingIds : [""] } },

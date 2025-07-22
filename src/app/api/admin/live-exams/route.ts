@@ -139,7 +139,7 @@ export async function POST(req: Request) {
         prizePool,
         createdById: decoded.userId,
         questions: {
-          create: validatedData.questions.map(q => ({
+          create: validatedData.questions.map((q: any) => ({
             text: q.question,
             options: q.options,
             correct: q.correctAnswer

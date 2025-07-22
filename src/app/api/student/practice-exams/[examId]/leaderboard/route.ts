@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: { params: { examId: stri
     });
 
     // Calculate time taken and create enhanced leaderboard
-    const enhancedParticipants = participants.map(p => {
+    const enhancedParticipants = participants.map((p: any) => {
       let timeTaken = null;
       if (p.startedAt && p.completedAt) {
         const startTime = new Date(p.startedAt).getTime();
@@ -40,7 +40,7 @@ export async function GET(request: Request, { params }: { params: { examId: stri
     });
 
     // Sort by score first, then by time taken (faster = better)
-    const sortedParticipants = enhancedParticipants.sort((a, b) => {
+    const sortedParticipants = enhancedParticipants.sort((a: any, b: any) => {
       // First sort by score (descending)
       if (a.score !== b.score) {
         return (b.score || 0) - (a.score || 0);
@@ -64,7 +64,7 @@ export async function GET(request: Request, { params }: { params: { examId: stri
     });
 
     // Create the full leaderboard with ranks
-    const fullLeaderboard = sortedParticipants.map((p, i) => ({
+    const fullLeaderboard = sortedParticipants.map((p: any, i: number) => ({
       rank: i + 1,
       name: p.user?.name || 'Anonymous',
       userId: p.user?.id,
@@ -75,7 +75,7 @@ export async function GET(request: Request, { params }: { params: { examId: stri
     }));
 
     // Find current user's entry
-    const currentUserEntry = fullLeaderboard.find(p => p.isCurrentUser);
+    const currentUserEntry = fullLeaderboard.find((p: any) => p.isCurrentUser);
     
     // Create the response structure
     const response = {
@@ -87,7 +87,7 @@ export async function GET(request: Request, { params }: { params: { examId: stri
         timeTaken: currentUserEntry.timeTaken,
         completedAt: currentUserEntry.completedAt
       } : null,
-      leaderboard: fullLeaderboard.map(p => ({
+      leaderboard: fullLeaderboard.map((p: any) => ({
         rank: p.rank,
         name: p.name,
         userId: p.userId,

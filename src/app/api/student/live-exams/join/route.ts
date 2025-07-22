@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     // 1. Deduct entry fee from user's wallet
     // 2. Add user as participant
     // 3. Update spots left
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Deduct entry fee
       await tx.user.update({
         where: { id: decoded.userId },

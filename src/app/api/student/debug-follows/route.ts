@@ -97,15 +97,15 @@ export async function GET(req: Request) {
         followersCount: user._count.followers,
         followingCount: user._count.following
       },
-      followers: user.followers.map(f => ({
+      followers: user.followers.map((f: any) => ({
         id: f.follower.id,
         name: f.follower.name
       })),
-      following: user.following.map(f => ({
+      following: user.following.map((f: any) => ({
         id: f.following.id,
         name: f.following.name
       })),
-      allFollows: allFollows.map(f => ({
+      allFollows: allFollows.map((f: any) => ({
         id: f.id,
         follower: {
           id: f.follower.id,

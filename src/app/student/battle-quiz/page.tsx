@@ -279,7 +279,7 @@ export default function BattleQuizHomepage() {
                     <div className="text-xs text-gray-500">Random questions</div>
                   </button>
                   
-                  {categories.map((category) => (
+                  {categories.map((category: Category) => (
                     <button
                       key={category.id}
                       onClick={() => setSelectedCategory(category.id)}
@@ -452,7 +452,7 @@ export default function BattleQuizHomepage() {
               </div>
               
               <div className="space-y-3">
-                {leaderboard.slice(0, 10).map((entry, index) => (
+                {leaderboard.slice(0, 10).map((entry: any, index: number) => (
                   <div key={entry.user.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                       index === 0 ? 'bg-yellow-500 text-white' :

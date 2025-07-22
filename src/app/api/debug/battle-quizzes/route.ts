@@ -33,7 +33,7 @@ export async function GET() {
 
     return NextResponse.json({
       total: quizzes.length,
-      quizzes: quizzes.map(q => ({
+      quizzes: quizzes.map((q: any) => ({
         id: q.id,
         title: q.title,
         isActive: q.isActive,
@@ -112,7 +112,7 @@ export async function POST() {
 
     // Add questions to the quiz
     const createdQuestions = await prisma.battleQuizQuestion.createMany({
-      data: sampleQuestions.map(q => ({
+      data: sampleQuestions.map((q: any) => ({
         ...q,
         quizId: quizWithoutQuestions.id
       }))

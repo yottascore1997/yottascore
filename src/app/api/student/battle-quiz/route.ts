@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         take: 50
       });
 
-      return NextResponse.json(leaderboard.map((user, index) => ({
+      return NextResponse.json(leaderboard.map((user: any, index: number) => ({
         rank: index + 1,
         user: {
           id: user.id,
@@ -191,7 +191,8 @@ export async function POST(request: NextRequest) {
       data: {
         quizId: room.id,
         userId: decoded.userId,
-        status: 'JOINED'
+        status: 'WAITING',
+        answers: []
       }
     });
 

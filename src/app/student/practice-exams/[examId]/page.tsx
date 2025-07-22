@@ -333,7 +333,7 @@ export default function PracticeExamDetailPage() {
                 <div>
                   <h4 className="text-lg font-semibold text-gray-700 mb-4">📊 Complete Rankings</h4>
                   <div className="space-y-2">
-                    {leaderboard.map((row, i) => {
+                    {leaderboard.map((row: any, i: number) => {
                       const isCurrentUser = row.userId === userId;
                       const isTop3 = i < 3;
                       

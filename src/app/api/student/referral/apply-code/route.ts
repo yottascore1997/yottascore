@@ -69,7 +69,7 @@ export const POST = withCORS(async (req: NextRequest) => {
     }
 
     // Process the referral using transaction
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // Update current user with referral info
       await tx.user.update({
         where: { id: decoded.userId },

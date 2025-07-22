@@ -35,9 +35,9 @@ export async function GET(req: Request) {
     const users = await prisma.user.findMany({
       where: {
         OR: [
-          { name: { contains: searchTerm, mode: 'insensitive' } },
-          { email: { contains: searchTerm, mode: 'insensitive' } },
-          { course: { contains: searchTerm, mode: 'insensitive' } }
+          { name: { contains: searchTerm } },
+          { email: { contains: searchTerm } },
+          { course: { contains: searchTerm } }
         ],
         role: 'USER'
       },
@@ -54,7 +54,7 @@ export async function GET(req: Request) {
 
     // Check if current user is following each user
     const usersWithFollowStatus = await Promise.all(
-      users.map(async (user) => {
+      users.map(async (user: any) => {
         const isFollowing = await prisma.follow.findUnique({
           where: {
             followerId_followingId: {
@@ -74,7 +74,7 @@ export async function GET(req: Request) {
     const posts = await prisma.post.findMany({
       where: {
         OR: [
-          { content: { contains: searchTerm, mode: 'insensitive' } },
+          { content: { contains: searchTerm } },
           { hashtags: { array_contains: [searchTerm] } }
         ],
         isPrivate: false

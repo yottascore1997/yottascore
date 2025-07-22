@@ -62,12 +62,6 @@ export async function GET(
             name: true,
             profilePhoto: true
           }
-        },
-        _count: {
-          select: {
-            // Count replies
-            _all: true
-          }
         }
       },
       orderBy: {

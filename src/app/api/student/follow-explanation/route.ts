@@ -126,16 +126,16 @@ export async function GET(req: Request) {
         name: currentUser.name,
         followersCount: currentUser._count.followers,
         followingCount: currentUser._count.following,
-        followers: currentUser.followers.map(f => f.follower.name),
-        following: currentUser.following.map(f => f.following.name)
+        followers: currentUser.followers.map((f: any) => f.follower.name),
+        following: currentUser.following.map((f: any) => f.following.name)
       },
       targetUser: {
         id: targetUser.id,
         name: targetUser.name,
         followersCount: targetUser._count.followers,
         followingCount: targetUser._count.following,
-        followers: targetUser.followers.map(f => f.follower.name),
-        following: targetUser.following.map(f => f.following.name)
+        followers: targetUser.followers.map((f: any) => f.follower.name),
+        following: targetUser.following.map((f: any) => f.following.name)
       },
       relationship: {
         iFollowThem: !!iFollowThem,

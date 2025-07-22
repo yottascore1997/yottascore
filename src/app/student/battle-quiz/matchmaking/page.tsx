@@ -207,7 +207,7 @@ export default function MatchmakingPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getCategoryName = (categoryId?: string) => {
+  const getCategoryName = (categoryId?: string | null) => {
     if (!categoryId) return 'Any Category';
     // You can add a mapping here or fetch categories
     return categoryId;

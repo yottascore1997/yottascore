@@ -17,7 +17,7 @@ async function main() {
         data: {
           email: adminEmail,
           name: 'Admin User',
-          password: hashedPassword,
+          hashedPassword: hashedPassword,
           phoneNumber: '1234567890',
           role: 'ADMIN',
         },

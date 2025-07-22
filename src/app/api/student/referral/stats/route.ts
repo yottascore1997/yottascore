@@ -68,7 +68,7 @@ export const GET = withCORS(async (req: NextRequest) => {
       totalEarnings: user.totalReferralEarnings,
       referredBy: user.referredBy,
       referrerInfo,
-      referrals: referrals.map(ref => ({
+      referrals: referrals.map((ref: any) => ({
         id: ref.referred.id,
         name: ref.referred.name,
         email: ref.referred.email,

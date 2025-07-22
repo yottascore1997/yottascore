@@ -442,7 +442,7 @@ export default function QuestionBankPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {categories.map((category) => (
+              {categories.map((category: QuestionCategory) => (
                 <div key={category.id} className="p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -497,7 +497,7 @@ export default function QuestionBankPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {questions.map((question) => (
+              {questions.map((question: QuestionBankItem) => (
                 <div key={question.id} className="p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -517,7 +517,7 @@ export default function QuestionBankPage() {
                       </div>
                       <p className="text-gray-900 mb-3">{question.text}</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
-                        {question.options.map((option, index) => (
+                        {question.options.map((option: string, index: number) => (
                           <div 
                             key={index}
                             className={`p-2 rounded text-sm ${
@@ -537,7 +537,7 @@ export default function QuestionBankPage() {
                       )}
                       {question.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {question.tags.map((tag, index) => (
+                          {question.tags.map((tag: string, index: number) => (
                             <span key={index} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
                               {tag}
                             </span>
@@ -642,7 +642,7 @@ export default function QuestionBankPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Options</label>
-                {questionForm.options.map((option, index) => (
+                {questionForm.options.map((option: string, index: number) => (
                   <div key={index} className="flex items-center space-x-2 mb-2">
                     <input
                       type="radio"
@@ -687,7 +687,7 @@ export default function QuestionBankPage() {
               <div>
                 <label className="block text-sm font-medium mb-1">Tags (Optional)</label>
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {questionForm.tags.map((tag, index) => (
+                  {questionForm.tags.map((tag: string, index: number) => (
                     <span key={index} className="px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded flex items-center">
                       {tag}
                       <button
