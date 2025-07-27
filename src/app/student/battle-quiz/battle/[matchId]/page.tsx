@@ -47,7 +47,7 @@ export default function BattlePage() {
     status: 'preparing',
     currentQuestion: 0,
     totalQuestions: 5,
-    timeLeft: 15,
+    timeLeft: 10,
     player1Score: 0,
     player2Score: 0,
     answers: {},
@@ -64,29 +64,54 @@ export default function BattlePage() {
     fetchUserProfile();
   }, []);
 
+  // Monitor battle state changes
   useEffect(() => {
+    console.log('🔄 Battle state changed:', {
+      status: battleState.status,
+      currentQuestion: battleState.currentQuestion,
+      questionText: battleState.question?.text?.substring(0, 50) + '...',
+      timeLeft: battleState.timeLeft
+    });
+  }, [battleState]);
+
+  useEffect(() => {
+    console.log('🔄 Battle useEffect triggered:');
+    console.log('   - Socket exists:', !!socket);
+    console.log('   - Socket connected:', isConnected);
+    console.log('   - Match ID:', matchId);
+    console.log('   - Socket ID:', socket?.id);
+    
     if (!socket || !isConnected) {
-      console.log('Socket not connected, waiting...');
+      console.log('❌ Socket not connected, waiting...');
       return;
     }
 
-    console.log('Setting up battle socket listeners for match:', matchId);
+    console.log('✅ Setting up battle socket listeners for match:', matchId);
 
     // Clean up any existing listeners first
+    console.log('🧹 Cleaning up existing socket listeners...');
     socket.off('match_started');
     socket.off('next_question');
     socket.off('match_ended');
     socket.off('opponent_answered');
     socket.off('match_not_found');
+    console.log('✅ Socket listeners cleaned up');
 
     // Listen for battle events
+    console.log('🎧 Attaching socket listeners...');
+    
     socket.on('match_started', (data: { 
       matchId: string; 
       questionIndex: number; 
       question: Question; 
       timeLimit: number 
     }) => {
-      console.log('Match started event received:', data);
+      console.log('🎮 Match started event received:', data);
+      console.log('   - Match ID:', data.matchId);
+      console.log('   - Question index:', data.questionIndex);
+      console.log('   - Question text:', data.question?.text?.substring(0, 50) + '...');
+      console.log('   - Time limit:', data.timeLimit);
+      
       setBattleState(prev => ({
         ...prev,
         status: 'playing',
@@ -95,30 +120,54 @@ export default function BattlePage() {
         timeLeft: data.timeLimit
       }));
       startQuestionTimer(data.timeLimit);
+      
+      console.log('✅ Match started state updated');
     });
 
     socket.on('next_question', (data: { 
       questionIndex: number; 
       question: Question 
     }) => {
-      console.log('Next question event received:', data);
-      setBattleState(prev => ({
-        ...prev,
-        currentQuestion: data.questionIndex,
-        question: data.question,
-        timeLeft: 15 // Default time limit
-      }));
-      startQuestionTimer(15);
+      console.log('🎯 Next question event received:', data);
+      console.log('   - Question index:', data.questionIndex);
+      console.log('   - Question text:', data.question?.text?.substring(0, 50) + '...');
+      console.log('   - Question options:', data.question?.options);
+      console.log('   - Current battle state before update:', battleState);
+      
+      // Force a more explicit state update
+      setBattleState(prev => {
+        const newState = {
+          ...prev,
+          currentQuestion: data.questionIndex,
+          question: data.question,
+          timeLeft: 10 // Default time limit
+        };
+        console.log('🔄 New battle state:', newState);
+        return newState;
+      });
+      
+      // Start timer after state update
+      setTimeout(() => {
+        startQuestionTimer(10);
+        console.log('✅ Next question timer started');
+      }, 100);
+      
+      console.log('✅ Next question state update triggered');
     });
 
     socket.on('match_ended', (data: { 
       matchId: string; 
-      player1Score: number; 
-      player2Score: number; 
+      myScore: number; 
+      opponentScore: number; 
       winner: string; 
       isDraw: boolean 
     }) => {
-      console.log('Match ended event received:', data);
+      console.log('🏁 Match ended event received:', data);
+      console.log('   - My score:', data.myScore);
+      console.log('   - Opponent score:', data.opponentScore);
+      console.log('   - Winner:', data.winner);
+      console.log('   - Is draw:', data.isDraw);
+      
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -131,13 +180,18 @@ export default function BattlePage() {
       setBattleState(prev => ({
         ...prev,
         status: 'finished',
-        player1Score: data.player1Score,
-        player2Score: data.player2Score
+        player1Score: data.myScore,
+        player2Score: data.opponentScore
       }));
     });
 
     socket.on('opponent_answered', (data: { questionIndex: number }) => {
-      console.log('Opponent answered event received:', data);
+      console.log('👥 Opponent answered event received:', data);
+      console.log('   - Question index:', data.questionIndex);
+      console.log('   - Current battle state:', battleState);
+      console.log('   - Current question:', battleState.currentQuestion);
+      console.log('   - Both answered?', battleState.answers[data.questionIndex] !== undefined);
+      
       setBattleState(prev => ({
         ...prev,
         opponentAnswers: {
@@ -145,6 +199,8 @@ export default function BattlePage() {
           [data.questionIndex]: 1 // Just mark as answered
         }
       }));
+      
+      console.log('✅ Opponent answered state updated');
     });
 
     socket.on('match_not_found', (data: { matchId: string }) => {
@@ -152,17 +208,34 @@ export default function BattlePage() {
       setError('Match not found or has already ended. Please start a new match.');
     });
 
+    socket.on('pong', () => {
+      console.log('🏓 Received pong from server - socket connection is working');
+    });
+
     // Request match status from server
-    console.log('Requesting match status from server...');
+    console.log('📤 Requesting match status from server...');
+    console.log('   - Match ID:', matchId);
+    console.log('   - Socket ID:', socket.id);
     socket.emit('get_match_status', { matchId });
+    console.log('✅ get_match_status event emitted');
+    
+    // Test socket connection by sending a ping
+    setTimeout(() => {
+      console.log('🏓 Testing socket connection...');
+      socket.emit('ping');
+    }, 1000);
 
     return () => {
-      console.log('Cleaning up battle socket listeners');
+      console.log('🧹 Cleaning up battle socket listeners');
+      console.log('   - Socket ID:', socket?.id);
+      console.log('   - Match ID:', matchId);
       socket.off('match_started');
       socket.off('next_question');
       socket.off('match_ended');
       socket.off('opponent_answered');
       socket.off('match_not_found');
+      socket.off('pong');
+      console.log('✅ Battle socket listeners cleaned up');
     };
   }, [socket, isConnected, matchId]);
 
@@ -211,12 +284,18 @@ export default function BattlePage() {
   };
 
   const handleAnswer = (answerIndex: number) => {
-    if (!socket || !isConnected) return;
+    if (!socket || !isConnected) {
+      console.log('❌ Cannot submit answer - socket not connected');
+      return;
+    }
     
     const questionIndex = battleState.currentQuestion;
-    const timeSpent = 15 - battleState.timeLeft;
+    const timeSpent = 10 - battleState.timeLeft;
     
-    console.log('Submitting answer:', { questionIndex, answerIndex, timeSpent });
+    console.log('🖱️ Submitting answer:', { questionIndex, answerIndex, timeSpent });
+    console.log('   - Match ID:', matchId);
+    console.log('   - User ID:', user?.id);
+    console.log('   - Socket connected:', isConnected);
     
     // Record answer locally
     setBattleState(prev => ({
@@ -228,13 +307,17 @@ export default function BattlePage() {
     }));
     
     // Send answer to server
-    socket.emit('answer_question', {
+    const answerData = {
       matchId,
       userId: user?.id,
       questionIndex,
       answer: answerIndex,
       timeSpent
-    });
+    };
+    
+    console.log('📤 Emitting answer_question:', answerData);
+    socket.emit('answer_question', answerData);
+    console.log('✅ answer_question event emitted');
     
     // Clear timer
     if (questionTimerRef.current) {

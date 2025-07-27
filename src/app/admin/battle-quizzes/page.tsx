@@ -51,7 +51,7 @@ export default function AdminBattleQuizzes() {
     description: "",
     entryAmount: "",
     categoryId: "",
-    questionCount: 10,
+    questionCount: "",
     timePerQuestion: 15,
     isPrivate: false,
     maxPlayers: 2
@@ -119,6 +119,14 @@ export default function AdminBattleQuizzes() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate question count
+    const questionCount = parseInt(form.questionCount);
+    if (!questionCount || questionCount < 1 || questionCount > 50) {
+      setError("Please enter a valid number of questions (1-50)");
+      return;
+    }
+    
     setCreating(true);
     setError("");
     setSuccess("");
@@ -142,7 +150,7 @@ export default function AdminBattleQuizzes() {
           description: form.description,
           entryAmount: parseFloat(form.entryAmount),
           categoryId: form.categoryId,
-          questionCount: form.questionCount,
+          questionCount: parseInt(form.questionCount) || 5,
           timePerQuestion: form.timePerQuestion,
           isPrivate: form.isPrivate,
           maxPlayers: form.maxPlayers
@@ -158,7 +166,7 @@ export default function AdminBattleQuizzes() {
           description: "", 
           entryAmount: "", 
           categoryId: categories[0]?.id || "",
-          questionCount: 10,
+          questionCount: "",
           timePerQuestion: 15,
           isPrivate: false,
           maxPlayers: 2
@@ -487,10 +495,11 @@ export default function AdminBattleQuizzes() {
                   type="number"
                   className="w-full border rounded px-3 py-2"
                   value={form.questionCount}
-                  onChange={e => setForm(f => ({ ...f, questionCount: parseInt(e.target.value) || 10 }))}
+                  onChange={e => setForm(f => ({ ...f, questionCount: e.target.value }))}
                   required
                   min={1}
                   max={50}
+                  placeholder="Enter number of questions"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Questions will be randomly selected from the chosen category
