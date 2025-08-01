@@ -18,7 +18,8 @@ import {
   Plus,
   ArrowRight,
   Star,
-  TrendingUp
+  TrendingUp,
+  CheckCircle
 } from "lucide-react";
 
 interface User {
@@ -69,6 +70,14 @@ export default function BattleQuizHomepage() {
   const [roomCode, setRoomCode] = useState("");
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showRoomModal, setShowRoomModal] = useState(false);
+  const [createdRoom, setCreatedRoom] = useState<{
+    roomCode: string;
+    roomId: string;
+    categoryId: string;
+    timePerQuestion: number;
+    questionCount: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchUserProfile();
@@ -170,14 +179,18 @@ export default function BattleQuizHomepage() {
         },
         body: JSON.stringify({
           categoryId: selectedCategory,
-          timePerQuestion: 15,
-          questionCount: 10
+          timePerQuestion: 10,
+          questionCount: 5
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        router.push(`/student/battle-quiz/room/${data.roomCode}`);
+        setCreatedRoom(data);
+        setShowRoomModal(true);
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to create room');
       }
     } catch (error) {
       console.error('Error creating private room:', error);
@@ -492,6 +505,65 @@ export default function BattleQuizHomepage() {
           </div>
         </div>
       </div>
+
+      {/* Room Created Modal */}
+      {showRoomModal && createdRoom && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-white" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Room Created!</h2>
+              <p className="text-gray-600 mb-6">Share this room code with your friends</p>
+              
+              {/* Room Code Display */}
+              <div className="bg-gray-100 rounded-lg p-4 mb-6">
+                <div className="text-sm text-gray-600 mb-2">Room Code</div>
+                <div className="text-3xl font-bold text-gray-900 tracking-wider mb-2">
+                  {createdRoom.roomCode}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {createdRoom.questionCount} questions • {createdRoom.timePerQuestion}s per question
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdRoom.roomCode);
+                    alert('Room code copied to clipboard!');
+                  }}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Room Code
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowRoomModal(false);
+                    router.push(`/student/battle-quiz/room/${createdRoom.roomCode}`);
+                  }}
+                  className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+                >
+                  <Gamepad2 className="w-4 h-4 mr-2" />
+                  Enter Room
+                </button>
+                
+                <button
+                  onClick={() => setShowRoomModal(false)}
+                  className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

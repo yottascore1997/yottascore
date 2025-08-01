@@ -441,35 +441,257 @@ io.on('connection', (socket) => {
     socket.emit('private_room_created', { roomCode, room });
   });
 
-  socket.on('join_private_room', (data) => {
+  socket.on('join_private_room', async (data) => {
+    console.log('🎮 join_private_room event received on server');
+    console.log('   - Full data:', data);
+    console.log('   - Socket ID:', socket.id);
+    console.log('   - Socket userId:', socket.userId);
+    
     const { userId, roomCode, quizData } = data;
     console.log(`User ${userId} joining private room ${roomCode}`);
     
-    const room = privateRooms.get(roomCode);
+    // First check if room exists in memory
+    let room = privateRooms.get(roomCode);
+    
+    // If not in memory, check database
     if (!room) {
-      socket.emit('room_error', { message: 'Room not found' });
-      return;
+      console.log(`Room ${roomCode} not found in memory, checking database...`);
+      try {
+        const dbRoom = await prisma.battleQuiz.findUnique({
+          where: { roomCode, isPrivate: true },
+          include: {
+            participants: {
+              include: {
+                user: {
+                  select: { id: true, name: true, profilePhoto: true }
+                }
+              }
+            },
+            category: true
+          }
+        });
+        
+        if (!dbRoom) {
+          console.log(`Room ${roomCode} not found in database`);
+          socket.emit('room_error', { message: 'Room not found' });
+          return;
+        }
+        
+        console.log(`Room ${roomCode} found in database, creating in memory`);
+        
+        console.log(`Database room participants:`, dbRoom.participants);
+        console.log(`Room creator:`, dbRoom.createdById);
+        console.log(`Room creator type:`, typeof dbRoom.createdById);
+        console.log(`Database room data:`, {
+          id: dbRoom.id,
+          roomCode: dbRoom.roomCode,
+          createdById: dbRoom.createdById,
+          participants: dbRoom.participants.map(p => p.userId)
+        });
+        
+        // Create room in memory from database
+        room = {
+          roomCode: dbRoom.roomCode,
+          creator: dbRoom.createdById,
+          players: dbRoom.participants.map(p => ({
+            userId: p.userId,
+            socketId: null, // Will be updated when they join
+            quizData: {
+              categoryId: dbRoom.categoryId,
+              questionCount: dbRoom.questionCount,
+              timePerQuestion: dbRoom.timePerQuestion
+            }
+          })),
+          maxPlayers: dbRoom.maxPlayers,
+          status: 'waiting',
+          quizData: {
+            categoryId: dbRoom.categoryId,
+            questionCount: dbRoom.questionCount,
+            timePerQuestion: dbRoom.timePerQuestion
+          },
+          dbRoomId: dbRoom.id
+        };
+        
+        console.log(`Created room in memory:`, {
+          roomCode: room.roomCode,
+          creator: room.creator,
+          players: room.players.map(p => p.userId),
+          maxPlayers: room.maxPlayers
+        });
+        
+        privateRooms.set(roomCode, room);
+        
+      } catch (error) {
+        console.error('Error checking database for room:', error);
+        socket.emit('room_error', { message: 'Error finding room' });
+        return;
+      }
     }
     
-    if (room.players.length >= room.maxPlayers) {
-      socket.emit('room_error', { message: 'Room is full' });
-      return;
+    // Check if user is already in the room
+    const existingPlayer = room.players.find(p => p.userId === userId);
+    if (existingPlayer) {
+      // Update socket ID if reconnecting
+      existingPlayer.socketId = socket.id;
+      console.log(`User ${userId} reconnected to room ${roomCode}`);
+    } else {
+      // Add new player
+      if (room.players.length >= room.maxPlayers) {
+        socket.emit('room_error', { message: 'Room is full' });
+        return;
+      }
+      
+      // Add to database if room was created from database
+      if (room.dbRoomId) {
+        try {
+          await prisma.battleQuizParticipant.create({
+            data: {
+              quizId: room.dbRoomId,
+              userId: userId,
+              status: 'WAITING',
+              answers: []
+            }
+          });
+          console.log(`User ${userId} added to database participants`);
+        } catch (error) {
+          console.error('Error adding user to database:', error);
+          // Continue anyway, just log the error
+        }
+      }
+      
+      // Add to memory
+      room.players.push({
+        userId,
+        socketId: socket.id,
+        quizData: quizData || room.quizData
+      });
+      
+      console.log(`User ${userId} joined room ${roomCode}`);
+      console.log(`Room ${roomCode} now has ${room.players.length} players:`, room.players.map(p => p.userId));
     }
-    
-    room.players.push({
-      userId,
-      socketId: socket.id,
-      quizData
-    });
     
     socket.join(`room_${roomCode}`);
-    io.to(`room_${roomCode}`).emit('player_joined_room', { room });
+    
+    console.log(`Sending room_joined event to user ${userId}:`);
+    console.log(`   - Room players:`, room.players.map(p => p.userId));
+    console.log(`   - Room creator:`, room.creator);
+    console.log(`   - Current user ID:`, userId);
+    console.log(`   - User is host:`, userId === room.creator);
+    console.log(`   - Room creator type:`, typeof room.creator);
+    console.log(`   - User ID type:`, typeof userId);
+    
+    const roomJoinedData = {
+      room: {
+        roomCode: room.roomCode,
+        host: room.players.find(p => p.userId === room.creator) ? {
+          id: room.creator,
+          name: 'Host', // You might want to fetch this from database
+          isHost: true
+        } : null,
+        players: room.players.map(p => ({
+          id: p.userId,
+          name: p.userId === room.creator ? 'Host' : 'Player',
+          isHost: p.userId === room.creator
+        })),
+        maxPlayers: room.maxPlayers,
+        status: room.status,
+        countdown: 0,
+        category: room.quizData.categoryId,
+        timePerQuestion: room.quizData.timePerQuestion,
+        questionCount: room.quizData.questionCount
+      },
+      user: {
+        id: userId,
+        name: 'User', // You might want to fetch this from database
+        isHost: userId === room.creator
+      },
+      isHost: userId === room.creator
+    };
+    
+    console.log(`   - Room joined data:`, roomJoinedData);
+    
+    // Send room joined event to the user
+    socket.emit('room_joined', roomJoinedData);
+    
+    // Notify other players about the new player
+    socket.to(`room_${roomCode}`).emit('player_joined', { 
+      player: {
+        id: userId,
+        name: 'Player',
+        isHost: userId === room.creator
+      }
+    });
+    
+    // Also notify about room state update
+    socket.to(`room_${roomCode}`).emit('room_updated', { 
+      room: {
+        roomCode: room.roomCode,
+        host: room.players.find(p => p.userId === room.creator) ? {
+          id: room.creator,
+          name: 'Host',
+          isHost: true
+        } : null,
+        players: room.players.map(p => ({
+          id: p.userId,
+          name: p.userId === room.creator ? 'Host' : 'Player',
+          isHost: p.userId === room.creator
+        })),
+        maxPlayers: room.maxPlayers,
+        status: room.status,
+        countdown: 0,
+        category: room.quizData.categoryId,
+        timePerQuestion: room.quizData.timePerQuestion,
+        questionCount: room.quizData.questionCount
+      }
+    });
     
     // Start game if room is full
     if (room.players.length >= room.maxPlayers) {
       startPrivateRoomGame(roomCode).catch(error => {
         console.error('Error in startPrivateRoomGame:', error);
       });
+    }
+  });
+
+  socket.on('start_private_game', async (data) => {
+    console.log('🎮 start_private_game event received');
+    console.log('   - Room code:', data.roomCode);
+    console.log('   - Socket ID:', socket.id);
+    
+    const { roomCode } = data;
+    const room = privateRooms.get(roomCode);
+    
+    if (!room) {
+      console.log('❌ Room not found:', roomCode);
+      socket.emit('room_error', { message: 'Room not found' });
+      return;
+    }
+    
+    // Check if user is the host
+    if (room.creator !== socket.userId) {
+      console.log('❌ User is not the host');
+      socket.emit('room_error', { message: 'Only the host can start the game' });
+      return;
+    }
+    
+    // Check if enough players
+    if (room.players.length < 2) {
+      console.log('❌ Not enough players:', room.players.length);
+      socket.emit('room_error', { message: 'Need at least 2 players to start' });
+      return;
+    }
+    
+    console.log('✅ Starting private game for room:', roomCode);
+    console.log('   - Players:', room.players.map(p => p.userId));
+    console.log('   - Question count:', room.quizData.questionCount);
+    console.log('   - Time per question:', room.quizData.timePerQuestion);
+    
+    // Start the game
+    try {
+      await startPrivateRoomGame(roomCode);
+    } catch (error) {
+      console.error('❌ Error starting private game:', error);
+      socket.emit('room_error', { message: 'Failed to start game' });
     }
   });
 
@@ -1057,7 +1279,7 @@ async function startPrivateRoomGame(roomCode) {
   activeMatches.set(matchId, match);
   
   // Notify all players
-  io.to(`room_${roomCode}`).emit('private_game_started', {
+  io.to(`room_${roomCode}`).emit('game_started', {
     matchId,
     questionIndex: 0,
     question: match.questions[0],

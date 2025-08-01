@@ -67,14 +67,60 @@ export default function PrivateRoomPage() {
     fetchUserProfile();
   }, []);
 
+  // Debug room state changes
   useEffect(() => {
-    if (!socket || !isConnected || hasJoinedRoom.current) return;
+    console.log('🔄 Room state changed:', roomState);
+    console.log('   - Players:', roomState.players);
+    console.log('   - Player count:', roomState.players.length);
+    console.log('   - Max players:', roomState.maxPlayers);
+    console.log('   - Status:', roomState.status);
+  }, [roomState]);
 
-    console.log('Joining private room:', roomCode);
+  // Debug user changes
+  useEffect(() => {
+    console.log('👤 User state changed:', user);
+    if (user) {
+      console.log('   - User ID:', user.id);
+      console.log('   - User name:', user.name);
+      console.log('   - User isHost:', user.isHost);
+      
+      // Reset hasJoinedRoom flag when user is loaded so we can join room
+      if (hasJoinedRoom.current) {
+        console.log('🔄 Resetting hasJoinedRoom flag for user:', user.id);
+        hasJoinedRoom.current = false;
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    console.log('🔍 useEffect triggered:');
+    console.log('   - Socket exists:', !!socket);
+    console.log('   - Is connected:', isConnected);
+    console.log('   - Has joined room:', hasJoinedRoom.current);
+    console.log('   - User exists:', !!user);
+    console.log('   - User data:', user);
+    
+    if (!socket || !isConnected || hasJoinedRoom.current || !user) {
+      console.log('❌ Cannot join room - conditions not met');
+      return;
+    }
+
+    console.log('✅ Joining private room:', roomCode);
+    console.log('User data:', user);
     hasJoinedRoom.current = true;
 
     // Join the private room
-    socket.emit('join_private_room', { roomCode });
+    console.log('📤 Emitting join_private_room event');
+    socket.emit('join_private_room', { 
+      roomCode,
+      userId: user.id,
+      quizData: {
+        categoryId: roomState.category,
+        questionCount: roomState.questionCount,
+        timePerQuestion: roomState.timePerQuestion
+      }
+    });
+    console.log('📤 join_private_room event emitted');
 
     // Listen for room events
     socket.on('room_joined', (data: { 
@@ -82,9 +128,26 @@ export default function PrivateRoomPage() {
       user: User; 
       isHost: boolean 
     }) => {
-      console.log('Room joined:', data);
+      console.log('🎯 Room joined event received:');
+      console.log('   - Full data:', data);
+      console.log('   - Room state:', data.room);
+      console.log('   - Players in room:', data.room.players);
+      console.log('   - Player count:', data.room.players.length);
+      console.log('   - Max players:', data.room.maxPlayers);
+      console.log('   - User:', data.user);
+      console.log('   - Is host:', data.isHost);
+      
       setRoomState(data.room);
-      setUser({ ...data.user, isHost: data.isHost });
+      
+      // Update user with isHost value from server
+      const updatedUser = { 
+        ...data.user, 
+        isHost: data.isHost 
+      };
+      console.log('🔄 Updating user with isHost:', updatedUser);
+      setUser(updatedUser);
+      
+      console.log('✅ Room state updated');
     });
 
     socket.on('player_joined', (data: { player: User }) => {
@@ -93,6 +156,11 @@ export default function PrivateRoomPage() {
         ...prev,
         players: [...prev.players, data.player]
       }));
+    });
+
+    socket.on('room_updated', (data: { room: RoomState }) => {
+      console.log('Room updated:', data);
+      setRoomState(data.room);
     });
 
     socket.on('player_left', (data: { playerId: string }) => {
@@ -127,11 +195,15 @@ export default function PrivateRoomPage() {
     });
 
     socket.on('game_started', (data: { matchId: string }) => {
-      console.log('Game started:', data);
+      console.log('🎮 Game started event received:', data);
+      console.log('   - Match ID:', data.matchId);
+      console.log('   - Redirecting to battle page...');
+      
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
         countdownRef.current = null;
       }
+      
       router.push(`/student/battle-quiz/battle/${data.matchId}`);
     });
 
@@ -141,11 +213,26 @@ export default function PrivateRoomPage() {
     });
 
     socket.on('room_not_found', () => {
+      console.error('Room not found:', roomCode);
       setError('Room not found. Please check the room code.');
     });
 
     socket.on('room_full', () => {
+      console.error('Room is full:', roomCode);
       setError('Room is full. Maximum 2 players allowed.');
+    });
+
+    // Add connection error handling
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      setError('Connection error. Please refresh the page.');
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      if (reason === 'io server disconnect') {
+        setError('Disconnected from server. Please refresh the page.');
+      }
     });
 
     return () => {
@@ -157,23 +244,30 @@ export default function PrivateRoomPage() {
       // Clean up socket listeners
       socket.off('room_joined');
       socket.off('player_joined');
+      socket.off('room_updated');
       socket.off('player_left');
       socket.off('room_starting');
       socket.off('game_started');
       socket.off('room_error');
       socket.off('room_not_found');
       socket.off('room_full');
+      socket.off('connect_error');
+      socket.off('disconnect');
+      socket.off('room_full');
     };
-  }, [socket, isConnected, roomCode, router]);
+  }, [socket, isConnected, roomCode, router, user]);
 
   const fetchUserProfile = async () => {
+    console.log('🔍 Fetching user profile...');
     try {
       const token = localStorage.getItem('token');
       if (!token) {
+        console.log('❌ No token found, redirecting to login');
         router.push('/auth/login');
         return;
       }
 
+      console.log('📤 Fetching profile from API...');
       const response = await fetch('/api/student/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -182,16 +276,30 @@ export default function PrivateRoomPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ User profile loaded:', data);
         setUser(data);
+      } else {
+        console.log('❌ Failed to fetch user profile:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('❌ Error fetching user profile:', error);
     }
   };
 
   const handleStartGame = () => {
+    console.log('🎮 Start game button clicked');
+    console.log('   - Socket connected:', isConnected);
+    console.log('   - User is host:', user?.isHost);
+    console.log('   - Room code:', roomCode);
+    
     if (socket && isConnected && user?.isHost) {
+      console.log('✅ Emitting start_private_game event');
       socket.emit('start_private_game', { roomCode });
+    } else {
+      console.log('❌ Cannot start game:');
+      console.log('   - Socket exists:', !!socket);
+      console.log('   - Is connected:', isConnected);
+      console.log('   - User is host:', user?.isHost);
     }
   };
 
@@ -380,28 +488,38 @@ export default function PrivateRoomPage() {
         {/* Game Controls */}
         {roomState.status === 'waiting' && (
           <div className="bg-white rounded-2xl shadow-lg p-6">
-            {user?.isHost ? (
-              <div className="text-center">
-                <Button
-                  onClick={handleStartGame}
-                  disabled={roomState.players.length < 2}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3"
-                >
-                  <Gamepad2 className="w-5 h-5 mr-2" />
-                  Start Game
-                </Button>
-                {roomState.players.length < 2 && (
-                  <p className="text-gray-600 mt-2">Need at least 2 players to start</p>
-                )}
-              </div>
-            ) : (
-              <div className="text-center">
-                <div className="flex items-center justify-center space-x-2 text-gray-600">
-                  <Clock className="w-5 h-5" />
-                  <span>Waiting for host to start the game...</span>
+            {(() => {
+              console.log('🎮 Game Controls Debug:');
+              console.log('   - User:', user);
+              console.log('   - User isHost:', user?.isHost);
+              console.log('   - Room host:', roomState.host);
+              console.log('   - Room creator ID:', roomState.host?.id);
+              console.log('   - Current user ID:', user?.id);
+              console.log('   - Players:', roomState.players);
+              
+              return user?.isHost ? (
+                <div className="text-center">
+                  <Button
+                    onClick={handleStartGame}
+                    disabled={roomState.players.length < 2}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3"
+                  >
+                    <Gamepad2 className="w-5 h-5 mr-2" />
+                    Start Game
+                  </Button>
+                  {roomState.players.length < 2 && (
+                    <p className="text-gray-600 mt-2">Need at least 2 players to start</p>
+                  )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-2 text-gray-600">
+                    <Clock className="w-5 h-5" />
+                    <span>Waiting for host to start the game...</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
