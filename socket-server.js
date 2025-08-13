@@ -80,6 +80,40 @@ const waitingPlayers = new Map(); // quizId -> array of waiting players
 const activeMatches = new Map(); // matchId -> match data
 const privateRooms = new Map(); // roomCode -> room data
 
+// Spy Game Data
+const spyGames = new Map(); // gameId -> game data
+const spyGamePlayers = new Map(); // socketId -> gameId
+
+// Word Packs for Spy Game
+const wordPacks = {
+  default: [
+    { word: "Pizza", spyWord: "Burger" },
+    { word: "Beach", spyWord: "Mountain" },
+    { word: "Coffee", spyWord: "Tea" },
+    { word: "Movie", spyWord: "Book" },
+    { word: "Summer", spyWord: "Winter" },
+    { word: "Dog", spyWord: "Cat" },
+    { word: "Car", spyWord: "Bike" },
+    { word: "Phone", spyWord: "Computer" },
+    { word: "Music", spyWord: "Dance" },
+    { word: "Sleep", spyWord: "Wake" }
+  ],
+  funny: [
+    { word: "Dancing", spyWord: "Singing" },
+    { word: "Jokes", spyWord: "Stories" },
+    { word: "Party", spyWord: "Meeting" },
+    { word: "Laugh", spyWord: "Cry" },
+    { word: "Fun", spyWord: "Work" }
+  ],
+  hard: [
+    { word: "Philosophy", spyWord: "Psychology" },
+    { word: "Quantum", spyWord: "Classical" },
+    { word: "Algorithm", spyWord: "Formula" },
+    { word: "Synthesis", spyWord: "Analysis" },
+    { word: "Paradigm", spyWord: "Model" }
+  ]
+};
+
 // Redis Queue Management with fallback
 class QueueManager {
   async addToQueue(userId, quizId, playerData) {
@@ -699,20 +733,43 @@ io.on('connection', (socket) => {
     console.log('🎯 answer_question event received on server');
     console.log('   - Socket ID:', socket.id);
     console.log('   - Event data:', data);
+    console.log('   - Full data object:', JSON.stringify(data, null, 2));
     
     const { matchId, userId, questionIndex, answer, timeSpent } = data;
     console.log(`User ${userId} answered question ${questionIndex} in match ${matchId}`);
     console.log('Answer data:', { answer, timeSpent });
+    console.log('Answer type:', typeof answer);
+    console.log('Answer value:', answer);
     
     const match = activeMatches.get(matchId);
     if (!match) {
-      console.log('Match not found:', matchId);
+      console.log('❌ Match not found:', matchId);
+      console.log('Available matches:', Array.from(activeMatches.keys()));
       return;
     }
     
-    console.log('Match found, current status:', match.status);
+    console.log('✅ Match found, current status:', match.status);
     console.log('Current question index:', match.currentQuestion);
     console.log('Total questions:', match.totalQuestions);
+    console.log('Match details:', {
+      player1Id: match.player1Id,
+      player2Id: match.player2Id,
+      player1SocketId: match.player1SocketId,
+      player2SocketId: match.player2SocketId
+    });
+    
+    // Get the question to verify the correct answer
+    const question = match.questions[questionIndex];
+    if (question) {
+      console.log('Question details:');
+      console.log('   - Question text:', question.text);
+      console.log('   - Options:', question.options);
+      console.log('   - Correct answer (index):', question.correct);
+      console.log('   - Correct answer (text):', question.options[question.correct]);
+    } else {
+      console.log('❌ Question not found for index:', questionIndex);
+      console.log('Available questions:', match.questions.length);
+    }
     
     // Record answer
     console.log('📝 Recording answer:');
@@ -727,14 +784,19 @@ io.on('connection', (socket) => {
       console.log('✅ Player 1 answer recorded for question', questionIndex);
       console.log('   - Answer:', answer);
       console.log('   - Time spent:', timeSpent);
+      console.log('   - Answer type:', typeof answer);
+      console.log('   - All player 1 answers now:', match.player1Answers);
     } else if (match.player2Id === userId) {
       match.player2Answers[questionIndex] = { answer, timeSpent, timestamp: Date.now() };
       console.log('✅ Player 2 answer recorded for question', questionIndex);
       console.log('   - Answer:', answer);
       console.log('   - Time spent:', timeSpent);
+      console.log('   - Answer type:', typeof answer);
+      console.log('   - All player 2 answers now:', match.player2Answers);
     } else {
       console.log('❌ User ID not found in match players');
       console.log('   - Available player IDs:', [match.player1Id, match.player2Id]);
+      console.log('   - Current user ID:', userId);
     }
     
     // Notify opponent that this player answered
@@ -743,8 +805,11 @@ io.on('connection', (socket) => {
     
     const opponentSocket = io.sockets.sockets.get(opponentSocketId);
     if (opponentSocket && opponentSocket.connected) {
-      opponentSocket.emit('opponent_answered', { questionIndex });
-      console.log('opponent_answered event sent to:', opponentSocketId);
+      opponentSocket.emit('opponent_answered', { 
+        questionIndex,
+        answer: answer // Send the specific answer
+      });
+      console.log('opponent_answered event sent to:', opponentSocketId, 'with answer:', answer);
     } else {
       console.log('Opponent socket not found or disconnected:', opponentSocketId);
     }
@@ -765,7 +830,7 @@ io.on('connection', (socket) => {
     console.log('   - All player 2 answers:', match.player2Answers);
     
     if (p1Answered && p2Answered) {
-      console.log('Both players answered question', questionIndex);
+      console.log('✅ Both players answered question', questionIndex);
       console.log('📊 Question progression check:');
       console.log(`   - Current question index: ${questionIndex}`);
       console.log(`   - Total questions: ${match.totalQuestions}`);
@@ -808,11 +873,15 @@ io.on('connection', (socket) => {
           console.log('🏁 All questions answered, ending match');
           console.log(`   - Final question index: ${questionIndex}`);
           console.log(`   - Total questions: ${match.totalQuestions}`);
+          console.log('   - Final player 1 answers:', match.player1Answers);
+          console.log('   - Final player 2 answers:', match.player2Answers);
           endMatch(matchId);
         }
-      }, 3000); // 3 second delay between questions to ensure client is ready
+      }, 1000); // 1 second delay between questions to ensure client is ready
     } else {
       console.log('⏳ Waiting for other player to answer...');
+      console.log('   - Player 1 answered:', !!p1Answered);
+      console.log('   - Player 2 answered:', !!p2Answered);
     }
   });
 
@@ -954,6 +1023,24 @@ io.on('connection', (socket) => {
     console.log('🏓 Sent pong to socket:', socket.id);
   });
 
+  // Test event to verify socket communication
+  socket.on('test_answer', (data) => {
+    console.log('🧪 Test answer event received:');
+    console.log('   - Socket ID:', socket.id);
+    console.log('   - User ID:', socket.userId);
+    console.log('   - Data:', data);
+    console.log('   - Data type:', typeof data);
+    console.log('   - Data stringified:', JSON.stringify(data, null, 2));
+    
+    // Send back a test response
+    socket.emit('test_answer_response', {
+      received: data,
+      timestamp: new Date().toISOString(),
+      socketId: socket.id,
+      userId: socket.userId
+    });
+  });
+
   socket.on('disconnect', async () => {
     console.log('🔌 Client disconnected:', socket.id);
     console.log('   - Time:', new Date().toISOString());
@@ -1013,6 +1100,833 @@ io.on('connection', (socket) => {
       });
     }
   });
+
+  // Spy Game Events
+  socket.on('create_spy_game', async (data) => {
+    console.log('🎮 create_spy_game event received:', data);
+    const { userId, maxPlayers = 6, wordPack = 'default' } = data;
+    
+    try {
+      // Generate room code
+      const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      console.log(`Generated room code: ${roomCode}`);
+      
+      // Create game in database
+      const game = await prisma.spyGame.create({
+        data: {
+          roomCode,
+          hostId: userId,
+          maxPlayers,
+          wordPack
+        }
+      });
+      
+      console.log(`✅ Game created in database: ${game.id}`);
+      
+      // Add host as player
+      await prisma.spyGamePlayer.create({
+        data: {
+          gameId: game.id,
+          userId,
+          isHost: true
+        }
+      });
+      
+      console.log(`✅ Host added as player`);
+      
+      // Create game in memory
+      const gameData = {
+        id: game.id,
+        roomCode,
+        hostId: userId,
+        maxPlayers,
+        wordPack,
+        players: [{
+          userId,
+          socketId: socket.id,
+          isHost: true,
+          name: 'Host'
+        }],
+        status: 'WAITING',
+        currentPhase: 'LOBBY',
+        currentTurn: 0
+      };
+      
+      spyGames.set(game.id, gameData);
+      spyGamePlayers.set(socket.id, game.id);
+      
+      socket.join(`spy_game_${game.id}`);
+      
+      console.log(`✅ Game data created in memory`);
+      console.log(`✅ Game ID: ${game.id}`);
+      console.log(`✅ Room Code: ${roomCode}`);
+      console.log(`✅ Total games in memory now: ${spyGames.size}`);
+      console.log(`✅ Game data:`, JSON.stringify(gameData, null, 2));
+      
+      socket.emit('spy_game_created', {
+        gameId: game.id,
+        roomCode,
+        game: gameData
+      });
+      
+      console.log(`🎮 Spy game created: ${roomCode} by user ${userId}`);
+      
+    } catch (error) {
+      console.error('❌ Error creating spy game:', error);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Error code:', error.code);
+      socket.emit('spy_game_error', { message: 'Failed to create game: ' + error.message });
+    }
+  });
+
+  socket.on('join_spy_game', async (data) => {
+    console.log('🎮 join_spy_game event received:', data);
+    const { userId, roomCode } = data;
+    console.log(`🔍 Looking for game with room code: ${roomCode}`);
+    console.log(`🔍 Current user ID: ${userId}`);
+    
+    try {
+      // First check in-memory games
+      console.log(`🔍 Checking in-memory games...`);
+      console.log(`🔍 Total games in memory:`, spyGames.size);
+      for (const [gameId, data] of spyGames.entries()) {
+        console.log(`🔍 Game ${gameId}: roomCode=${data.roomCode}, players=${data.players.length}`);
+      }
+      
+      let memoryGameData = null;
+      for (const [gameId, data] of spyGames.entries()) {
+        if (data.roomCode === roomCode) {
+          memoryGameData = data;
+          console.log(`✅ Found game in memory: ${gameId}`);
+          break;
+        }
+      }
+      
+      // Find game by room code in database
+      const game = await prisma.spyGame.findUnique({
+        where: { roomCode },
+        include: { players: true }
+      });
+      
+      if (!game && !memoryGameData) {
+        console.log(`❌ Game not found with room code: ${roomCode}`);
+        socket.emit('spy_game_error', { message: 'Game not found' });
+        return;
+      }
+      
+      // If game exists in memory but not in database, use memory data
+      if (!game && memoryGameData) {
+        console.log(`⚠️ Game found in memory but not in database: ${roomCode}`);
+        // We'll use the memory data for now
+      }
+      
+      // Use database game or memory game data
+      const gameToUse = game || memoryGameData;
+      const gameStatus = game?.status || memoryGameData?.status;
+      const gamePlayers = game?.players || memoryGameData?.players || [];
+      const gameMaxPlayers = game?.maxPlayers || memoryGameData?.maxPlayers;
+      
+      if (gameStatus !== 'WAITING') {
+        console.log(`❌ Game already started: ${roomCode}`);
+        socket.emit('spy_game_error', { message: 'Game already started' });
+        return;
+      }
+      
+      if (gamePlayers.length >= gameMaxPlayers) {
+        console.log(`❌ Game is full: ${roomCode}`);
+        socket.emit('spy_game_error', { message: 'Game is full' });
+        return;
+      }
+      
+      // Check if player already in game
+      const existingPlayer = gamePlayers.find(p => p.userId === userId);
+      if (existingPlayer) {
+        console.log(`❌ Player already in game: ${userId}`);
+        console.log(`🔍 Existing player data:`, existingPlayer);
+        console.log(`🔍 All players in game:`, gamePlayers);
+        console.log(`🔍 Game to use:`, gameToUse);
+        console.log(`🔍 Game ID:`, gameToUse?.id);
+        
+        // Instead of blocking, let's try to rejoin the game
+        console.log(`🔄 Attempting to rejoin game for player: ${userId}`);
+        
+        // Get the game data and send it to the player
+        let gameData = spyGames.get(gameToUse.id);
+        console.log(`🔍 Game data from memory:`, gameData);
+        if (!gameData) {
+          gameData = {
+            id: gameToUse.id,
+            roomCode: gameToUse.roomCode,
+            hostId: gameToUse.hostId,
+            maxPlayers: gameToUse.maxPlayers,
+            wordPack: gameToUse.wordPack,
+            players: gamePlayers,
+            status: gameToUse.status,
+            currentPhase: gameToUse.currentPhase,
+            currentTurn: gameToUse.currentTurn
+          };
+          spyGames.set(gameToUse.id, gameData);
+        }
+        
+        // Update the player's socket ID
+        const playerIndex = gameData.players.findIndex(p => p.userId === userId);
+        if (playerIndex !== -1) {
+          gameData.players[playerIndex].socketId = socket.id;
+          console.log(`🔄 Updated socket ID for player ${userId} (isHost: ${gameData.players[playerIndex].isHost})`);
+        }
+        
+        spyGamePlayers.set(socket.id, gameToUse.id);
+        socket.join(`spy_game_${gameToUse.id}`);
+        
+        // Send the game data to the player
+        console.log(`📤 Sending spy_game_joined event to player ${userId}`);
+        socket.emit('spy_game_joined', {
+          gameId: gameToUse.id,
+          game: gameData
+        });
+        
+        console.log(`✅ Player ${userId} rejoined spy game ${roomCode}`);
+        return;
+      }
+      
+      // Add player to database if game exists in database
+      if (game) {
+        try {
+          await prisma.spyGamePlayer.create({
+            data: {
+              gameId: game.id,
+              userId
+            }
+          });
+          console.log(`✅ Player added to database`);
+        } catch (error) {
+          if (error.code === 'P2002' && error.message.includes('spy_game_players_gameId_userId_key')) {
+            console.log(`ℹ️ Player already exists in database: ${userId}`);
+            // This is fine, the player already exists in the database
+          } else {
+            throw error; // Re-throw other errors
+          }
+        }
+      }
+      
+      // Get or create game data in memory
+      let gameData = spyGames.get(gameToUse.id);
+      if (!gameData) {
+        // Create new game data with all existing players
+        const allPlayers = [];
+        
+        // Add database players
+        if (gameToUse.players) {
+          allPlayers.push(...gameToUse.players.map(p => ({
+            userId: p.userId,
+            socketId: null,
+            isHost: p.isHost,
+            name: p.name || 'Player'
+          })));
+        }
+        
+        gameData = {
+          id: gameToUse.id,
+          roomCode: gameToUse.roomCode,
+          hostId: gameToUse.hostId,
+          maxPlayers: gameToUse.maxPlayers,
+          wordPack: gameToUse.wordPack,
+          players: allPlayers,
+          status: gameToUse.status,
+          currentPhase: gameToUse.currentPhase,
+          currentTurn: gameToUse.currentTurn
+        };
+        spyGames.set(gameToUse.id, gameData);
+        console.log(`🆕 Created new game data in memory with ${allPlayers.length} players`);
+      } else {
+        console.log(`📋 Using existing game data in memory with ${gameData.players.length} players`);
+      }
+      
+      // Add player to memory
+      const isHost = gameData.hostId === userId;
+      gameData.players.push({
+        userId,
+        socketId: socket.id,
+        isHost: isHost,
+        name: 'Player'
+      });
+      
+      console.log(`👤 Added player ${userId} to game (isHost: ${isHost})`);
+      console.log(`📊 Total players in game: ${gameData.players.length}`);
+      
+      spyGamePlayers.set(socket.id, gameToUse.id);
+      socket.join(`spy_game_${gameToUse.id}`);
+      
+      // Debug: Check who's in the room
+      const room = io.sockets.adapter.rooms.get(`spy_game_${gameToUse.id}`);
+      console.log(`🏠 Players in room spy_game_${gameToUse.id}:`, room ? Array.from(room) : 'No room found');
+      console.log(`🏠 Total sockets in room:`, room ? room.size : 0);
+      
+      // Notify all players
+      console.log(`📢 Sending player_joined_spy_game to all players in room spy_game_${gameToUse.id}`);
+      console.log(`📢 Game data being sent:`, JSON.stringify(gameData, null, 2));
+      
+      io.to(`spy_game_${gameToUse.id}`).emit('player_joined_spy_game', {
+        player: { userId, name: 'Player', isHost: isHost },
+        game: gameData
+      });
+      
+      // Notify the joining player
+      console.log(`📢 Sending spy_game_joined to player ${userId}`);
+      socket.emit('spy_game_joined', {
+        gameId: gameToUse.id,
+        game: gameData
+      });
+      
+      console.log(`📢 Notified all players about new player. Total players: ${gameData.players.length}`);
+      
+      console.log(`🎮 Player ${userId} joined spy game ${roomCode}`);
+      
+    } catch (error) {
+      console.error('❌ Error joining spy game:', error);
+      socket.emit('spy_game_error', { message: 'Failed to join game: ' + error.message });
+    }
+  });
+
+  // Test event to check if players can communicate
+  socket.on('test_spy_game', (data) => {
+    const { gameId, message } = data;
+    console.log(`🧪 Test event received from ${socket.id}: ${message}`);
+    console.log(`🧪 Game ID: ${gameId}`);
+    
+    // Send test message to all players in the game
+    io.to(`spy_game_${gameId}`).emit('test_spy_game_response', {
+      message: `Test from ${socket.id}: ${message}`,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Also test the broadcast event
+    console.log(`🧪 Testing broadcast event for game ${gameId}`);
+    const gameData = spyGames.get(gameId);
+    if (gameData) {
+      const testPlayerWords = gameData.players.map((player, index) => ({
+        userId: player.userId,
+        word: `Test Word ${index + 1}`,
+        isSpy: index === 0
+      }));
+      
+      io.to(`spy_game_${gameId}`).emit('spy_game_started_broadcast', {
+        gameData: { ...gameData, currentPhase: 'WORD_ASSIGNMENT' },
+        playerWords: testPlayerWords
+      });
+      console.log(`🧪 Sent test broadcast with ${testPlayerWords.length} player words`);
+    } else {
+      console.log(`❌ No game data found for game ${gameId}`);
+    }
+  });
+
+  // Chat message handler
+  socket.on('send_chat_message', (data) => {
+    const { gameId, message } = data;
+    const gameData = spyGames.get(gameId);
+    
+    if (!gameData) return;
+    
+    // Find the player who sent the message
+    const player = gameData.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+    
+    // Broadcast the message to all players in the game
+    io.to(`spy_game_${gameId}`).emit('chat_message_received', {
+      id: Date.now().toString(),
+      userId: player.userId,
+      userName: player.name,
+      message: message,
+      timestamp: new Date(),
+      type: 'chat'
+    });
+    
+    console.log(`💬 Chat message from ${player.name}: ${message}`);
+  });
+
+  // Typing indicators
+  socket.on('typing', (data) => {
+    const { gameId, userName } = data;
+    const gameData = spyGames.get(gameId);
+    
+    if (!gameData) return;
+    
+    // Broadcast typing indicator to all players except the sender
+    socket.to(`spy_game_${gameId}`).emit('user_typing', {
+      userId: socket.userId,
+      userName: userName
+    });
+  });
+
+  socket.on('stop_typing', (data) => {
+    const { gameId, userName } = data;
+    const gameData = spyGames.get(gameId);
+    
+    if (!gameData) return;
+    
+    // Broadcast stop typing indicator to all players except the sender
+    socket.to(`spy_game_${gameId}`).emit('user_stopped_typing', {
+      userId: socket.userId,
+      userName: userName
+    });
+  });
+
+  // Description submission handler
+  socket.on('submit_description', (data) => {
+    const { gameId, description } = data;
+    const gameData = spyGames.get(gameId);
+    
+    if (!gameData) return;
+    
+    // Find the player who sent the description
+    const player = gameData.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+    
+    // Check if it's the player's turn
+    if (gameData.currentTurn !== gameData.players.findIndex(p => p.userId === player.userId)) {
+      console.log(`❌ Not ${player.name}'s turn to describe`);
+      return;
+    }
+    
+    // Store the description
+    if (!gameData.descriptions) gameData.descriptions = {};
+    gameData.descriptions[player.userId] = description;
+    
+    // Broadcast the description to all players
+    io.to(`spy_game_${gameId}`).emit('description_submitted', {
+      playerId: player.userId,
+      description: description,
+      currentTurn: gameData.currentTurn
+    });
+    
+    console.log(`📝 Description from ${player.name}: ${description}`);
+    
+    // Move to next player
+    const nextTurn = gameData.currentTurn + 1;
+    if (nextTurn < gameData.players.length) {
+      gameData.currentTurn = nextTurn;
+      gameData.timeLeft = 20;
+      
+      // Start timer for next player
+      setTimeout(() => {
+        if (gameData.currentTurn === nextTurn) {
+          io.to(`spy_game_${gameId}`).emit('turn_started', {
+            gameId: gameId,
+            currentTurn: nextTurn,
+            timeLeft: 20
+          });
+          
+          // Start countdown timer
+          let timeLeft = 20;
+          const timer = setInterval(() => {
+            timeLeft--;
+            gameData.timeLeft = timeLeft;
+            
+            io.to(`spy_game_${gameId}`).emit('turn_started', {
+              gameId: gameId,
+              currentTurn: nextTurn,
+              timeLeft: timeLeft
+            });
+            
+            if (timeLeft <= 0) {
+              clearInterval(timer);
+              io.to(`spy_game_${gameId}`).emit('turn_ended', {
+                gameId: gameId,
+                nextTurn: nextTurn + 1
+              });
+            }
+          }, 1000);
+        }
+      }, 1000);
+    } else {
+      // All players have described, move to voting phase
+      gameData.currentPhase = 'VOTING';
+      io.to(`spy_game_${gameId}`).emit('voting_started', {
+        players: gameData.players
+      });
+    }
+  });
+
+  // Get spy game data by room code
+  socket.on('get_spy_game_data', async (data) => {
+    const { roomCode, userId } = data;
+    console.log(`🔍 get_spy_game_data event received for room code: ${roomCode}`);
+    
+    try {
+      // Find game by room code
+      const game = await prisma.spyGame.findUnique({
+        where: { roomCode },
+        include: { players: true }
+      });
+      
+      if (!game) {
+        console.log(`❌ Game not found with room code: ${roomCode}`);
+        socket.emit('spy_game_error', { message: 'Game not found' });
+        return;
+      }
+      
+      // Get game data from memory
+      let gameData = spyGames.get(game.id);
+      if (!gameData) {
+        // Create game data from database
+        gameData = {
+          id: game.id,
+          roomCode: game.roomCode,
+          hostId: game.hostId,
+          maxPlayers: game.maxPlayers,
+          wordPack: game.wordPack,
+          players: game.players.map(p => ({
+            userId: p.userId,
+            socketId: null,
+            isHost: p.isHost,
+            name: p.name || 'Player'
+          })),
+          status: game.status,
+          currentPhase: game.currentPhase,
+          currentTurn: game.currentTurn
+        };
+        spyGames.set(game.id, gameData);
+        console.log(`🆕 Created game data from database for room: ${roomCode}`);
+      }
+      
+      // Check if user is already in the game
+      const existingPlayer = gameData.players.find(p => p.userId === userId);
+      if (!existingPlayer) {
+        console.log(`❌ User ${userId} not found in game ${roomCode}`);
+        socket.emit('spy_game_error', { message: 'You are not in this game' });
+        return;
+      }
+      
+      // Update player's socket ID
+      const playerIndex = gameData.players.findIndex(p => p.userId === userId);
+      if (playerIndex !== -1) {
+        gameData.players[playerIndex].socketId = socket.id;
+      }
+      
+      // Join the socket room
+      spyGamePlayers.set(socket.id, game.id);
+      socket.join(`spy_game_${game.id}`);
+      
+      // Send game data to the player
+      socket.emit('spy_game_data_received', {
+        gameId: game.id,
+        game: gameData
+      });
+      
+      console.log(`✅ Sent game data to user ${userId} for room ${roomCode}`);
+      
+    } catch (error) {
+      console.error('❌ Error getting spy game data:', error);
+      socket.emit('spy_game_error', { message: 'Failed to get game data: ' + error.message });
+    }
+  });
+
+  socket.on('start_spy_game', async (data) => {
+    const { gameId } = data;
+    const gameData = spyGames.get(gameId);
+    
+    if (!gameData) {
+      socket.emit('spy_game_error', { message: 'Game not found' });
+      return;
+    }
+    
+    if (gameData.hostId !== socket.userId) {
+      socket.emit('spy_game_error', { message: 'Only host can start game' });
+      return;
+    }
+    
+    if (gameData.players.length < 2) {
+      socket.emit('spy_game_error', { message: 'Need at least 2 players' });
+      return;
+    }
+    
+    try {
+      // Select random word pair
+      const wordPack = wordPacks[gameData.wordPack] || wordPacks.default;
+      const wordPair = wordPack[Math.floor(Math.random() * wordPack.length)];
+      
+      // Select random spy
+      const spyIndex = Math.floor(Math.random() * gameData.players.length);
+      
+      // Assign words to players
+      const playerWords = gameData.players.map((player, index) => ({
+        userId: player.userId,
+        word: index === spyIndex ? wordPair.spyWord : wordPair.word,
+        isSpy: index === spyIndex
+      }));
+      
+      // Save words to database
+      await prisma.spyGameWord.createMany({
+        data: playerWords.map(pw => ({
+          gameId,
+          word: pw.word,
+          isSpyWord: pw.isSpy
+        }))
+      });
+      
+      // Update game status
+      await prisma.spyGame.update({
+        where: { id: gameId },
+        data: { 
+          status: 'PLAYING',
+          currentPhase: 'WORD_ASSIGNMENT'
+        }
+      });
+      
+      gameData.status = 'PLAYING';
+      gameData.currentPhase = 'WORD_ASSIGNMENT';
+      gameData.currentTurn = 0;
+      
+      // Send words to players
+      console.log(`🎮 Sending words to ${gameData.players.length} players`);
+      gameData.players.forEach((player, index) => {
+        console.log(`🎮 Player ${player.userId} (socket: ${player.socketId}) - Word: ${playerWords[index].word}, IsSpy: ${playerWords[index].isSpy}`);
+        
+        if (player.socketId) {
+          const playerSocket = io.sockets.sockets.get(player.socketId);
+          if (playerSocket) {
+            playerSocket.emit('spy_game_started', {
+              word: playerWords[index].word,
+              isSpy: playerWords[index].isSpy,
+              gameData
+            });
+            console.log(`✅ Sent word to player ${player.userId}`);
+          } else {
+            console.log(`❌ Socket not found for player ${player.userId} (socketId: ${player.socketId})`);
+          }
+        } else {
+          console.log(`❌ No socket ID for player ${player.userId}`);
+        }
+      });
+      
+      // Fallback: Send to all players in the room
+      console.log(`🎮 Broadcasting game start to all players in room spy_game_${gameId}`);
+      
+      // Get all sockets in the room
+      const roomSockets = io.sockets.adapter.rooms.get(`spy_game_${gameId}`);
+      if (roomSockets) {
+        console.log(`🎮 Found ${roomSockets.size} sockets in room spy_game_${gameId}`);
+        roomSockets.forEach(socketId => {
+          console.log(`🎮 Socket in room: ${socketId}`);
+        });
+      } else {
+        console.log(`❌ No sockets found in room spy_game_${gameId}`);
+      }
+      
+      io.to(`spy_game_${gameId}`).emit('spy_game_started_broadcast', {
+        gameData,
+        playerWords
+      });
+      
+      console.log(`🎮 Spy game ${gameId} started`);
+      
+      // Start description phase after 5 seconds
+      setTimeout(() => {
+        gameData.currentPhase = 'DESCRIBING';
+        gameData.currentTurn = 0;
+        gameData.timeLeft = 20;
+        gameData.descriptions = {};
+        
+        io.to(`spy_game_${gameId}`).emit('description_phase_started', {
+          gameId: gameId,
+          currentTurn: 0,
+          timeLeft: 20
+        });
+        
+        // Start timer for first player
+        let timeLeft = 20;
+        const timer = setInterval(() => {
+          timeLeft--;
+          gameData.timeLeft = timeLeft;
+          
+          // Only emit timer update (not system message) every second
+          io.to(`spy_game_${gameId}`).emit('timer_update', {
+            gameId: gameId,
+            currentTurn: 0,
+            timeLeft: timeLeft
+          });
+          
+          if (timeLeft <= 0) {
+            clearInterval(timer);
+            // Move to next player when time runs out
+            const nextTurn = 1;
+            if (nextTurn < gameData.players.length) {
+              gameData.currentTurn = nextTurn;
+              gameData.timeLeft = 20;
+              
+              io.to(`spy_game_${gameId}`).emit('turn_ended', {
+                gameId: gameId,
+                nextTurn: nextTurn
+              });
+              
+              // Start timer for next player
+              setTimeout(() => {
+                io.to(`spy_game_${gameId}`).emit('turn_started', {
+                  gameId: gameId,
+                  currentTurn: nextTurn,
+                  timeLeft: 20
+                });
+                
+                let nextTimeLeft = 20;
+                const nextTimer = setInterval(() => {
+                  nextTimeLeft--;
+                  gameData.timeLeft = nextTimeLeft;
+                  
+                  io.to(`spy_game_${gameId}`).emit('timer_update', {
+                    gameId: gameId,
+                    currentTurn: nextTurn,
+                    timeLeft: nextTimeLeft
+                  });
+                  
+                  if (nextTimeLeft <= 0) {
+                    clearInterval(nextTimer);
+                    // Continue to next player or end game
+                    if (nextTurn + 1 < gameData.players.length) {
+                      gameData.currentTurn = nextTurn + 1;
+                      io.to(`spy_game_${gameId}`).emit('turn_ended', {
+                        gameId: gameId,
+                        nextTurn: nextTurn + 1
+                      });
+                    } else {
+                      // All players have described, move to voting
+                      gameData.currentPhase = 'VOTING';
+                      io.to(`spy_game_${gameId}`).emit('voting_started', {
+                        players: gameData.players
+                      });
+                    }
+                  }
+                }, 1000);
+              }, 1000);
+            } else {
+              // All players have described, move to voting
+              gameData.currentPhase = 'VOTING';
+              io.to(`spy_game_${gameId}`).emit('voting_started', {
+                players: gameData.players
+              });
+            }
+          }
+        }, 1000);
+      }, 5000);
+      
+    } catch (error) {
+      console.error('Error starting spy game:', error);
+      socket.emit('spy_game_error', { message: 'Failed to start game' });
+    }
+  });
+
+  socket.on('submit_description', (data) => {
+    const { gameId, description } = data;
+    const gameData = spyGames.get(gameId);
+    
+    if (!gameData) return;
+    
+    // Find the player who sent the description
+    const player = gameData.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+    
+    // Check if it's the player's turn
+    if (gameData.currentTurn !== gameData.players.findIndex(p => p.userId === player.userId)) {
+      console.log(`❌ Not ${player.name}'s turn to describe`);
+      return;
+    }
+    
+    // Store the description
+    if (!gameData.descriptions) gameData.descriptions = {};
+    gameData.descriptions[player.userId] = description;
+    
+    // Broadcast the description to all players
+    io.to(`spy_game_${gameId}`).emit('description_submitted', {
+      playerId: player.userId,
+      description: description,
+      currentTurn: gameData.currentTurn
+    });
+    
+    console.log(`📝 Description from ${player.name}: ${description}`);
+    
+    // Move to next player
+    const nextTurn = gameData.currentTurn + 1;
+    if (nextTurn < gameData.players.length) {
+      gameData.currentTurn = nextTurn;
+      gameData.timeLeft = 20;
+      
+      // Start timer for next player
+      setTimeout(() => {
+        if (gameData.currentTurn === nextTurn) {
+          io.to(`spy_game_${gameId}`).emit('turn_started', {
+            gameId: gameId,
+            currentTurn: nextTurn,
+            timeLeft: 20
+          });
+          
+          // Start countdown timer
+          let timeLeft = 20;
+          const timer = setInterval(() => {
+            timeLeft--;
+            gameData.timeLeft = timeLeft;
+            
+            io.to(`spy_game_${gameId}`).emit('turn_started', {
+              gameId: gameId,
+              currentTurn: nextTurn,
+              timeLeft: timeLeft
+            });
+            
+            if (timeLeft <= 0) {
+              clearInterval(timer);
+              io.to(`spy_game_${gameId}`).emit('turn_ended', {
+                gameId: gameId,
+                nextTurn: nextTurn + 1
+              });
+            }
+          }, 1000);
+        }
+      }, 1000);
+    } else {
+      // All players have described, move to voting phase
+      gameData.currentPhase = 'VOTING';
+      io.to(`spy_game_${gameId}`).emit('voting_started', {
+        players: gameData.players
+      });
+    }
+  });
+
+  socket.on('submit_vote', async (data) => {
+    const { gameId, votedForId } = data;
+    const gameData = spyGames.get(gameId);
+    
+    if (!gameData) return;
+    
+    try {
+      // Save vote to database
+      await prisma.spyGameVote.create({
+        data: {
+          gameId,
+          voterId: socket.userId,
+          votedForId
+        }
+      });
+      
+      // Notify all players about the vote
+      io.to(`spy_game_${gameId}`).emit('vote_submitted', {
+        voterId: socket.userId,
+        votedForId
+      });
+      
+      // Check if all players have voted
+      const votes = await prisma.spyGameVote.findMany({
+        where: { gameId }
+      });
+      
+      if (votes.length >= gameData.players.length) {
+        // End game and reveal results
+        await endSpyGame(gameId);
+      }
+      
+    } catch (error) {
+      console.error('Error submitting vote:', error);
+    }
+  });
 });
 
 // Helper Functions
@@ -1035,6 +1949,49 @@ async function tryMatchPlayers(quizId) {
     const player2 = players.shift();
     
     console.log(`Matching players ${player1.userId} and ${player2.userId} for quiz ${quizId}`);
+    
+    // Check if same user is trying to match with themselves
+    if (player1.userId === player2.userId) {
+      console.log(`⚠️ WARNING: Same user ${player1.userId} matched with themselves!`);
+      console.log(`   - Socket 1: ${player1.socketId}`);
+      console.log(`   - Socket 2: ${player2.socketId}`);
+      
+      // Put player2 back in queue and continue with next player
+      players.unshift(player2);
+      console.log(`🔄 Put second player back in queue due to same user match`);
+      continue;
+    }
+    
+    // Check if either player is already in an active match
+    const player1InMatch = activeMatches.has(player1.userId);
+    const player2InMatch = activeMatches.has(player2.userId);
+    
+    if (player1InMatch || player2InMatch) {
+      console.log(`⚠️ WARNING: Player already in active match!`);
+      console.log(`   - Player 1 (${player1.userId}) in match: ${player1InMatch}`);
+      console.log(`   - Player 2 (${player2.userId}) in match: ${player2InMatch}`);
+      
+      // Remove active match players from queue instead of putting them back
+      if (player1InMatch) {
+        await queueManager.removeFromQueue(quizId, player1);
+        console.log(`🗑️ Removed player 1 (${player1.userId}) from queue - already in active match`);
+      }
+      if (player2InMatch) {
+        await queueManager.removeFromQueue(quizId, player2);
+        console.log(`🗑️ Removed player 2 (${player2.userId}) from queue - already in active match`);
+      }
+      
+      // Only put non-active players back in queue
+      if (!player1InMatch) {
+        players.unshift(player1);
+      }
+      if (!player2InMatch) {
+        players.unshift(player2);
+      }
+      
+      console.log(`🔄 Processed active match conflict - continuing with next players`);
+      continue;
+    }
     
     // Remove matched players from queue
     await queueManager.removeFromQueue(quizId, player1);
@@ -1139,8 +2096,26 @@ async function tryMatchPlayers(quizId) {
     };
     
     console.log(`✅ Match created with ${match.totalQuestions} total questions`);
+    console.log('Match object details:');
+    console.log('   - Match ID:', match.id);
+    console.log('   - Player 1 ID:', match.player1Id);
+    console.log('   - Player 2 ID:', match.player2Id);
+    console.log('   - Player 1 Socket ID:', match.player1SocketId);
+    console.log('   - Player 2 Socket ID:', match.player2SocketId);
+    console.log('   - Total Questions:', match.totalQuestions);
+    console.log('   - Questions array length:', match.questions.length);
+    console.log('   - First question sample:', match.questions[0] ? {
+      text: match.questions[0].text.substring(0, 50) + '...',
+      options: match.questions[0].options,
+      correct: match.questions[0].correct
+    } : 'No questions');
     
     activeMatches.set(matchId, match);
+    
+    // Track active players to prevent multiple matches
+    activeMatches.set(player1.userId, matchId);
+    activeMatches.set(player2.userId, matchId);
+    
     console.log('Match created:', matchId);
     console.log('Match details:', {
       id: match.id,
@@ -1299,19 +2274,84 @@ async function endMatch(matchId) {
   let player1Score = 0;
   let player2Score = 0;
   
+  console.log('🔍 Detailed answer analysis:');
+  console.log('   - Match questions:', match.questions);
+  console.log('   - Player 1 answers:', match.player1Answers);
+  console.log('   - Player 2 answers:', match.player2Answers);
+  
   for (let i = 0; i < match.totalQuestions; i++) {
     const p1Answer = match.player1Answers[i];
     const p2Answer = match.player2Answers[i];
+    const question = match.questions[i];
     
-    if (p1Answer && p1Answer.answer === match.questions[i].correct) {
-      player1Score += 10;
+    console.log(`🔍 Question ${i} analysis:`);
+    console.log(`   - Question: ${question.text}`);
+    console.log(`   - Options: ${JSON.stringify(question.options)}`);
+    console.log(`   - Correct answer (index): ${question.correct}`);
+    console.log(`   - Correct answer (text): ${question.options[question.correct]}`);
+    console.log(`   - Player 1 answer: ${JSON.stringify(p1Answer)}`);
+    console.log(`   - Player 2 answer: ${JSON.stringify(p2Answer)}`);
+    
+    // Check player 1 answer
+    if (p1Answer) {
+      let p1Correct = false;
+      
+      // Handle different answer formats
+      if (typeof p1Answer.answer === 'number') {
+        // Answer is already an index
+        p1Correct = p1Answer.answer === question.correct;
+      } else if (typeof p1Answer.answer === 'string') {
+        // Answer might be the text of the option
+        const answerIndex = question.options.findIndex(option => 
+          option.toLowerCase() === p1Answer.answer.toLowerCase()
+        );
+        p1Correct = answerIndex === question.correct;
+      } else if (typeof p1Answer.answer === 'string' && !isNaN(parseInt(p1Answer.answer))) {
+        // Answer might be a string number
+        p1Correct = parseInt(p1Answer.answer) === question.correct;
+      }
+      
+      if (p1Correct) {
+        player1Score += 10;
+        console.log(`✅ Player 1 correct! Score: ${player1Score}`);
+      } else {
+        console.log(`❌ Player 1 incorrect. Expected: ${question.correct}, Got: ${p1Answer.answer}`);
+      }
+    } else {
+      console.log(`❌ Player 1 no answer for question ${i}`);
     }
-    if (p2Answer && p2Answer.answer === match.questions[i].correct) {
-      player2Score += 10;
+    
+    // Check player 2 answer
+    if (p2Answer) {
+      let p2Correct = false;
+      
+      // Handle different answer formats
+      if (typeof p2Answer.answer === 'number') {
+        // Answer is already an index
+        p2Correct = p2Answer.answer === question.correct;
+      } else if (typeof p2Answer.answer === 'string') {
+        // Answer might be the text of the option
+        const answerIndex = question.options.findIndex(option => 
+          option.toLowerCase() === p2Answer.answer.toLowerCase()
+        );
+        p2Correct = answerIndex === question.correct;
+      } else if (typeof p2Answer.answer === 'string' && !isNaN(parseInt(p2Answer.answer))) {
+        // Answer might be a string number
+        p2Correct = parseInt(p2Answer.answer) === question.correct;
+      }
+      
+      if (p2Correct) {
+        player2Score += 10;
+        console.log(`✅ Player 2 correct! Score: ${player2Score}`);
+      } else {
+        console.log(`❌ Player 2 incorrect. Expected: ${question.correct}, Got: ${p2Answer.answer}`);
+      }
+    } else {
+      console.log(`❌ Player 2 no answer for question ${i}`);
     }
   }
   
-  console.log('🏆 Score calculation:');
+  console.log('🏆 Final score calculation:');
   console.log(`   - Player 1 (${match.player1Id}): ${player1Score} points`);
   console.log(`   - Player 2 (${match.player2Id}): ${player2Score} points`);
   console.log(`   - Player 1 answers:`, match.player1Answers);
@@ -1377,9 +2417,11 @@ async function endMatch(matchId) {
         });
         
         console.log(`✅ Transaction record created:`, transactionRecord);
-        
-        // Create battle quiz winner record
-        const winnerRecord = await tx.battleQuizWinner.create({
+      });
+      
+      // Create battle quiz winner record - outside transaction to prevent rollback
+      try {
+        const winnerRecord = await prisma.battleQuizWinner.create({
           data: {
             quizId: match.quizId || 'general',
             userId: winner,
@@ -1388,9 +2430,12 @@ async function endMatch(matchId) {
             paid: true
           }
         });
-        
         console.log(`✅ Battle quiz winner record created:`, winnerRecord);
-      });
+      } catch (quizError) {
+        console.log(`⚠️ Could not create battle quiz winner record:`, quizError.message);
+        console.log(`   - This is normal for category-based matches without specific quiz ID`);
+        console.log(`   - Winner still gets the prize: ₹${winnerPrize}`);
+      }
       
       console.log(`✅ Winnings distributed to winner: ${winner}`);
       console.log(`   - Winner received: ₹${winnerPrize}`);
@@ -1519,7 +2564,13 @@ async function endMatch(matchId) {
   // Clean up
   activeMatches.delete(matchId);
   
+  // Remove players from active matches tracking
+  activeMatches.delete(match.player1Id);
+  activeMatches.delete(match.player2Id);
+  
   console.log(`Match ${matchId} ended. Winner: ${winner}, Prize: ₹${winnerPrize}`);
+  console.log(`Players ${match.player1Id} and ${match.player2Id} are now available for new matches`);
+  console.log(`📊 Active matches after cleanup:`, Array.from(activeMatches.keys()));
 }
 
 async function generateQuestions(quizData) {
@@ -1630,6 +2681,67 @@ async function generateQuestions(quizData) {
     }
     console.log(`✅ Generated ${questions.length} fallback questions`);
     return questions;
+  }
+}
+
+// Helper function to end spy game
+async function endSpyGame(gameId) {
+  const gameData = spyGames.get(gameId);
+  if (!gameData) return;
+  
+  try {
+    // Get all votes
+    const votes = await prisma.spyGameVote.findMany({
+      where: { gameId },
+      include: { voter: true, votedFor: true }
+    });
+    
+    // Count votes
+    const voteCounts = {};
+    votes.forEach(vote => {
+      voteCounts[vote.votedForId] = (voteCounts[vote.votedForId] || 0) + 1;
+    });
+    
+    // Find most voted player
+    const mostVotedId = Object.keys(voteCounts).reduce((a, b) => 
+      voteCounts[a] > voteCounts[b] ? a : b
+    );
+    
+    // Get spy player
+    const spyPlayer = gameData.players.find(p => p.isSpy);
+    
+    // Determine winner
+    const spyWasCaught = mostVotedId === spyPlayer.userId;
+    const winner = spyWasCaught ? 'team' : 'spy';
+    
+    // Update game status
+    await prisma.spyGame.update({
+      where: { id: gameId },
+      data: { 
+        status: 'FINISHED',
+        currentPhase: 'REVEAL'
+      }
+    });
+    
+    // Send results to all players
+    io.to(`spy_game_${gameId}`).emit('spy_game_ended', {
+      spyPlayer: spyPlayer,
+      mostVotedPlayer: mostVotedId,
+      voteCounts,
+      winner,
+      spyWasCaught
+    });
+    
+    // Clean up
+    spyGames.delete(gameId);
+    gameData.players.forEach(player => {
+      spyGamePlayers.delete(player.socketId);
+    });
+    
+    console.log(`🎮 Spy game ${gameId} ended. Winner: ${winner}`);
+    
+  } catch (error) {
+    console.error('Error ending spy game:', error);
   }
 }
 

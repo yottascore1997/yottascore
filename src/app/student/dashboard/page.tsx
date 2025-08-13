@@ -256,6 +256,10 @@ function QuestionOfTheDay() {
       }
 
       const data = await response.json()
+      console.log('Question data received:', data);
+      console.log('Selected option:', data.selectedOption);
+      console.log('Correct answer:', data.correctAnswer);
+      console.log('Is correct:', data.isCorrect);
       setQuestion(data)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to fetch question')
@@ -349,16 +353,61 @@ function QuestionOfTheDay() {
         <div className="p-6">
           {question.hasAttempted ? (
             <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                question.isCorrect ? 'bg-green-100' : 'bg-red-100'
+              }`}>
+                <svg className={`w-8 h-8 ${question.isCorrect ? 'text-green-500' : 'text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={question.isCorrect ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M6 18L18 6M6 6l12 12"} />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Already Answered!</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {question.isCorrect ? 'Correct Answer!' : 'Incorrect Answer!'}
+              </h3>
               <p className="text-gray-500 mb-4">You've already answered today's question. Come back tomorrow!</p>
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-sm text-gray-600 mb-2">Your answer was:</p>
-                <p className="font-semibold text-gray-800">{question.options[question.selectedOption]}</p>
+              
+              {/* Show question and answers */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <p className="text-gray-700 mb-4 text-left">{question.question}</p>
+                
+                <div className="space-y-2">
+                  {question.options.map((option: string, index: number) => (
+                    <div
+                      key={index}
+                      className={`p-3 rounded-lg border-2 text-left ${
+                        index === question.selectedOption
+                          ? question.isCorrect
+                            ? 'bg-green-50 border-green-200 text-green-800'
+                            : 'bg-red-50 border-red-200 text-red-800'
+                          : index === question.correctAnswer
+                          ? 'bg-green-50 border-green-200 text-green-800'
+                          : 'bg-white border-gray-200 text-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${
+                          index === question.selectedOption
+                            ? question.isCorrect
+                              ? 'bg-green-500 text-white'
+                              : 'bg-red-500 text-white'
+                            : index === question.correctAnswer
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-300 text-gray-600'
+                        }`}>
+                          {String.fromCharCode(65 + index)}
+                        </div>
+                        <span>{option}</span>
+                        {index === question.selectedOption && (
+                          <span className="ml-auto text-sm font-medium">
+                            {question.isCorrect ? '✅ Your Answer (Correct)' : '❌ Your Answer'}
+                          </span>
+                        )}
+                        {index === question.correctAnswer && index !== question.selectedOption && (
+                          <span className="ml-auto text-sm font-medium text-green-600">✅ Correct Answer</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (

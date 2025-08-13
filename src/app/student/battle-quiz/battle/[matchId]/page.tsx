@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ interface BattleState {
     name: string;
   };
   answers: { [key: number]: number };
-  opponentAnswers: { [key: number]: number };
+  opponentAnswers: { [key: number]: number }; // Store actual answer indices
 }
 
 export default function BattlePage() {
@@ -59,6 +59,13 @@ export default function BattlePage() {
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const questionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const socketListenersRef = useRef<Set<string>>(new Set());
+  const lastQuestionIndexRef = useRef<number>(-1);
+
+  // Check if running in React Native environment
+  const isReactNative = typeof window !== 'undefined' && 
+    (window as any).ReactNativeWebView !== undefined || 
+    typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
 
   useEffect(() => {
     fetchUserProfile();
@@ -70,37 +77,46 @@ export default function BattlePage() {
       status: battleState.status,
       currentQuestion: battleState.currentQuestion,
       questionText: battleState.question?.text?.substring(0, 50) + '...',
-      timeLeft: battleState.timeLeft
+      timeLeft: battleState.timeLeft,
+      isReactNative
     });
-  }, [battleState]);
+  }, [battleState, isReactNative]);
 
-  useEffect(() => {
-    console.log('🔄 Battle useEffect triggered:');
-    console.log('   - Socket exists:', !!socket);
-    console.log('   - Socket connected:', isConnected);
-    console.log('   - Match ID:', matchId);
-    console.log('   - Socket ID:', socket?.id);
+  // Cleanup function for socket listeners
+  const cleanupSocketListeners = useCallback(() => {
+    if (!socket) return;
     
+    console.log('🧹 Cleaning up socket listeners...');
+    const events = ['match_started', 'next_question', 'match_ended', 'opponent_answered', 'match_not_found', 'pong'];
+    
+    events.forEach(event => {
+      if (socketListenersRef.current.has(event)) {
+        socket.off(event);
+        socketListenersRef.current.delete(event);
+        console.log(`✅ Removed listener for: ${event}`);
+      }
+    });
+  }, [socket]);
+
+  // Setup socket listeners with React Native compatibility
+  const setupSocketListeners = useCallback(() => {
     if (!socket || !isConnected) {
-      console.log('❌ Socket not connected, waiting...');
+      console.log('❌ Cannot setup listeners - socket not connected');
       return;
     }
 
     console.log('✅ Setting up battle socket listeners for match:', matchId);
+    console.log('   - Is React Native:', isReactNative);
+    console.log('   - Socket ID:', socket.id);
 
-    // Clean up any existing listeners first
-    console.log('🧹 Cleaning up existing socket listeners...');
-    socket.off('match_started');
-    socket.off('next_question');
-    socket.off('match_ended');
-    socket.off('opponent_answered');
-    socket.off('match_not_found');
-    console.log('✅ Socket listeners cleaned up');
+    // Clean up existing listeners first
+    cleanupSocketListeners();
 
     // Listen for battle events
     console.log('🎧 Attaching socket listeners...');
     
-    socket.on('match_started', (data: { 
+    // Match started event
+    const handleMatchStarted = (data: { 
       matchId: string; 
       questionIndex: number; 
       question: Question; 
@@ -122,9 +138,10 @@ export default function BattlePage() {
       startQuestionTimer(data.timeLimit);
       
       console.log('✅ Match started state updated');
-    });
+    };
 
-    socket.on('next_question', (data: { 
+    // Next question event
+    const handleNextQuestion = (data: { 
       questionIndex: number; 
       question: Question 
     }) => {
@@ -132,30 +149,44 @@ export default function BattlePage() {
       console.log('   - Question index:', data.questionIndex);
       console.log('   - Question text:', data.question?.text?.substring(0, 50) + '...');
       console.log('   - Question options:', data.question?.options);
-      console.log('   - Current battle state before update:', battleState);
+      console.log('   - Last processed question:', lastQuestionIndexRef.current);
+      console.log('   - Is React Native:', isReactNative);
       
-      // Force a more explicit state update
-      setBattleState(prev => {
-        const newState = {
-          ...prev,
-          currentQuestion: data.questionIndex,
-          question: data.question,
-          timeLeft: 10 // Default time limit
-        };
-        console.log('🔄 New battle state:', newState);
-        return newState;
-      });
+      // Prevent duplicate processing
+      if (data.questionIndex === lastQuestionIndexRef.current) {
+        console.log('⚠️ Duplicate next_question event, ignoring');
+        return;
+      }
       
-      // Start timer after state update
+      lastQuestionIndexRef.current = data.questionIndex;
+      
+      // Force state update with setTimeout for React Native compatibility
       setTimeout(() => {
-        startQuestionTimer(10);
-        console.log('✅ Next question timer started');
-      }, 100);
+        console.log('🔄 Updating battle state for next question...');
+        setBattleState(prev => {
+          const newState = {
+            ...prev,
+            currentQuestion: data.questionIndex,
+            question: data.question,
+            timeLeft: 10 // Default time limit
+          };
+          console.log('🔄 New battle state:', newState);
+          return newState;
+        });
+        
+        // Start timer after state update
+        setTimeout(() => {
+          console.log('⏰ Starting question timer...');
+          startQuestionTimer(10);
+          console.log('✅ Next question timer started');
+        }, 100);
+      }, isReactNative ? 100 : 50); // Longer delay for React Native
       
       console.log('✅ Next question state update triggered');
-    });
+    };
 
-    socket.on('match_ended', (data: { 
+    // Match ended event
+    const handleMatchEnded = (data: { 
       matchId: string; 
       myScore: number; 
       opponentScore: number; 
@@ -183,34 +214,53 @@ export default function BattlePage() {
         player1Score: data.myScore,
         player2Score: data.opponentScore
       }));
-    });
+    };
 
-    socket.on('opponent_answered', (data: { questionIndex: number }) => {
+    // Opponent answered event
+    const handleOpponentAnswered = (data: { questionIndex: number; answer: number }) => {
       console.log('👥 Opponent answered event received:', data);
       console.log('   - Question index:', data.questionIndex);
-      console.log('   - Current battle state:', battleState);
+      console.log('   - Opponent answer:', data.answer);
       console.log('   - Current question:', battleState.currentQuestion);
-      console.log('   - Both answered?', battleState.answers[data.questionIndex] !== undefined);
+      console.log('   - Is React Native:', isReactNative);
       
       setBattleState(prev => ({
         ...prev,
         opponentAnswers: {
           ...prev.opponentAnswers,
-          [data.questionIndex]: 1 // Just mark as answered
+          [data.questionIndex]: data.answer // Store the specific answer
         }
       }));
       
-      console.log('✅ Opponent answered state updated');
-    });
+      console.log('✅ Opponent answered state updated with answer:', data.answer);
+    };
 
-    socket.on('match_not_found', (data: { matchId: string }) => {
+    // Match not found event
+    const handleMatchNotFound = (data: { matchId: string }) => {
       console.log('Match not found:', data.matchId);
       setError('Match not found or has already ended. Please start a new match.');
-    });
+    };
 
-    socket.on('pong', () => {
+    // Pong event for connection testing
+    const handlePong = () => {
       console.log('🏓 Received pong from server - socket connection is working');
-    });
+    };
+
+    // Attach listeners
+    socket.on('match_started', handleMatchStarted);
+    socket.on('next_question', handleNextQuestion);
+    socket.on('match_ended', handleMatchEnded);
+    socket.on('opponent_answered', handleOpponentAnswered);
+    socket.on('match_not_found', handleMatchNotFound);
+    socket.on('pong', handlePong);
+
+    // Track attached listeners
+    socketListenersRef.current.add('match_started');
+    socketListenersRef.current.add('next_question');
+    socketListenersRef.current.add('match_ended');
+    socketListenersRef.current.add('opponent_answered');
+    socketListenersRef.current.add('match_not_found');
+    socketListenersRef.current.add('pong');
 
     // Request match status from server
     console.log('📤 Requesting match status from server...');
@@ -225,19 +275,52 @@ export default function BattlePage() {
       socket.emit('ping');
     }, 1000);
 
+    // Additional debugging for React Native
+    if (isReactNative) {
+      console.log('📱 React Native specific socket setup completed');
+      console.log('   - Socket connected:', socket.connected);
+      console.log('   - Socket ID:', socket.id);
+      console.log('   - Transport:', socket.io.engine.transport.name);
+      
+      // Monitor socket state changes for React Native
+      console.log('📱 React Native socket monitoring enabled');
+      console.log('   - Transport type:', socket.io?.engine?.transport?.name || 'unknown');
+    }
+
+  }, [socket, isConnected, matchId, cleanupSocketListeners, isReactNative]);
+
+  useEffect(() => {
+    console.log('🔄 Battle useEffect triggered:');
+    console.log('   - Socket exists:', !!socket);
+    console.log('   - Socket connected:', isConnected);
+    console.log('   - Match ID:', matchId);
+    console.log('   - Socket ID:', socket?.id);
+    console.log('   - Is React Native:', isReactNative);
+    
+    if (!socket || !isConnected) {
+      console.log('❌ Socket not connected, waiting...');
+      return;
+    }
+
+    setupSocketListeners();
+
     return () => {
       console.log('🧹 Cleaning up battle socket listeners');
       console.log('   - Socket ID:', socket?.id);
       console.log('   - Match ID:', matchId);
-      socket.off('match_started');
-      socket.off('next_question');
-      socket.off('match_ended');
-      socket.off('opponent_answered');
-      socket.off('match_not_found');
-      socket.off('pong');
-      console.log('✅ Battle socket listeners cleaned up');
+      cleanupSocketListeners();
+      
+      // Clear timers
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
     };
-  }, [socket, isConnected, matchId]);
+  }, [socket, isConnected, matchId, setupSocketListeners, cleanupSocketListeners, isReactNative]);
 
   const fetchUserProfile = async () => {
     try {
@@ -296,6 +379,7 @@ export default function BattlePage() {
     console.log('   - Match ID:', matchId);
     console.log('   - User ID:', user?.id);
     console.log('   - Socket connected:', isConnected);
+    console.log('   - Is React Native:', isReactNative);
     
     // Record answer locally
     setBattleState(prev => ({
@@ -330,7 +414,7 @@ export default function BattlePage() {
     if (battleState.answers[questionIndex] !== undefined) {
       return 'answered';
     }
-    if (battleState.opponentAnswers[questionIndex]) {
+    if (battleState.opponentAnswers[questionIndex] !== undefined) {
       return 'opponent-answered';
     }
     return 'pending';
@@ -370,6 +454,9 @@ export default function BattlePage() {
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Preparing Battle</h1>
           <p className="text-gray-600">Setting up your match...</p>
+          {isReactNative && (
+            <p className="text-sm text-gray-500 mt-2">React Native Mode</p>
+          )}
         </div>
       </div>
     );
@@ -444,19 +531,39 @@ export default function BattlePage() {
               </div>
             </div>
           </div>
+          {isReactNative && (
+            <div className="mt-2 text-center">
+              <span className="text-xs text-gray-500">React Native Mode</span>
+            </div>
+          )}
         </div>
 
         {/* Question Progress */}
         <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
-          <div className="flex justify-center space-x-2">
+          <div className="flex justify-center space-x-2 mb-3">
             {Array.from({ length: battleState.totalQuestions }, (_, i) => (
               <div
                 key={i}
                 className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-medium ${getAnswerClass(i)}`}
+                title={`Question ${i + 1}: ${getAnswerStatus(i)}`}
               >
                 {i + 1}
               </div>
             ))}
+          </div>
+          
+          {/* Progress Status */}
+          <div className="text-center text-sm text-gray-600">
+            {battleState.answers[battleState.currentQuestion] !== undefined && 
+             battleState.opponentAnswers[battleState.currentQuestion] !== undefined ? (
+              <span className="text-green-600">✅ Both players answered</span>
+            ) : battleState.answers[battleState.currentQuestion] !== undefined ? (
+              <span className="text-blue-600">⏳ Waiting for opponent...</span>
+            ) : battleState.opponentAnswers[battleState.currentQuestion] !== undefined ? (
+              <span className="text-yellow-600">⏳ Opponent answered, waiting for you...</span>
+            ) : (
+              <span className="text-gray-500">⏰ Time remaining: {battleState.timeLeft}s</span>
+            )}
           </div>
         </div>
 
@@ -477,16 +584,100 @@ export default function BattlePage() {
                     battleState.answers[battleState.currentQuestion] === index
                       ? 'bg-blue-100 border-blue-500 text-blue-900'
                       : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed relative`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{option}</span>
-                    {battleState.answers[battleState.currentQuestion] === index && (
-                      <CheckCircle className="w-5 h-5 text-blue-500" />
-                    )}
+                    <div className="flex items-center space-x-2">
+                      {/* Your answer indicator */}
+                      {battleState.answers[battleState.currentQuestion] === index && (
+                        <div className="flex items-center text-blue-600">
+                          <CheckCircle className="w-5 h-5 mr-1" />
+                          <span className="text-sm font-medium">Your Answer</span>
+                        </div>
+                      )}
+                      
+                      {/* Opponent's answer indicator */}
+                      {battleState.opponentAnswers[battleState.currentQuestion] === index && (
+                        <div className="flex items-center text-yellow-600">
+                          <div className="w-5 h-5 bg-yellow-500 rounded-full mr-1 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">O</span>
+                          </div>
+                          <span className="text-sm font-medium">Opponent</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </button>
               ))}
+            </div>
+            
+            {/* Real-time status */}
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <div className="text-center text-sm text-gray-600">
+                {battleState.answers[battleState.currentQuestion] !== undefined && 
+                 battleState.opponentAnswers[battleState.currentQuestion] !== undefined ? (
+                  <span className="text-green-600 font-medium">✅ Both players answered!</span>
+                ) : battleState.answers[battleState.currentQuestion] !== undefined ? (
+                  <span className="text-blue-600">⏳ Waiting for opponent to answer...</span>
+                ) : battleState.opponentAnswers[battleState.currentQuestion] !== undefined ? (
+                  <span className="text-yellow-600">⏳ Opponent answered, waiting for you...</span>
+                ) : (
+                  <span className="text-gray-500">⏰ Time remaining: {battleState.timeLeft}s</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Answer Comparison - Show when both players have answered */}
+        {battleState.question && 
+         battleState.answers[battleState.currentQuestion] !== undefined && 
+         battleState.opponentAnswers[battleState.currentQuestion] !== undefined && (
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+              Answer Comparison
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Your Answer */}
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-blue-800">Your Answer</span>
+                  <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                    {String.fromCharCode(65 + battleState.answers[battleState.currentQuestion])}
+                  </div>
+                </div>
+                <div className="text-blue-900 font-medium">
+                  {battleState.question.options[battleState.answers[battleState.currentQuestion]]}
+                </div>
+              </div>
+
+              {/* Opponent's Answer */}
+              <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-yellow-800">Opponent's Answer</span>
+                  <div className="w-6 h-6 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                    {String.fromCharCode(65 + battleState.opponentAnswers[battleState.currentQuestion])}
+                  </div>
+                </div>
+                <div className="text-yellow-900 font-medium">
+                  {battleState.question.options[battleState.opponentAnswers[battleState.currentQuestion]]}
+                </div>
+              </div>
+            </div>
+
+            {/* Answer Status */}
+            <div className="mt-4 text-center">
+              {battleState.answers[battleState.currentQuestion] === battleState.opponentAnswers[battleState.currentQuestion] ? (
+                <div className="text-green-600 font-medium">
+                  🤝 Both players selected the same answer!
+                </div>
+              ) : (
+                <div className="text-gray-600 font-medium">
+                  📊 Different answers selected
+                </div>
+              )}
             </div>
           </div>
         )}

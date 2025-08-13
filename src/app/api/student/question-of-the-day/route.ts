@@ -43,7 +43,9 @@ export async function GET(req: Request) {
       return NextResponse.json({
         ...activeQuestion,
         hasAttempted: true,
-        isCorrect: attempt.isCorrect
+        isCorrect: attempt.isCorrect,
+        selectedOption: attempt.selected,
+        correctAnswer: activeQuestion.correct
       })
     }
 
@@ -75,9 +77,9 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { questionId, selected, timeTaken } = body
+    const { questionId, selectedOption, timeTaken = 0 } = body
 
-    if (!questionId || selected === undefined || !timeTaken) {
+    if (!questionId || selectedOption === undefined) {
       return new NextResponse('Missing required fields', { status: 400 })
     }
 
@@ -111,8 +113,8 @@ export async function POST(req: Request) {
       data: {
         questionId,
         userId: decoded.userId,
-        selected,
-        isCorrect: selected === question.correct,
+        selected: selectedOption,
+        isCorrect: selectedOption === question.correct,
         timeTaken
       }
     })

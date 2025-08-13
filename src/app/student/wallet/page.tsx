@@ -17,8 +17,16 @@ interface WalletData {
   transactions: Transaction[];
 }
 
+interface KYCStatus {
+  kycStatus: string;
+  kycVerifiedAt?: string;
+  kycRejectedAt?: string;
+  kycRejectionReason?: string;
+}
+
 const WalletPage: React.FC = () => {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [kycStatus, setKycStatus] = useState<KYCStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [depositAmount, setDepositAmount] = useState<number | ''>('');
   const [withdrawAmount, setWithdrawAmount] = useState<number | ''>('');
@@ -35,10 +43,10 @@ const WalletPage: React.FC = () => {
       return;
     }
     fetchWalletData();
+    fetchKYCStatus();
   }, [router]);
 
   const fetchWalletData = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const res = await fetch('/api/student/wallet', {
@@ -54,8 +62,51 @@ const WalletPage: React.FC = () => {
     } catch (error: any) {
       console.error('Error fetching wallet data:', error);
       toast.error(error.message || 'Failed to load wallet data');
+    }
+  };
+
+  const fetchKYCStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/user/kyc/upload', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setKycStatus(data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching KYC status:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getKYCStatusColor = (status: string) => {
+    switch (status) {
+      case 'VERIFIED':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'REJECTED':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getKYCStatusText = (status: string) => {
+    switch (status) {
+      case 'VERIFIED':
+        return '✓ KYC Verified';
+      case 'PENDING':
+        return '⏳ KYC Pending';
+      case 'REJECTED':
+        return '✗ KYC Rejected';
+      default:
+        return '📋 KYC Not Submitted';
     }
   };
 
@@ -122,6 +173,13 @@ const WalletPage: React.FC = () => {
 
   const handleWithdraw = async () => {
     if (typeof withdrawAmount !== 'number' || withdrawAmount <= 0 || isWithdrawing || !walletData || walletData.balance < withdrawAmount) return;
+    
+    // Check KYC status for withdrawals above ₹1000
+    if (withdrawAmount > 1000 && kycStatus?.kycStatus !== 'VERIFIED') {
+      toast.error('KYC verification required for withdrawals above ₹1000. Please complete your KYC first.');
+      return;
+    }
+    
     setIsWithdrawing(true);
     toast.loading('Processing withdrawal...');
     try {
@@ -159,11 +217,48 @@ const WalletPage: React.FC = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Wallet</h1>
+      
+      {/* KYC Status */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold mb-2">KYC Verification Status</h2>
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getKYCStatusColor(kycStatus?.kycStatus || 'NOT_SUBMITTED')}`}>
+              {getKYCStatusText(kycStatus?.kycStatus || 'NOT_SUBMITTED')}
+            </div>
+            {kycStatus?.kycVerifiedAt && (
+              <p className="text-sm text-gray-600 mt-1">
+                Verified on: {new Date(kycStatus.kycVerifiedAt).toLocaleDateString()}
+              </p>
+            )}
+            {kycStatus?.kycRejectionReason && (
+              <p className="text-sm text-red-600 mt-1">
+                Rejection reason: {kycStatus.kycRejectionReason}
+              </p>
+            )}
+          </div>
+          <div className="text-right">
+            {kycStatus?.kycStatus !== 'VERIFIED' && (
+              <button
+                onClick={() => router.push('/student/wallet/kyc')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Complete KYC
+              </button>
+            )}
+            {kycStatus?.kycStatus === 'VERIFIED' && (
+              <div className="text-green-600 text-2xl">✓</div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Available Balance */}
       <div className="bg-blue-600 text-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-xl font-semibold mb-2">Available Balance</h2>
         <p className="text-3xl font-bold">₹{walletData?.balance.toFixed(2) ?? '0.00'}</p>
       </div>
+      
       {/* Deposit Section */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Deposit</h2>
@@ -196,7 +291,8 @@ const WalletPage: React.FC = () => {
           </button>
         </div>
       </div>
-      {/* Wallet Sections (Placeholder based on screenshot) */}
+      
+      {/* Wallet Sections */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="flex items-center justify-between py-3 border-b last:border-b-0">
           <div className="flex items-center">
@@ -232,7 +328,8 @@ const WalletPage: React.FC = () => {
           <span className="text-gray-800 font-semibold">₹0.00</span>
         </div>
       </div>
-      {/* Navigation Links (Placeholder based on screenshot) */}
+      
+      {/* Navigation Links */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="flex items-center justify-between py-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50" onClick={() => router.push('/student/wallet/transactions')}>
           <span className="text-gray-800">My Transactions</span>
@@ -251,6 +348,7 @@ const WalletPage: React.FC = () => {
           <span>&gt;</span>
         </div>
       </div>
+      
       {/* Transaction History */}
       {walletData?.transactions && walletData.transactions.length > 0 && (
         <div className="bg-white rounded-lg shadow-md p-6">

@@ -142,7 +142,7 @@ export async function POST(req: Request) {
           create: validatedData.questions.map((q: any) => ({
             text: q.question,
             options: q.options,
-            correct: q.correctAnswer
+            correctAnswer: q.correctAnswer
           }))
         }
       }

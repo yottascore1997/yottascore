@@ -35,6 +35,7 @@ export async function GET(req: Request) {
     // Fetch available exams
     const exams = await prisma.liveExam.findMany({
       where: {
+        isLive: true, // Only show exams that are marked as live
         startTime: {
           lte: now,
         },

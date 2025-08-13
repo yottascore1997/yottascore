@@ -51,6 +51,13 @@ model User {
   role            Role        @default(USER)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  
+  // KYC Fields
+  kycStatus       KYCStatus   @default(NOT_SUBMITTED)
+  kycVerifiedAt   DateTime?
+  kycRejectedAt   DateTime?
+  kycRejectionReason String?
+  
   accounts        Account[]
   sessions        Session[]
   participatedExams LiveExamParticipant[]
@@ -74,6 +81,11 @@ model User {
   wonMatches BattleQuizMatch[] @relation("WonMatches")
   battleQuizLeaderboard BattleQuizLeaderboard?
   battleStats UserBattleStats?
+  
+  // New Battle Room Relations
+  createdBattleRooms BattleRoom[] @relation("BattleRoomCreator")
+  battlePlayers BattlePlayer[]
+  battleAnswers BattleAnswer[]
   
   // Question Bank Relations
   createdQuestionCategories QuestionCategory[]
@@ -122,33 +134,22 @@ model User {
   createdPolls    GroupPoll[]
   pollVotes       GroupPollVote[]
   
-  // Direct Messages
-  sentMessages    DirectMessage[] @relation("MessageSender")
-  receivedMessages DirectMessage[] @relation("MessageReceiver")
+  // KYC Documents
+  kycDocuments   KYCDocument[]
   
-  // Message Requests
-  sentMessageRequests MessageRequest[] @relation("MessageRequestSender")
-  receivedMessageRequests MessageRequest[] @relation("MessageRequestReceiver")
+  // Support Tickets
+  supportTickets SupportTicket[]
+  supportTicketReplies SupportTicketReply[]
   
   // Stories
   stories        Story[]
   storyViews     StoryView[]
   storyLikes     StoryLike[]
   
-  // Referral System
-  referralCode   String?     @unique
-  referredBy     String?     // Referral code of the user who referred this user
-  referralCount  Int         @default(0)
-  totalReferralEarnings Float @default(0)
+  // Spy Game - Commented out for now
+  // spyGamePlayers SpyGamePlayer[]
   
-  // Referral Relations
-  referrals      Referral[]  @relation("ReferrerReferrals")
-  referredByUser Referral[]  @relation("ReferredUserReferrals")
-  
-  // Support Ticket Relations
-  supportTickets SupportTicket[]
-  assignedTickets SupportTicket[] @relation("AssignedTickets")
-  ticketReplies  SupportTicketReply[]
+  @@map("users")
 }
 
 model LiveExam {
@@ -214,9 +215,15 @@ model Question {
   id          String    @id @default(cuid())
   text        String?   @db.Text
   options     Json?     // Array of options
-  correct     Int?      // Index of correct option
+  correctAnswer Int?    // Index of correct option
   exam        LiveExam? @relation(fields: [examId], references: [id])
   examId      String?
+  categoryId  String?
+  category    QuestionCategory? @relation(fields: [categoryId], references: [id])
+  
+  // Battle relations
+  battleQuestions BattleQuestion[]
+  battleAnswers BattleAnswer[]
 }
 
 model Transaction {
@@ -433,6 +440,8 @@ model SavedPost {
   @@unique([userId, postId])
 }
 
+// DirectMessage model - Commented out for now
+/*
 model DirectMessage {
   id          String    @id @default(cuid())
   content     String    @db.Text
@@ -450,7 +459,10 @@ model DirectMessage {
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, senderId, createdAt])
 }
+*/
 
+// MessageRequest model - Commented out for now
+/*
 model MessageRequest {
   id          String    @id @default(cuid())
   content     String    @db.Text
@@ -469,6 +481,7 @@ model MessageRequest {
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, senderId, createdAt])
 }
+*/
 
 model Group {
   id          String    @id @default(cuid())
@@ -905,6 +918,8 @@ model QuestionCategory {
   createdById String
   questions   QuestionBankItem[]
   battleQuizzes BattleQuiz[]
+  battleRooms BattleRoom[]
+  quizQuestions Question[]
 }
 
 model QuestionBankItem {
@@ -987,6 +1002,8 @@ enum StoryMediaType {
   VIDEO
 }
 
+// Referral model - Commented out for now
+/*
 model Referral {
   id          String    @id @default(cuid())
   referrer    User      @relation("ReferrerReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
@@ -998,6 +1015,7 @@ model Referral {
 
   @@unique([referrerId, referredId])
 }
+*/
 
 // Support Ticket System
 model SupportTicket {
@@ -1015,14 +1033,15 @@ model SupportTicket {
   // Relations
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
-  assignedTo  User?     @relation("AssignedTickets", fields: [assignedToId], references: [id])
-  assignedToId String?
+  // assignedTo relation - Commented out for now
+  // assignedTo  User?     @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  // assignedToId String?
   replies     SupportTicketReply[]
   attachments SupportTicketAttachment[]
   
   @@index([userId, createdAt])
   @@index([status, priority])
-  @@index([assignedToId])
+  // @@index([assignedToId]) // Commented out as assignedToId is commented
 }
 
 model SupportTicketReply {
@@ -1084,4 +1103,191 @@ enum TicketStatus {
   WAITING_FOR_USER
   RESOLVED
   CLOSED
+}
+
+// Spy Game Models - Commented out for now
+/*
+model SpyGame {
+  id          String   @id @default(cuid())
+  roomCode    String   @unique
+  hostId      String
+  host        User     @relation("SpyGameHost", fields: [hostId], references: [id])
+  status      GameStatus @default(WAITING)
+  maxPlayers  Int      @default(6)
+  minPlayers  Int      @default(4)
+  wordPack    String   @default("default")
+  currentTurn Int      @default(0)
+  currentPhase GamePhase @default(LOBBY)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  players     SpyGamePlayer[]
+  words       SpyGameWord[]
+  votes       SpyGameVote[]
+  
+  @@map("spy_games")
+}
+
+model SpyGamePlayer {
+  id        String   @id @default(cuid())
+  gameId    String
+  game      SpyGame  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isSpy     Boolean  @default(false)
+  isHost    Boolean  @default(false)
+  isAlive   Boolean  @default(true)
+  joinedAt  DateTime @default(now())
+  
+  @@unique([gameId, userId])
+  @@map("spy_game_players")
+}
+
+model SpyGameWord {
+  id        String   @id @default(cuid())
+  gameId    String
+  game      SpyGame  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  word      String
+  isSpyWord Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@map("spy_game_words")
+}
+
+model SpyGameVote {
+  id          String   @id @default(cuid())
+  gameId      String
+  game        SpyGame  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  voterId     String
+  voter       User     @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  votedForId  String
+  votedFor    User     @relation("VotedFor", fields: [votedForId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  
+  @@unique([gameId, voterId])
+  @@map("spy_game_votes")
+}
+
+enum GameStatus {
+  WAITING
+  PLAYING
+  VOTING
+  FINISHED
+}
+
+enum GamePhase {
+  LOBBY
+  WORD_ASSIGNMENT
+  DESCRIBING
+  VOTING
+  REVEAL
+}
+*/
+
+// New Battle Room Models
+model BattleRoom {
+  id          String   @id @default(cuid())
+  name        String
+  categoryId  String?
+  category    QuestionCategory? @relation(fields: [categoryId], references: [id])
+  maxPlayers  Int      @default(2)
+  status      BattleRoomStatus @default(WAITING)
+  createdById String
+  createdBy   User     @relation("BattleRoomCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  players     BattlePlayer[]
+  questions   BattleQuestion[]
+  answers     BattleAnswer[]
+  
+  @@map("battle_rooms")
+}
+
+model BattlePlayer {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      BattleRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score     Int      @default(0)
+  isReady   Boolean  @default(false)
+  isOnline  Boolean  @default(true)
+  joinedAt  DateTime @default(now())
+  
+  @@unique([roomId, userId])
+  @@map("battle_players")
+}
+
+model BattleQuestion {
+  id            String   @id @default(cuid())
+  roomId        String
+  room          BattleRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  questionId    String
+  question      Question @relation(fields: [questionId], references: [id])
+  questionIndex Int
+  startedAt     DateTime @default(now())
+  
+  @@unique([roomId, questionIndex])
+  @@map("battle_questions")
+}
+
+model BattleAnswer {
+  id            String   @id @default(cuid())
+  roomId        String
+  room          BattleRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId    String
+  question      Question @relation(fields: [questionId], references: [id])
+  questionIndex Int
+  answerIndex   Int
+  isCorrect     Boolean
+  timeSpent     Int      // in seconds
+  score         Int      @default(0)
+  answeredAt    DateTime @default(now())
+  
+  @@unique([roomId, userId, questionIndex])
+  @@map("battle_answers")
+}
+
+enum BattleRoomStatus {
+  WAITING
+  PLAYING
+  FINISHED
+}
+
+enum KYCStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  NOT_SUBMITTED
+}
+
+enum KYCDocumentType {
+  AADHAR_CARD
+  PAN_CARD
+  DRIVING_LICENSE
+  PASSPORT
+  VOTER_ID
+  BANK_PASSBOOK
+  OTHER
+}
+
+model KYCDocument {
+  id          String           @id @default(cuid())
+  userId      String
+  documentType KYCDocumentType
+  documentNumber String?
+  documentImage String         @db.Text // Base64 data or URL
+  isVerified  Boolean          @default(false)
+  verifiedAt  DateTime?
+  verifiedBy  String?          // Admin ID who verified
+  rejectionReason String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("kyc_documents")
 }

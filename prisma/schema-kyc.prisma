@@ -1,0 +1,76 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+  USER
+}
+
+enum KYCStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  NOT_SUBMITTED
+}
+
+enum KYCDocumentType {
+  AADHAR_CARD
+  PAN_CARD
+  DRIVING_LICENSE
+  PASSPORT
+  VOTER_ID
+  BANK_PASSBOOK
+  OTHER
+}
+
+model User {
+  id              String      @id @default(cuid())
+  name            String?
+  email           String?     @unique
+  emailVerified   DateTime?
+  image           String?
+  hashedPassword  String?
+  phoneNumber     String?
+  role            Role        @default(USER)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // KYC Fields
+  kycStatus       KYCStatus   @default(NOT_SUBMITTED)
+  kycVerifiedAt   DateTime?
+  kycRejectedAt   DateTime?
+  kycRejectionReason String?
+  
+  // Basic fields
+  wallet           Float    @default(0)
+  
+  // KYC Documents
+  kycDocuments   KYCDocument[]
+  
+  @@map("users")
+}
+
+model KYCDocument {
+  id          String           @id @default(cuid())
+  userId      String
+  documentType KYCDocumentType
+  documentNumber String?
+  documentImage String         // URL to uploaded image
+  isVerified  Boolean          @default(false)
+  verifiedAt  DateTime?
+  verifiedBy  String?          // Admin ID who verified
+  rejectionReason String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("kyc_documents")
+} 

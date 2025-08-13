@@ -19,6 +19,7 @@ interface Opponent {
   score: number;
   currentQuestion: number;
   isAnswered: boolean;
+  lastAnswer?: number; // Store the specific answer selected
 }
 
 export default function RealTimeBattleQuiz() {
@@ -208,10 +209,12 @@ export default function RealTimeBattleQuiz() {
     });
 
     socket.on('opponent_answer', (data: { questionIndex: number, answer: number }) => {
+      console.log('👥 Opponent answered:', data);
       setOpponent(prev => prev ? {
         ...prev,
         currentQuestion: data.questionIndex,
-        isAnswered: true
+        isAnswered: true,
+        lastAnswer: data.answer // Store the specific answer
       } : null);
     });
 
@@ -533,24 +536,63 @@ export default function RealTimeBattleQuiz() {
                       selectedAnswer === index
                         ? 'border-purple-500 bg-purple-50 text-purple-700'
                         : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
-                    } ${isAnswered ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}
+                    } ${isAnswered ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} relative`}
                   >
-                    <div className="flex items-center">
-                      <div className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${
-                        selectedAnswer === index
-                          ? 'border-purple-500 bg-purple-500 text-white'
-                          : 'border-gray-300'
-                      }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${
+                          selectedAnswer === index
+                            ? 'border-purple-500 bg-purple-500 text-white'
+                            : 'border-gray-300'
+                        }`}>
+                          {selectedAnswer === index && (
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="font-medium">{option}</span>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        {/* Your answer indicator */}
                         {selectedAnswer === index && (
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
+                          <div className="flex items-center text-purple-600">
+                            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            <span className="text-sm font-medium">You</span>
+                          </div>
+                        )}
+                        
+                        {/* Opponent's answer indicator */}
+                        {opponent?.lastAnswer === index && (
+                          <div className="flex items-center text-orange-600">
+                            <div className="w-4 h-4 bg-orange-500 rounded-full mr-1 flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">O</span>
+                            </div>
+                            <span className="text-sm font-medium">Opponent</span>
+                          </div>
                         )}
                       </div>
-                      <span className="font-medium">{option}</span>
                     </div>
                   </button>
                 ))}
+              </div>
+              
+              {/* Real-time status */}
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <div className="text-center text-sm text-gray-600">
+                  {isAnswered && opponent?.isAnswered ? (
+                    <span className="text-green-600 font-medium">✅ Both players answered!</span>
+                  ) : isAnswered ? (
+                    <span className="text-purple-600">⏳ Waiting for opponent to answer...</span>
+                  ) : opponent?.isAnswered ? (
+                    <span className="text-orange-600">⏳ Opponent answered, waiting for you...</span>
+                  ) : (
+                    <span className="text-gray-500">⏰ Time remaining: {timeLeft}s</span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -571,6 +613,56 @@ export default function RealTimeBattleQuiz() {
                       : `The correct answer was: ${questions[questionResult.questionIndex]?.options[questionResult.correctAnswer]}`
                     }
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* Answer Comparison - Show when both players have answered */}
+            {isAnswered && opponent?.isAnswered && opponent?.lastAnswer !== undefined && (
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+                  Answer Comparison
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Your Answer */}
+                  <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-purple-800">Your Answer</span>
+                      <div className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        {String.fromCharCode(65 + (selectedAnswer || 0))}
+                      </div>
+                    </div>
+                    <div className="text-purple-900 font-medium">
+                      {questions[currentQuestionIndex]?.options[selectedAnswer || 0]}
+                    </div>
+                  </div>
+
+                  {/* Opponent's Answer */}
+                  <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-orange-800">Opponent's Answer</span>
+                      <div className="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        {String.fromCharCode(65 + opponent.lastAnswer)}
+                      </div>
+                    </div>
+                    <div className="text-orange-900 font-medium">
+                      {questions[currentQuestionIndex]?.options[opponent.lastAnswer]}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Answer Status */}
+                <div className="mt-4 text-center">
+                  {selectedAnswer === opponent.lastAnswer ? (
+                    <div className="text-green-600 font-medium">
+                      🤝 Both players selected the same answer!
+                    </div>
+                  ) : (
+                    <div className="text-gray-600 font-medium">
+                      📊 Different answers selected
+                    </div>
+                  )}
                 </div>
               </div>
             )}
