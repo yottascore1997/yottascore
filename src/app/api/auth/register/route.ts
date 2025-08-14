@@ -38,8 +38,6 @@ const handler = async (req: Request) => {
     // Validate referral code if provided
     let referrerId = null;
     if (referralCode) {
-      // Commented out as referral system is disabled
-      /*
       const referrer = await prisma.user.findUnique({
         where: { referralCode },
         select: { id: true }
@@ -61,8 +59,7 @@ const handler = async (req: Request) => {
       }
       
       referrerId = referrer.id;
-      */
-      console.log('Referral code validation disabled - referral system is commented out');
+      console.log('Referral code validated:', { referralCode, referrerId });
     }
 
     // Hash password
@@ -77,7 +74,7 @@ const handler = async (req: Request) => {
         hashedPassword,
         phoneNumber,
         role: 'STUDENT', // Default role is student
-        // referredBy: referralCode || null, // Commented out as referral system is disabled
+        referredBy: referralCode || null,
       },
     })
 
@@ -87,8 +84,6 @@ const handler = async (req: Request) => {
     if (referralCode && referrerId) {
       try {
         // Use transaction to ensure data consistency
-        // Commented out as referral system is disabled
-        /*
         await prisma.$transaction(async (tx: any) => {
           // Create referral record
           await tx.referral.create({
@@ -119,9 +114,8 @@ const handler = async (req: Request) => {
             }
           });
         });
-        */
 
-        console.log('Referral processing disabled - referral system is commented out');
+        console.log('Referral processed successfully:', { referralCode, referrerId, userId: user.id });
       } catch (referralError) {
         console.error('Error processing referral:', referralError);
         // Don't fail registration if referral processing fails

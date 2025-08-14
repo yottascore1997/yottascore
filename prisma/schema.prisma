@@ -146,6 +146,16 @@ model User {
   storyViews     StoryView[]
   storyLikes     StoryLike[]
   
+  // Referral System
+  referralCode   String?   @unique
+  referralCount  Int       @default(0)
+  referredBy     String?   // Referral code of the user who referred this user
+  totalReferralEarnings Float @default(0)
+  
+  // Referral Relations
+  referrerReferrals Referral[] @relation("ReferrerReferrals")
+  referredUserReferrals Referral[] @relation("ReferredUserReferrals")
+  
   // Spy Game - Commented out for now
   // spyGamePlayers SpyGamePlayer[]
   
@@ -1003,8 +1013,7 @@ enum StoryMediaType {
   VIDEO
 }
 
-// Referral model - Commented out for now
-/*
+// Referral model
 model Referral {
   id          String    @id @default(cuid())
   referrer    User      @relation("ReferrerReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
@@ -1016,7 +1025,6 @@ model Referral {
 
   @@unique([referrerId, referredId])
 }
-*/
 
 // Support Ticket System
 model SupportTicket {
@@ -1280,7 +1288,7 @@ model KYCDocument {
   userId      String
   documentType KYCDocumentType
   documentNumber String?
-  documentImage String         @db.Text // Base64 data or URL
+  documentImage String         @db.LongText // Base64 data or URL - LONGTEXT for large images
   isVerified  Boolean          @default(false)
   verifiedAt  DateTime?
   verifiedBy  String?          // Admin ID who verified

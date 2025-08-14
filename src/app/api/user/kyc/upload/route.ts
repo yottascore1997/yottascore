@@ -6,7 +6,7 @@ import { z } from 'zod';
 const kycUploadSchema = z.object({
   documentType: z.enum(['AADHAR_CARD', 'PAN_CARD', 'DRIVING_LICENSE', 'PASSPORT', 'VOTER_ID', 'BANK_PASSBOOK', 'OTHER']),
   documentNumber: z.string().optional(),
-  documentImage: z.string().min(1), // Accept any string (base64 or URL)
+  documentImage: z.string().min(1).max(10000000), // Max 10MB base64
 });
 
 export async function POST(request: NextRequest) {
@@ -36,6 +36,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = kycUploadSchema.parse(body);
 
+    // Validate base64 format
+    if (validatedData.documentImage.startsWith('data:image/')) {
+      const base64Data = validatedData.documentImage.split(',')[1];
+      if (!base64Data) {
+        return NextResponse.json({ 
+          error: 'Invalid image format' 
+        }, { status: 400 });
+      }
+      
+      // Check if base64 is valid
+      try {
+        Buffer.from(base64Data, 'base64');
+      } catch (e) {
+        return NextResponse.json({ 
+          error: 'Invalid base64 image data' 
+        }, { status: 400 });
+      }
+    }
+
     // Check if user already has this document type
     const existingDocument = user.kycDocuments.find(
       doc => doc.documentType === validatedData.documentType
@@ -55,11 +74,15 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Update user KYC status to PENDING if it was NOT_SUBMITTED
-    if (user.kycStatus === 'NOT_SUBMITTED') {
+    // Update user KYC status to PENDING if it was NOT_SUBMITTED or REJECTED
+    if (user.kycStatus === 'NOT_SUBMITTED' || user.kycStatus === 'REJECTED') {
       await prisma.user.update({
         where: { id: user.id },
-        data: { kycStatus: 'PENDING' }
+        data: { 
+          kycStatus: 'PENDING',
+          kycRejectedAt: null,
+          kycRejectionReason: null
+        }
       });
     }
 
@@ -74,7 +97,10 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       console.error('Validation error:', error.errors);
-      return new NextResponse('Invalid request data', { status: 400 });
+      return NextResponse.json({ 
+        error: 'Invalid request data', 
+        details: error.errors 
+      }, { status: 400 });
     }
 
     // Log more details for debugging
@@ -83,7 +109,19 @@ export async function POST(request: NextRequest) {
       console.error('Error stack:', error.stack);
     }
 
-    return new NextResponse('Internal server error', { status: 500 });
+    // Check for Prisma errors
+    if ((error as any).code) {
+      console.error('Prisma error code:', (error as any).code);
+      return NextResponse.json({ 
+        error: 'Database error', 
+        code: (error as any).code 
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 

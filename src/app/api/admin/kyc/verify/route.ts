@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -12,15 +10,28 @@ const kycVerificationSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    // Get authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new NextResponse('Unauthorized - No token provided', { status: 401 });
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
-    if (!session?.user?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    // Verify JWT token
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+    
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      return new NextResponse('Unauthorized - Invalid token', { status: 401 });
     }
 
     // Check if user is admin
     const adminUser = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { id: decoded.userId }
     });
 
     if (!adminUser || adminUser.role !== 'ADMIN') {
@@ -95,13 +106,22 @@ export async function POST(request: NextRequest) {
       });
 
       // Update user KYC status to REJECTED
-      await prisma.user.update({
+      const updatedUser = await prisma.user.update({
         where: { id: kycDocument.userId },
         data: {
           kycStatus: 'REJECTED',
           kycRejectedAt: new Date(),
-          kycRejectionReason: validatedData.rejectionReason
+          kycRejectionReason: validatedData.rejectionReason,
+          // Reset verification fields
+          kycVerifiedAt: null
         }
+      });
+
+      console.log('User KYC status updated to REJECTED:', {
+        userId: kycDocument.userId,
+        newStatus: updatedUser.kycStatus,
+        rejectionReason: validatedData.rejectionReason,
+        rejectedAt: updatedUser.kycRejectedAt
       });
 
       return NextResponse.json({
@@ -123,15 +143,28 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    // Get authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new NextResponse('Unauthorized - No token provided', { status: 401 });
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
-    if (!session?.user?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    // Verify JWT token
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+    
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      return new NextResponse('Unauthorized - Invalid token', { status: 401 });
     }
 
     // Check if user is admin
     const adminUser = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { id: decoded.userId }
     });
 
     if (!adminUser || adminUser.role !== 'ADMIN') {
@@ -150,10 +183,18 @@ export async function GET(request: NextRequest) {
       where.kycStatus = status;
     }
 
-    // Get pending KYC requests
+    console.log('Admin KYC filter:', { status, where });
+
+    // Get KYC requests with documents
     const [kycRequests, total] = await Promise.all([
       prisma.user.findMany({
-        where,
+        where: {
+          ...where,
+          // Only show users who have uploaded documents
+          kycDocuments: {
+            some: {}
+          }
+        },
         select: {
           id: true,
           name: true,
@@ -181,8 +222,24 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit
       }),
-      prisma.user.count({ where })
+      prisma.user.count({ 
+        where: {
+          ...where,
+          kycDocuments: {
+            some: {}
+          }
+        }
+      })
     ]);
+
+    console.log('KYC requests found:', kycRequests.length);
+    kycRequests.forEach(req => {
+      console.log('User KYC status:', { 
+        name: req.name, 
+        status: req.kycStatus, 
+        documents: req.kycDocuments.length 
+      });
+    });
 
     return NextResponse.json({
       kycRequests,

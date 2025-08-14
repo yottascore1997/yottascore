@@ -36,6 +36,7 @@ const AdminKYCPage: React.FC = () => {
   const [verifying, setVerifying] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const statusOptions = [
     { value: 'ALL', label: 'All Requests' },
@@ -246,12 +247,45 @@ const AdminKYCPage: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Document Preview */}
-                  <div className="mb-3">
-                    <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center border">
-                      <span className="text-gray-500 text-xs">Document Preview</span>
-                    </div>
-                  </div>
+                                     {/* Document Preview */}
+                   <div className="mb-3">
+                     {doc.documentImage ? (
+                       <div className="relative group">
+                         <img
+                           src={doc.documentImage}
+                           alt={`${doc.documentType} document`}
+                           className="w-40 h-32 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-all duration-200 hover:scale-105"
+                           onClick={() => setSelectedImage(doc.documentImage)}
+                           title="Click to view full size"
+                         />
+                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                           <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white bg-opacity-90 text-gray-800 text-xs px-2 py-1 rounded">
+                             Click to enlarge
+                           </div>
+                         </div>
+                         <div className="absolute top-2 right-2">
+                           <button
+                             onClick={() => setSelectedImage(doc.documentImage)}
+                             className="bg-blue-600 text-white p-1 rounded-full hover:bg-blue-700 transition-colors"
+                             title="View full size"
+                           >
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                             </svg>
+                           </button>
+                         </div>
+                       </div>
+                     ) : (
+                       <div className="w-40 h-32 bg-gray-100 rounded-lg flex items-center justify-center border">
+                         <div className="text-center">
+                           <svg className="w-8 h-8 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                           </svg>
+                           <span className="text-gray-500 text-xs">No Preview</span>
+                         </div>
+                       </div>
+                     )}
+                   </div>
 
                   {/* Verification Actions */}
                   {!doc.isVerified && (
@@ -318,45 +352,79 @@ const AdminKYCPage: React.FC = () => {
         </div>
       )}
 
-      {/* Rejection Modal */}
-      {selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Reject Document</h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Rejection Reason *
-              </label>
-              <textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Please provide a reason for rejection..."
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                rows={3}
-              />
-            </div>
-            
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => {
-                  setSelectedDocument(null);
-                  setRejectionReason('');
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleVerification(selectedDocument, 'REJECT')}
-                disabled={!rejectionReason.trim() || verifying === selectedDocument}
-                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {verifying === selectedDocument ? 'Processing...' : 'Reject'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+             {/* Image Preview Modal */}
+       {selectedImage && (
+         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+           <div className="relative max-w-4xl max-h-full">
+             <div className="bg-white rounded-lg p-4">
+               <div className="flex justify-between items-center mb-4">
+                 <h3 className="text-lg font-semibold">Document Preview</h3>
+                 <button
+                   onClick={() => setSelectedImage(null)}
+                   className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                 >
+                   ×
+                 </button>
+               </div>
+               <div className="flex justify-center">
+                 <img
+                   src={selectedImage}
+                   alt="Document preview"
+                   className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                 />
+               </div>
+               <div className="mt-4 flex justify-center">
+                 <button
+                   onClick={() => window.open(selectedImage, '_blank')}
+                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                 >
+                   Open in New Tab
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Rejection Modal */}
+       {selectedDocument && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+             <h3 className="text-lg font-semibold mb-4">Reject Document</h3>
+             <div className="mb-4">
+               <label className="block text-sm font-medium text-gray-700 mb-2">
+                 Rejection Reason *
+               </label>
+               <textarea
+                 value={rejectionReason}
+                 onChange={(e) => setRejectionReason(e.target.value)}
+                 placeholder="Please provide a reason for rejection..."
+                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                 rows={3}
+               />
+             </div>
+             
+             <div className="flex gap-2 justify-end">
+               <button
+                 onClick={() => {
+                   setSelectedDocument(null);
+                   setRejectionReason('');
+                 }}
+                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+               >
+                 Cancel
+               </button>
+               <button
+                 onClick={() => handleVerification(selectedDocument, 'REJECT')}
+                 disabled={!rejectionReason.trim() || verifying === selectedDocument}
+                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+               >
+                 {verifying === selectedDocument ? 'Processing...' : 'Reject'}
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
 
       {kycRequests.length === 0 && (
         <div className="text-center py-12">
