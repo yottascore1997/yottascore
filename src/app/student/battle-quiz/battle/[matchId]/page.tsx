@@ -188,16 +188,23 @@ export default function BattlePage() {
     // Match ended event
     const handleMatchEnded = (data: { 
       matchId: string; 
-      myScore: number; 
-      opponentScore: number; 
+      player1Score: number; 
+      player2Score: number; 
       winner: string; 
-      isDraw: boolean 
+      isDraw: boolean;
+      myScore: number;
+      opponentScore: number;
+      myPosition: 'player1' | 'player2';
     }) => {
       console.log('🏁 Match ended event received:', data);
+      console.log('   - Player 1 score:', data.player1Score);
+      console.log('   - Player 2 score:', data.player2Score);
       console.log('   - My score:', data.myScore);
       console.log('   - Opponent score:', data.opponentScore);
+      console.log('   - My position:', data.myPosition);
       console.log('   - Winner:', data.winner);
       console.log('   - Is draw:', data.isDraw);
+      console.log('   - Current user ID:', user?.id);
       
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -208,11 +215,24 @@ export default function BattlePage() {
         questionTimerRef.current = null;
       }
       
+      // Use the server-provided scores
+      const myScore = data.myScore;
+      const opponentScore = data.opponentScore;
+      const isWinner = data.winner === user?.id;
+      
+      console.log('🎯 Final score calculation:');
+      console.log('   - My score:', myScore);
+      console.log('   - Opponent score:', opponentScore);
+      console.log('   - Is winner:', isWinner);
+      
       setBattleState(prev => ({
         ...prev,
         status: 'finished',
-        player1Score: data.myScore,
-        player2Score: data.opponentScore
+        player1Score: myScore,
+        player2Score: opponentScore,
+        winner: data.winner,
+        isDraw: data.isDraw,
+        isWinner: isWinner
       }));
     };
 
@@ -339,9 +359,14 @@ export default function BattlePage() {
       if (response.ok) {
         const data = await response.json();
         setUser(data);
+        console.log('✅ User profile loaded:', data);
+        console.log('   - User ID:', data.id);
+        console.log('   - User name:', data.name);
+      } else {
+        console.error('❌ Failed to fetch user profile:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('❌ Error fetching user profile:', error);
     }
   };
 

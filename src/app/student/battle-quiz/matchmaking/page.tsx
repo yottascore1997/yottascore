@@ -54,6 +54,7 @@ function MatchmakingPageContent() {
 
   const category = searchParams.get('category');
   const mode = searchParams.get('mode');
+  const amount = searchParams.get('amount');
 
   useEffect(() => {
     fetchUserProfile();
@@ -62,7 +63,7 @@ function MatchmakingPageContent() {
   useEffect(() => {
     if (!socket || !isConnected || hasStartedSearch.current) return;
 
-    console.log('Starting matchmaking...', { category, mode });
+    console.log('Starting matchmaking...', { category, mode, amount });
     hasStartedSearch.current = true;
     searchStartTime.current = Date.now();
 
@@ -90,7 +91,8 @@ function MatchmakingPageContent() {
     // Emit matchmaking request
     socket.emit('join_matchmaking', {
       categoryId: category,
-      mode: mode || 'quick'
+      mode: mode || 'quick',
+      amount: amount ? parseFloat(amount) : undefined
     });
 
     // Listen for matchmaking events
@@ -166,7 +168,7 @@ function MatchmakingPageContent() {
       socket.off('matchmaking_error');
       socket.off('opponent_cancelled');
     };
-  }, [socket, isConnected, category, mode, router]);
+  }, [socket, isConnected, category, mode, amount, router]);
 
   const fetchUserProfile = async () => {
     try {

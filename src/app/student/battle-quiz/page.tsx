@@ -19,7 +19,8 @@ import {
   ArrowRight,
   Star,
   TrendingUp,
-  CheckCircle
+  CheckCircle,
+  IndianRupee
 } from "lucide-react";
 
 interface User {
@@ -42,6 +43,14 @@ interface Category {
   name: string;
   color: string;
   questionCount: number;
+}
+
+interface BattleAmount {
+  id: string;
+  categoryId: string;
+  amount: number;
+  isActive: boolean;
+  maxPlayers: number;
 }
 
 interface LeaderboardEntry {
@@ -70,6 +79,8 @@ export default function BattleQuizHomepage() {
   const [roomCode, setRoomCode] = useState("");
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [availableAmounts, setAvailableAmounts] = useState<BattleAmount[]>([]);
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [createdRoom, setCreatedRoom] = useState<{
     roomCode: string;
@@ -84,6 +95,16 @@ export default function BattleQuizHomepage() {
     fetchCategories();
     fetchLeaderboard();
   }, []);
+
+  // Fetch amounts when category changes
+  useEffect(() => {
+    if (selectedCategory) {
+      fetchAvailableAmounts(selectedCategory);
+    } else {
+      setAvailableAmounts([]);
+      setSelectedAmount(null);
+    }
+  }, [selectedCategory]);
 
   const fetchUserProfile = async () => {
     try {
@@ -100,18 +121,20 @@ export default function BattleQuizHomepage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setUser(data);
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        setError('Failed to fetch user profile');
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      setError('Failed to fetch user profile');
     }
   };
 
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/student/question-categories', {
+      const response = await fetch('/api/student/battle-quiz', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -121,17 +144,17 @@ export default function BattleQuizHomepage() {
         const data = await response.json();
         setCategories(data);
       } else {
-        console.error('Failed to fetch categories:', response.status);
+        setError('Failed to fetch categories');
       }
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      setError('Failed to fetch categories');
     }
   };
 
-  const fetchLeaderboard = async () => {
+  const fetchAvailableAmounts = async (categoryId: string) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/student/battle-quiz/leaderboard', {
+      const response = await fetch(`/api/student/battle-quiz/amounts?categoryId=${categoryId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -139,16 +162,38 @@ export default function BattleQuizHomepage() {
 
       if (response.ok) {
         const data = await response.json();
-        setLeaderboard(data);
+        setAvailableAmounts(data);
+        // Reset selected amount when category changes
+        setSelectedAmount(null);
+      } else {
+        console.error('Failed to fetch amounts');
       }
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      console.error('Failed to fetch amounts:', error);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/student/battle-quiz?type=leaderboard', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLeaderboard(data.slice(0, 5)); // Top 5 players
+      }
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleQuickMatch = (categoryId?: string) => {
+  const handleQuickMatch = (categoryId?: string, amount?: number) => {
     if (!user) {
       router.push('/auth/login');
       return;
@@ -157,6 +202,9 @@ export default function BattleQuizHomepage() {
     const params = new URLSearchParams();
     if (categoryId) {
       params.append('category', categoryId);
+    }
+    if (amount) {
+      params.append('amount', amount.toString());
     }
     params.append('mode', 'quick');
     
@@ -254,25 +302,17 @@ export default function BattleQuizHomepage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Left Column - Game Modes */}
+          {/* Left Column - Quick Match */}
           <div className="lg:col-span-2 space-y-6">
-            
             {/* Quick Match Section */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
-                    <Zap className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Quick Match</h2>
-                    <p className="text-gray-600">Find opponents instantly</p>
-                  </div>
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                  <Zap className="w-6 h-6 text-white" />
                 </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-500">Average Wait</div>
-                  <div className="text-lg font-bold text-green-600">~30s</div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Quick Match</h2>
+                  <p className="text-gray-600">Find opponents instantly</p>
                 </div>
               </div>
 
@@ -281,7 +321,7 @@ export default function BattleQuizHomepage() {
                 <h3 className="text-lg font-semibold mb-3">Choose Category (Optional)</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <button
-                    onClick={() => handleQuickMatch()}
+                    onClick={() => setSelectedCategory(null)}
                     className={`p-3 rounded-lg border-2 transition-all ${
                       !selectedCategory 
                         ? 'border-purple-500 bg-purple-50 text-purple-700' 
@@ -309,12 +349,39 @@ export default function BattleQuizHomepage() {
                 </div>
               </div>
 
+              {/* Amount Selection - Only show if category is selected */}
+              {selectedCategory && availableAmounts.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3">Select Amount</h3>
+                  <div className="grid grid-cols-4 gap-3">
+                    {availableAmounts.map((amount) => (
+                      <button
+                        key={amount.id}
+                        onClick={() => setSelectedAmount(amount.amount)}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          selectedAmount === amount.amount 
+                            ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                            : 'border-gray-200 hover:border-purple-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center">
+                          <IndianRupee className="w-4 h-4 mr-1" />
+                          <span className="text-sm font-medium">{amount.amount}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Find Opponent Button */}
               <Button
-                onClick={() => handleQuickMatch(selectedCategory || undefined)}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-lg font-semibold"
+                onClick={() => handleQuickMatch(selectedCategory || undefined, selectedAmount || undefined)}
+                disabled={selectedCategory ? !selectedAmount : false}
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Gamepad2 className="w-5 h-5 mr-2" />
-                Find Opponent
+                {selectedCategory && !selectedAmount ? 'Select Amount First' : 'Find Opponent'}
               </Button>
             </div>
 
@@ -400,13 +467,14 @@ export default function BattleQuizHomepage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold">Real-time Battles</h3>
-                    <p className="text-sm text-gray-600">15 seconds per question</p>
+                    <p className="text-sm text-gray-600">Quick 5-question matches</p>
                   </div>
                 </div>
                 <ul className="space-y-2 text-sm text-gray-600">
-                  <li>• Live opponent progress</li>
-                  <li>• Instant score updates</li>
-                  <li>• Real-time leaderboards</li>
+                  <li>• 10 seconds per question</li>
+                  <li>• Instant matchmaking</li>
+                  <li>• Live opponent answers</li>
+                  <li>• Real-time scoring</li>
                 </ul>
               </div>
 
@@ -416,57 +484,63 @@ export default function BattleQuizHomepage() {
                     <Trophy className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold">Win Rewards</h3>
-                    <p className="text-sm text-gray-600">Earn money & climb ranks</p>
+                    <h3 className="text-lg font-semibold">Win Prizes</h3>
+                    <p className="text-sm text-gray-600">Earn money by winning</p>
                   </div>
                 </div>
                 <ul className="space-y-2 text-sm text-gray-600">
-                  <li>• Prize money for winners</li>
-                  <li>• Experience points</li>
-                  <li>• Level progression</li>
+                  <li>• 80% prize pool to winner</li>
+                  <li>• 10% refund on draws</li>
+                  <li>• 10% admin commission</li>
+                  <li>• Instant wallet credit</li>
                 </ul>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Leaderboard & Stats */}
+          {/* Right Column - Stats & Leaderboard */}
           <div className="space-y-6">
-            
             {/* User Stats */}
-            {user?.battleStats && (
+            {user && (
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold mb-4">Your Stats</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Matches</span>
-                    <span className="font-semibold">{user.battleStats.totalMatches}</span>
+                    <span className="font-semibold">{user.battleStats?.totalMatches || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Win Rate</span>
-                    <span className="font-semibold text-green-600">{(user.battleStats.winRate * 100).toFixed(1)}%</span>
+                    <span className="font-semibold text-green-600">
+                      {((user.battleStats?.winRate || 0) * 100).toFixed(1)}%
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Current Streak</span>
-                    <span className="font-semibold text-orange-600">{user.battleStats.currentStreak}</span>
+                    <span className="font-semibold text-purple-600">
+                      {user.battleStats?.currentStreak || 0}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Winnings</span>
-                    <span className="font-semibold text-green-600">₹{user.battleStats.totalPrizeMoney}</span>
+                    <span className="font-semibold text-green-600">
+                      ₹{user.battleStats?.totalPrizeMoney || 0}
+                    </span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Global Leaderboard */}
+            {/* Leaderboard */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <Crown className="w-6 h-6 text-yellow-500" />
                 <h3 className="text-lg font-semibold">Top Players</h3>
-                <TrendingUp className="w-5 h-5 text-purple-600" />
               </div>
               
               <div className="space-y-3">
-                {leaderboard.slice(0, 10).map((entry: any, index: number) => (
-                  <div key={entry.user.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50">
+                {leaderboard.map((entry, index) => (
+                  <div key={entry.user.id} className="flex items-center space-x-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                       index === 0 ? 'bg-yellow-500 text-white' :
                       index === 1 ? 'bg-gray-400 text-white' :
