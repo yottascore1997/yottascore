@@ -964,21 +964,55 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} joined chat ${chatId}`);
   });
 
+  // Enhanced Message Notifications
   socket.on('private_message', (data) => {
-    console.log('Received private_message event:', data);
+    console.log('📨 Received private_message event:', data);
     const { message } = data;
     const receiverId = message.receiver.id;
+    const senderId = message.sender.id;
+    
+    // Create chat room ID for this conversation
+    const chatId = [senderId, receiverId].sort().join('-');
+    console.log(`🔗 Chat room ID: ${chatId}`);
+
+    // Send message to the chat room (both sender and receiver will receive it if they are in this room)
+    io.to(chatId).emit('new_message', message);
+    console.log(`✅ Message sent to chat room: ${chatId}`);
+    
+    // Send notification to the receiver's individual socket if they are online and not in the chat room
     const receiverSocketId = userSockets[receiverId];
-
-    console.log(`Looking for receiver ${receiverId}, socket ID: ${receiverSocketId}`);
-    console.log('All connected users:', Object.keys(userSockets));
-
     if (receiverSocketId) {
-      // Send the message directly to the specific socket of the receiver
-      io.to(receiverSocketId).emit('new_message', message);
-      console.log(`Message sent to user ${receiverId} via socket ${receiverSocketId}`);
+      // Check if the receiver's socket is already in the chat room
+      const receiverIsInChatRoom = io.sockets.adapter.rooms.get(chatId)?.has(receiverSocketId);
+      
+      if (!receiverIsInChatRoom) {
+        io.to(receiverSocketId).emit('message_notification', {
+          type: 'new_message',
+          message: message,
+          unreadCount: 1
+        });
+        console.log(`🔔 Notification sent to receiver ${receiverId} (not in chat room)`);
+      } else {
+        console.log(`ℹ️ Receiver ${receiverId} is in chat room, no separate notification needed.`);
+      }
     } else {
-      console.log(`User ${receiverId} is not connected, message will be delivered on next login.`);
+      console.log(`⚠️ User ${receiverId} is not connected, message will be delivered on next login.`);
+    }
+  });
+
+  // Message Read Status
+  socket.on('mark_message_read', (data) => {
+    const { messageId, readerId } = data;
+    console.log(`Marking message ${messageId} as read by ${readerId}`);
+    
+    // Emit to sender that message was read
+    const senderSocketId = userSockets[data.senderId];
+    if (senderSocketId) {
+      io.to(senderSocketId).emit('message_read_status', {
+        messageId,
+        readBy: readerId,
+        readAt: new Date()
+      });
     }
   });
 

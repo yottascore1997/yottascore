@@ -1,7 +1,7 @@
 'use client'
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const sidebarLinks = [
   { 
@@ -97,7 +97,17 @@ const sidebarLinks = [
     category: 'content'
   },
   { 
-    name: 'Exam Notifications', 
+    name: 'Push Notifications', 
+    href: '/admin/push-notifications', 
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.19 4.19A4 4 0 004 6v10a4 4 0 004 4h10a4 4 0 004-4V6a4 4 0 00-4-4H8a4 4 0 00-3.81 2.19z" />
+      </svg>
+    ),
+    category: 'main'
+  },
+  { 
+    name: 'Exam Notifications',
     href: '/admin/exam-notifications', 
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,7 +179,33 @@ const categoryLabels = {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          router.push('/auth/login');
+          return;
+        }
+
+        // Simple token existence check - let the individual pages handle detailed auth
+        setIsAuthenticated(true);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('token');
+        router.push('/auth/login');
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const groupedLinks = sidebarLinks.reduce((acc, link) => {
     if (!acc[link.category]) {
@@ -178,6 +214,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     acc[link.category].push(link);
     return acc;
   }, {} as Record<string, typeof sidebarLinks>);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading admin panel...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Will redirect to login
+  }
 
   return (
     <div className="h-screen flex bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden">

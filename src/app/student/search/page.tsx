@@ -122,6 +122,34 @@ export default function SearchPage() {
     }
   }
 
+  const handleCancelRequest = async (userId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      const response = await fetch('/api/student/follow/cancel-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ targetUserId: userId })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel follow request')
+      }
+
+      // Refresh search results
+      handleSearch()
+    } catch (error) {
+      console.error('Error cancelling follow request:', error)
+    }
+  }
+
   return (
     <div className="pb-4">
       {/* Search Header */}
@@ -237,30 +265,69 @@ export default function SearchPage() {
                             </div>
                           </Link>
                         </div>
-                        <Button
-                          variant={user.isFollowing || user.followRequestStatus === 'PENDING' ? "outline" : "default"}
-                          size="sm"
-                          onClick={() => {
-                            if (user.isFollowing) {
-                              handleUnfollow(user.id)
-                            } else if (user.followRequestStatus === 'PENDING') {
-                              // Cancel request functionality can be added here
-                              return
-                            } else {
-                              handleFollow(user.id)
-                            }
-                          }}
-                          disabled={user.followRequestStatus === 'PENDING'}
-                          className={`rounded-full ${
-                            user.isFollowing 
-                              ? 'border-gray-300 text-gray-700' 
-                              : user.followRequestStatus === 'PENDING'
-                              ? 'border-orange-300 text-orange-600'
-                              : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
-                          }`}
-                        >
-                          {user.isFollowing ? 'Following' : user.followRequestStatus === 'PENDING' ? 'Request Sent' : 'Follow'}
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                          {/* Message Button - Show when following */}
+                          {user.isFollowing && (
+                            <Button
+                              size="sm"
+                              onClick={() => router.push(`/student/messages?user=${user.id}`)}
+                              className="bg-green-500 hover:bg-green-600 text-white rounded-full"
+                            >
+                              <MessageCircle className="w-4 h-4 mr-1" />
+                              Message
+                            </Button>
+                          )}
+                          
+                                                     {/* Follow/Unfollow Button */}
+                           {user.isFollowing ? (
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => handleUnfollow(user.id)}
+                               className="border-gray-300 text-gray-700 rounded-full"
+                             >
+                               Following
+                             </Button>
+                           ) : user.followRequestStatus === 'PENDING' ? (
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => handleCancelRequest(user.id)}
+                               className="border-orange-300 text-orange-600 rounded-full"
+                             >
+                               Cancel Request
+                             </Button>
+                           ) : (
+                             <Button
+                               variant="default"
+                               size="sm"
+                               onClick={() => handleFollow(user.id)}
+                               className={`rounded-full ${
+                                 user.followRequestStatus === 'DECLINED'
+                                   ? 'border-red-300 text-red-600'
+                                   : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+                               }`}
+                             >
+                               {user.followRequestStatus === 'DECLINED' ? 'Send Again' : 'Follow'}
+                             </Button>
+                           )}
+                        </div>
+                        
+                                                 {/* Status Information */}
+                         <div className="mt-2 text-xs text-gray-500">
+                           {!user.isFollowing && !user.followRequestStatus && (
+                             <span>Follow this user to start messaging</span>
+                           )}
+                           {user.followRequestStatus === 'PENDING' && (
+                             <span>Follow request sent - waiting for response</span>
+                           )}
+                           {user.followRequestStatus === 'DECLINED' && (
+                             <span>Follow request was declined - you can try again</span>
+                           )}
+                           {user.isFollowing && (
+                             <span>You can message this user directly</span>
+                           )}
+                         </div>
                       </div>
                     </div>
                   ))}

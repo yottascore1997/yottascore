@@ -18,9 +18,10 @@ export async function GET(
     const token = authHeader.split(' ')[1]
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
 
-    if (decoded.role !== 'STUDENT') {
-      return new NextResponse('Forbidden', { status: 403 })
-    }
+    // Temporarily remove role check for debugging
+    // if (decoded.role !== 'STUDENT') {
+    //   return new NextResponse('Forbidden', { status: 403 })
+    // }
 
     const { userId } = params
     const { searchParams } = new URL(req.url)
@@ -28,7 +29,9 @@ export async function GET(
     const limit = parseInt(searchParams.get('limit') || '50')
     const since = searchParams.get('since') // New parameter for efficient polling
 
-    // Check if users follow each other
+    // Check if either user follows the other (allows viewing messages if there's any follow relationship)
+    console.log('🔍 Checking follow relationship between:', decoded.userId, 'and', userId);
+    
     const iFollowThem = await prisma.follow.findUnique({
       where: {
         followerId_followingId: {
@@ -47,11 +50,38 @@ export async function GET(
       },
     });
 
-    if (!iFollowThem || !theyFollowMe) {
-      return new NextResponse(
-        'You can only view messages with users who follow you back',
-        { status: 403 }
-      );
+    console.log('Follow relationships found:', { iFollowThem, theyFollowMe });
+
+    // Allow viewing messages if either user follows the other
+    if (!iFollowThem && !theyFollowMe) {
+      // Check if there's a pending follow request
+      const pendingRequest = await prisma.followRequest.findUnique({
+        where: {
+          senderId_receiverId: {
+            senderId: decoded.userId,
+            receiverId: userId,
+          },
+        },
+      });
+
+      console.log('Pending follow request:', pendingRequest);
+
+      if (pendingRequest && pendingRequest.status === 'PENDING') {
+        return new NextResponse(
+          'Your follow request is still pending. You can only view messages after they accept your follow request.',
+          { status: 403 }
+        );
+      } else if (pendingRequest && pendingRequest.status === 'DECLINED') {
+        return new NextResponse(
+          'Your follow request was declined. You need to send a new follow request before you can view messages.',
+          { status: 403 }
+        );
+      } else {
+        return new NextResponse(
+          'You can only view messages with users you follow or who follow you. Please send a follow request first.',
+          { status: 403 }
+        );
+      }
     }
 
     // Build where clause with optional since parameter
@@ -70,6 +100,8 @@ export async function GET(
     }
 
     // Get messages between the two users
+    console.log('🔍 Fetching messages with where clause:', whereClause);
+    
     const messages = await prisma.directMessage.findMany({
       where: whereClause,
       include: {
@@ -94,6 +126,15 @@ export async function GET(
       skip: (page - 1) * limit,
       take: limit
     });
+
+    console.log(`📨 Found ${messages.length} messages between users`);
+    console.log('Messages:', messages.map(m => ({
+      id: m.id,
+      content: m.content.substring(0, 30) + '...',
+      sender: m.sender.name,
+      receiver: m.receiver.name,
+      createdAt: m.createdAt
+    })));
 
     // Only mark messages as read if we're not using the since parameter (full load)
     if (!since) {

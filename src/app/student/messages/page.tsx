@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, MessageCircle, Send, ArrowLeft, Plus, Paperclip, Loader2, File } from 'lucide-react'
+import { Search, MessageCircle, Send, ArrowLeft, Plus, Paperclip, Loader2 } from 'lucide-react'
 import { useSocket } from '@/hooks/useSocket'
 
 // Force dynamic rendering
@@ -65,38 +65,60 @@ function MessagesPageContent() {
   const { socket, isConnected, error: socketError } = useSocket()
   const [isTyping, setIsTyping] = useState(false)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  // Refs to hold the most current state for our socket listeners, avoiding stale closures
-  const selectedUserRef = useRef(selectedUser)
-  const messagesRef = useRef(messages)
-  const currentUserRef = useRef(currentUser)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [isUploading, setIsUploading] = useState(false)
 
   useEffect(() => {
+    // Get current user from JWT token
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user: User = {
+          id: payload.userId,
+          name: payload.name || 'User',
+          profilePhoto: null,
+          course: null,
+          year: null
+        };
+        setCurrentUser(user);
+      } catch (error) {
+        console.error('Error decoding JWT token:', error);
+      }
+    }
+
     fetchConversations()
     fetchMessageRequests()
   }, [])
 
   useEffect(() => {
-    if (selectedUser) {
+    if (selectedUser && currentUser) {
+      // Clear previous messages when switching users
+      setMessages([]);
+      
+      // Fetch messages for the selected user
       fetchMessages(selectedUser.id)
+      
+      if (socket && isConnected) {
+        const chatId = [currentUser.id, selectedUser.id].sort().join('-');
+        socket.emit('join_chat', chatId);
+        socket.emit('join_typing_room', chatId);
+      }
     }
-  }, [selectedUser, messageRequests])
+  }, [selectedUser, currentUser, socket, isConnected])
 
   // Handle user parameter from URL
   useEffect(() => {
     const userId = searchParams.get('user')
-    if (userId) {
-      // First try to find user in existing conversations
+    if (userId && currentUser) {
       const user = conversations.find(conv => conv.user.id === userId)?.user
       if (user) {
         setSelectedUser(user)
       } else {
-        // If user not in conversations, fetch their profile data
         fetchUserProfile(userId)
       }
     }
-  }, [searchParams, conversations])
+  }, [searchParams, conversations, currentUser])
 
   // Fetch current user's profile to get their ID
   useEffect(() => {
@@ -124,50 +146,34 @@ function MessagesPageContent() {
     }
   }, [socket, isConnected, currentUser])
 
-  // Keep refs updated with the latest state
+  // Socket event listeners
   useEffect(() => {
-    selectedUserRef.current = selectedUser
-    messagesRef.current = messages
-    currentUserRef.current = currentUser
-  }, [selectedUser, messages, currentUser])
+    if (!socket || !isConnected) return
 
-  // Centralized real-time event handler setup
-  useEffect(() => {
-    if (!socket || !isConnected) {
-      console.log('Socket not connected, real-time features disabled')
-      return
-    }
-
-    // --- Listener for new messages ---
     const handleNewMessage = (newMessage: Message) => {
-      // Check if newMessage and sender exist before accessing properties
-      if (!newMessage || !newMessage.sender) {
-        console.warn('Received message with missing sender:', newMessage)
-        return
-      }
-      
-      // If this chat is currently open, add the message to the state
-      if (selectedUserRef.current && newMessage.sender.id === selectedUserRef.current.id) {
-        setMessages(prev => [...prev, newMessage])
+      if (selectedUser && 
+          (newMessage.sender.id === selectedUser.id || 
+           newMessage.receiver.id === selectedUser.id)) {
+        setMessages(prev => {
+          const exists = prev.some(msg => msg.id === newMessage.id);
+          if (!exists) {
+            return [...prev, newMessage];
+          }
+          return prev;
+        });
+        fetchConversations();
       } else {
-        // If chat is not open, just refresh the conversation list to show the notification
-        fetchConversations()
+        fetchConversations();
       }
       setIsTyping(false)
     }
 
-    // --- Listener for read receipts ---
     const handleMessagesRead = ({ readerId }: { readerId: string }) => {
-      if (selectedUserRef.current && selectedUserRef.current.id === readerId) {
+      if (selectedUser && selectedUser.id === readerId) {
         setMessages(prev =>
-          prev.map(msg => {
-            // Check if msg and sender exist before accessing properties
-            if (!msg || !msg.sender) {
-              console.warn('Message with missing sender found in handleMessagesRead:', msg);
-              return msg; // Return unchanged message
-            }
-            return msg.sender.id === currentUserRef.current?.id ? { ...msg, isRead: true } : msg;
-          })
+          prev.map(msg => 
+            msg.sender.id === currentUser?.id ? { ...msg, isRead: true } : msg
+          )
         )
       }
     }
@@ -179,24 +185,16 @@ function MessagesPageContent() {
       socket.off('new_message', handleNewMessage)
       socket.off('messages_were_read', handleMessagesRead)
     }
-  }, [socket, isConnected]) // This effect now runs when socket is ready and connected
+  }, [socket, isConnected, selectedUser, currentUser])
 
   // Effect to mark messages as read when a chat is opened
   useEffect(() => {
-    if (socket && isConnected && selectedUserRef.current && currentUserRef.current) {
-      const unreadMessages = messagesRef.current.filter(
-        (msg) => {
-          // Check if msg and receiver exist before accessing properties
-          if (!msg || !msg.receiver) {
-            console.warn('Message with missing receiver found in unreadMessages filter:', msg);
-            return false; // Skip this message
-          }
-          return msg.receiver.id === currentUserRef.current?.id && !msg.isRead;
-        }
+    if (socket && isConnected && selectedUser && currentUser) {
+      const unreadMessages = messages.filter(
+        (msg) => msg.receiver.id === currentUser.id && !msg.isRead
       )
 
       if (unreadMessages.length > 0) {
-        // 1. Call API to update the database
         const markAsRead = async () => {
           try {
             const token = localStorage.getItem('token')
@@ -206,25 +204,18 @@ function MessagesPageContent() {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`,
               },
-              body: JSON.stringify({ otherUserId: selectedUserRef.current?.id }),
+              body: JSON.stringify({ otherUserId: selectedUser.id }),
             })
 
-            // 2. Notify the other user via WebSocket
             socket.emit('notify_messages_read', { 
-              readerId: currentUserRef.current?.id,
-              otherUserId: selectedUserRef.current?.id 
+              readerId: currentUser.id,
+              otherUserId: selectedUser.id 
             })
 
-            // 3. Update the state locally for the current user
             setMessages(prev => 
-              prev.map(msg => {
-                // Check if msg and receiver exist before accessing properties
-                if (!msg || !msg.receiver) {
-                  console.warn('Message with missing receiver found in setMessages:', msg);
-                  return msg; // Return unchanged message
-                }
-                return msg.receiver.id === currentUserRef.current?.id ? { ...msg, isRead: true } : msg;
-              })
+              prev.map(msg => 
+                msg.receiver.id === currentUser.id ? { ...msg, isRead: true } : msg
+              )
             )
 
           } catch (error) {
@@ -234,7 +225,7 @@ function MessagesPageContent() {
         markAsRead()
       }
     }
-  }, [selectedUser, messages, socket, isConnected]) // This effect now correctly depends on selectedUser
+  }, [selectedUser, messages, socket, isConnected])
 
   const fetchConversations = async () => {
     try {
@@ -266,45 +257,80 @@ function MessagesPageContent() {
       const token = localStorage.getItem('token')
       if (!token) return
 
+      console.log('🔍 Fetching messages for user:', userId);
+
       const response = await fetch(`/api/student/messages/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       })
 
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (response.ok) {
         const data = await response.json()
-        setMessages(data)
+        console.log('📨 Fetched messages data:', data);
+        console.log('📨 Data type:', typeof data);
+        console.log('📨 Is array:', Array.isArray(data));
+        console.log('📨 Data length:', data?.length);
         
-        // If no direct messages, check for message requests from this user
-        if (data.length === 0) {
-          const pendingRequest = messageRequests.find(req => {
-            // Check if req and sender exist before accessing properties
-            if (!req || !req.sender) {
-              console.warn('Message request with missing sender found:', req);
-              return false; // Skip this request
+        if (data && Array.isArray(data)) {
+          console.log('📨 Processing array of messages...');
+          
+          // Sort messages by creation time (oldest first)
+          const sortedMessages: Message[] = [...data].sort((a: Message, b: Message) => 
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          
+          console.log('📨 Sorted messages:', sortedMessages.map((m: Message) => ({
+            id: m.id,
+            content: m.content.substring(0, 30),
+            sender: m.sender.name,
+            receiver: m.receiver.name,
+            createdAt: m.createdAt
+          })));
+          
+          setMessages(sortedMessages);
+          
+          if (data.length === 0) {
+            console.log('📨 No messages found, checking for pending requests...');
+            const pendingRequest = messageRequests.find(req => 
+              req.sender.id === userId && req.status === 'PENDING'
+            )
+            if (pendingRequest) {
+              console.log('📨 Found pending request:', pendingRequest);
+              setMessages([{
+                id: `request-${pendingRequest.id}`,
+                content: pendingRequest.content,
+                messageType: pendingRequest.messageType,
+                fileUrl: pendingRequest.fileUrl,
+                isRead: false,
+                createdAt: pendingRequest.createdAt,
+                sender: pendingRequest.sender,
+                receiver: pendingRequest.receiver,
+                isRequest: true,
+                requestId: pendingRequest.id
+              }])
+            } else {
+              console.log('📨 No pending requests either, setting empty messages');
+              setMessages([]);
             }
-            return req.sender.id === userId && req.status === 'PENDING';
-          })
-          if (pendingRequest) {
-            // Show the pending request as a message in the chat
-            setMessages([{
-              id: `request-${pendingRequest.id}`,
-              content: pendingRequest.content,
-              messageType: pendingRequest.messageType,
-              fileUrl: pendingRequest.fileUrl,
-              isRead: false,
-              createdAt: pendingRequest.createdAt,
-              sender: pendingRequest.sender,
-              receiver: pendingRequest.receiver,
-              isRequest: true, // Flag to identify this as a request
-              requestId: pendingRequest.id
-            }])
           }
+        } else {
+          console.log('❌ No messages data or not an array');
+          console.log('❌ Data:', data);
+          setMessages([]);
         }
+      } else {
+        const errorText = await response.text();
+        console.log('❌ Response not ok:', response.status);
+        console.log('❌ Error text:', errorText);
+        setMessages([]);
       }
     } catch (error) {
-      console.error('Error fetching messages:', error)
+      console.error('❌ Error fetching messages:', error)
+      setMessages([]);
     }
   }
 
@@ -377,12 +403,9 @@ function MessagesPageContent() {
 
       if (response.ok) {
         const result = await response.json()
-        // Remove the request from the list
         setMessageRequests(prev => prev.filter(req => req.id !== requestId))
-        // Refresh conversations to show the new conversation
         fetchConversations()
         
-        // Update messages state - replace the request message with the actual message
         if (result.message) {
           setMessages(prev => prev.map(msg => 
             msg.requestId === requestId ? result.message : msg
@@ -412,9 +435,7 @@ function MessagesPageContent() {
       })
 
       if (response.ok) {
-        // Remove the request from the list
         setMessageRequests(prev => prev.filter(req => req.id !== requestId))
-        // Remove the request message from the chat
         setMessages(prev => prev.filter(msg => msg.requestId !== requestId))
       }
     } catch (error) {
@@ -426,29 +447,26 @@ function MessagesPageContent() {
     if (!selectedUser || !newMessage.trim() || !currentUser) return
 
     setSending(true)
-    const chatId = [currentUser.id, selectedUser.id].sort().join('-')
-    const tempId = `temp-${Date.now()}`
     const content = newMessage.trim()
-    
-    // Clear the input immediately for a responsive feel
     setNewMessage('')
 
-    // 1. Optimistic UI update for the sender
+    // Create optimistic message for immediate display
     const optimisticMessage: Message = {
-      id: tempId,
+      id: `temp-${Date.now()}`,
       content: content,
-      createdAt: new Date().toISOString(),
-      sender: currentUser,
-      receiver: selectedUser,
       messageType: 'TEXT',
       fileUrl: null,
       isRead: false,
+      createdAt: new Date().toISOString(),
+      sender: currentUser,
+      receiver: selectedUser,
     }
+
+    // Add optimistic message to UI immediately
     setMessages(prev => [...prev, optimisticMessage])
 
     try {
       const token = localStorage.getItem('token')
-      // 2. Save the message to the database
       const response = await fetch('/api/student/messages', {
         method: 'POST',
         headers: {
@@ -462,25 +480,35 @@ function MessagesPageContent() {
       })
 
       if (!response.ok) {
-        throw new Error('Server responded with an error')
+        const errorText = await response.text();
+        console.error('Server error response:', response.status, errorText);
+        throw new Error(`Server responded with ${response.status}: ${errorText}`)
       }
       
       const result = await response.json()
+      console.log('Message API response:', result);
 
       if (result.type === 'direct') {
-        // 3. Replace the optimistic message with the real one from the server
-        setMessages(prev => prev.map(msg => (msg.id === tempId ? result.message : msg)))
-        
-        // 4. Emit WebSocket event for real-time delivery
-        if (socket && isConnected) {
-          socket.emit('private_message', { message: result.message });
-          console.log('Emitted private_message event:', result.message.id);
+        // Replace optimistic message with real message from server
+        if (result.message) {
+          setMessages(prev => prev.map(msg => 
+            msg.id === optimisticMessage.id ? result.message : msg
+          ))
         }
-
+        
+        // Update conversations list
+        fetchConversations();
+        
+        // Emit socket event for real-time delivery
+        if (socket && isConnected) {
+          const chatId = [currentUser.id, selectedUser.id].sort().join('-');
+          socket.emit('private_message', { message: result.message || optimisticMessage });
+        }
+        
       } else if (result.type === 'request') {
-        // Message was sent as a request - remove the optimistic message
-        setMessages(prev => prev.filter(msg => msg.id !== tempId))
-        // Show a notification that the message was sent as a request
+        // Remove optimistic message since it was sent as request
+        setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id))
+        
         const notification = document.createElement('div')
         notification.className = 'fixed top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded z-50'
         notification.innerHTML = `
@@ -504,10 +532,20 @@ function MessagesPageContent() {
 
     } catch (error) {
       console.error('Error sending message:', error)
-      // 5. If sending fails, remove the optimistic message
-      setMessages(prev => prev.filter(msg => msg.id !== tempId))
-      setNewMessage(content) // Restore the message in the input box
-      alert('Message failed to send. Please try again.')
+      
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id))
+      setNewMessage(content)
+      
+      if (error instanceof Error) {
+        if (error.message.includes('follow')) {
+          alert('You need to follow this user first before you can message them. Please go to their profile and follow them.')
+        } else {
+          alert(`Message failed to send: ${error.message}`)
+        }
+      } else {
+        alert('Message failed to send. Please try again.')
+      }
     } finally {
       setSending(false)
     }
@@ -527,7 +565,7 @@ function MessagesPageContent() {
 
     typingTimeoutRef.current = setTimeout(() => {
       socket.emit('stop_typing', { chatId })
-    }, 2000) // Consider typing stopped after 2 seconds of inactivity
+    }, 2000)
   }
 
   const handleAttachmentClick = () => {
@@ -555,7 +593,60 @@ function MessagesPageContent() {
 
       const result = await response.json();
       if (result.success && result.url) {
-        await sendFileMessage(result.url, file.type, file.name);
+        // Create optimistic file message for immediate display
+        const optimisticMessage: Message = {
+          id: `temp-file-${Date.now()}`,
+          content: file.name,
+          messageType: file.type.startsWith('image/') ? 'IMAGE' : 'FILE',
+          fileUrl: result.url,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          sender: currentUser!,
+          receiver: selectedUser,
+        }
+
+        // Add optimistic message to UI immediately
+        setMessages(prev => [...prev, optimisticMessage])
+
+        // Send file message
+        const token = localStorage.getItem('token');
+        const messageResponse = await fetch('/api/student/messages', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json', 
+            Authorization: `Bearer ${token}` 
+          },
+          body: JSON.stringify({
+            receiverId: selectedUser.id,
+            content: file.name,
+            messageType: file.type.startsWith('image/') ? 'IMAGE' : 'FILE',
+            fileUrl: result.url,
+          }),
+        });
+
+        if (messageResponse.ok) {
+          const savedMessage = await messageResponse.json();
+          
+          // Replace optimistic message with real message from server
+          if (savedMessage.message) {
+            setMessages(prev => prev.map(msg => 
+              msg.id === optimisticMessage.id ? savedMessage.message : msg
+            ))
+          }
+          
+          // Update conversations list
+          fetchConversations();
+          
+          // Emit socket event for real-time delivery
+          if (socket && isConnected && currentUser) {
+            const chatId = [currentUser.id, selectedUser.id].sort().join('-');
+            socket.emit('private_message', { message: savedMessage.message || optimisticMessage });
+          }
+        } else {
+          // Remove optimistic message on error
+          setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id))
+          throw new Error('Failed to save file message');
+        }
       } else {
         throw new Error(result.error || 'Upload returned an error');
       }
@@ -568,57 +659,6 @@ function MessagesPageContent() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-    }
-  };
-
-  const sendFileMessage = async (fileUrl: string, fileType: string, fileName: string) => {
-    if (!selectedUser || !currentUser || !fileUrl) return;
-    
-    const messageType = fileType.startsWith('image/') ? 'IMAGE' : 'FILE';
-    const content = messageType === 'IMAGE' ? 'Image' : fileName;
-    
-    // The rest is the same as the text message sending logic
-    const tempId = `temp-${Date.now()}`;
-    const optimisticMessage: Message = {
-      id: tempId,
-      content,
-      createdAt: new Date().toISOString(),
-      sender: currentUser,
-      receiver: selectedUser,
-      messageType,
-      fileUrl,
-      isRead: false,
-    };
-    setMessages(prev => [...prev, optimisticMessage]);
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/student/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          receiverId: selectedUser.id,
-          content,
-          messageType,
-          fileUrl,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to save file message');
-      
-      const savedMessage = await response.json();
-      setMessages(prev => prev.map(msg => (msg.id === tempId ? savedMessage : msg)));
-      
-      // Emit WebSocket event for real-time delivery
-      if (socket && isConnected) {
-        socket.emit('private_message', { message: savedMessage });
-        console.log('Emitted private_message event for file:', savedMessage.id);
-      }
-
-    } catch (error) {
-      console.error("Error sending file message:", error);
-      setMessages(prev => prev.filter(msg => msg.id !== tempId));
-      alert('Failed to send file.');
     }
   };
 
@@ -648,120 +688,6 @@ function MessagesPageContent() {
     scrollToBottom()
   }, [messages])
 
-  // Manual refresh function
-  const refreshMessages = async () => {
-    if (!selectedUser) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch(`/api/student/messages/${selectedUser.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const newMessages = await response.json();
-        setMessages(newMessages);
-        fetchConversations();
-      }
-    } catch (error) {
-      console.error('Error refreshing messages:', error);
-    }
-  };
-
-  // Real-time message updates using WebSocket events (no polling)
-  useEffect(() => {
-    console.log('Setting up WebSocket listeners:', { 
-      socket: !!socket, 
-      isConnected, 
-      currentUser: !!currentUser 
-    });
-    
-    if (!socket || !isConnected || !currentUser) return;
-
-    // Listen for new messages in real-time
-    const handleNewMessage = (message: Message) => {
-      console.log('Received new_message event:', message);
-      
-      // Check if message and sender/receiver exist before accessing properties
-      if (!message || !message.sender || !message.receiver) {
-        console.warn('Received message with missing sender or receiver:', message);
-        return;
-      }
-      
-      // If this message is for the currently open chat
-      if (selectedUser && 
-          (message.sender.id === selectedUser.id || message.receiver.id === selectedUser.id)) {
-        console.log('Message is for current chat, adding to messages');
-        setMessages(prev => {
-          // Check if message already exists to avoid duplicates
-          const exists = prev.some(msg => msg.id === message.id);
-          if (!exists) {
-            return [...prev, message];
-          }
-          console.log('Message already exists, not adding duplicate');
-          return prev;
-        });
-        
-        // Update conversations list to show latest message
-        fetchConversations();
-      } else if (!selectedUser) {
-        // If no chat is open, just update conversations
-        console.log('No chat open, updating conversations');
-        fetchConversations();
-      } else {
-        console.log('Message not for current chat, ignoring');
-      }
-    };
-
-    // Listen for message read receipts
-    const handleMessageRead = (data: { readerId: string, otherUserId: string }) => {
-      if (selectedUser && data.otherUserId === selectedUser.id) {
-        setMessages(prev =>
-          prev.map(msg => {
-            // Check if msg and sender exist before accessing properties
-            if (!msg || !msg.sender) {
-              console.warn('Message with missing sender found in handleMessageRead:', msg);
-              return msg; // Return unchanged message
-            }
-            return msg.sender.id === currentUser.id ? { ...msg, isRead: true } : msg;
-          })
-        );
-      }
-    };
-
-    // Listen for typing indicators
-    const handleTypingStart = () => {
-      if (selectedUser) {
-        setIsTyping(true);
-      }
-    };
-
-    const handleTypingStop = () => {
-      if (selectedUser) {
-        setIsTyping(false);
-      }
-    };
-
-
-
-    console.log('Registering socket event listeners');
-    socket.on('new_message', handleNewMessage);
-    socket.on('messages_were_read', handleMessageRead);
-    socket.on('user_typing', handleTypingStart);
-    socket.on('user_stopped_typing', handleTypingStop);
-
-    return () => {
-      socket.off('new_message', handleNewMessage);
-      socket.off('messages_were_read', handleMessageRead);
-      socket.off('user_typing', handleTypingStart);
-      socket.off('user_stopped_typing', handleTypingStop);
-    };
-  }, [socket, isConnected, currentUser, selectedUser]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -773,7 +699,6 @@ function MessagesPageContent() {
     )
   }
 
-  // Show socket connection error if socket failed to connect
   if (socketError) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -823,7 +748,6 @@ function MessagesPageContent() {
                     selectedUser.name.charAt(0).toUpperCase()
                   )}
                 </div>
-                {/* Placeholder for online status */}
                 <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-400 border-2 border-white"></span>
               </div>
               <div>
@@ -833,120 +757,77 @@ function MessagesPageContent() {
                 </p>
               </div>
             </div>
-            
-
-            
-            {/* Refresh Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={refreshMessages}
-              className="p-2 rounded-full text-gray-500 hover:text-blue-600"
-              title="Refresh messages"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </Button>
           </div>
         </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {messages.map((message, index) => {
-            // Check if message and sender exist before accessing properties
-            if (!message || !message.sender) {
-              console.warn('Message with missing sender found:', message);
-              return null; // Skip rendering this message
-            }
-            
-            const isOwn = message.sender.id !== selectedUser.id
-            
-            return (
-              <div
-                key={message.id || index}
-                className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-              >
+          {messages.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No messages yet</p>
+              <p className="text-sm">Start a conversation by sending a message!</p>
+            </div>
+          ) : (
+            messages.map((message, index) => {
+              const isOwn = message.sender.id !== selectedUser.id
+              
+              return (
                 <div
-                  className={`max-w-xs lg:max-w-md rounded-2xl ${
-                    message.isRequest 
-                      ? 'bg-yellow-50 border-2 border-yellow-200' 
-                      : isOwn 
-                        ? 'bg-blue-500 text-white' 
-                        : 'bg-gray-100 text-gray-900'
-                  } ${message.messageType === 'IMAGE' ? 'p-1' : 'px-4 py-2'}`}
+                  key={message.id || index}
+                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                 >
-                  {message.messageType === 'IMAGE' && message.fileUrl && (
-                    <img
-                      src={message.fileUrl}
-                      alt="Sent image"
-                      className="rounded-xl max-w-xs cursor-pointer"
-                      onClick={() => message.fileUrl && window.open(message.fileUrl, '_blank')}
-                    />
-                  )}
-                  {message.messageType === 'FILE' && message.fileUrl && (
-                    <a
-                      href={message.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`flex items-center rounded-lg ${isOwn ? 'text-white hover:text-blue-100' : 'text-gray-800 hover:text-black'}`}
-                    >
-                      <File className="h-5 w-5 mr-2 flex-shrink-0" />
-                      <span className="truncate font-medium">{message.content}</span>
-                    </a>
-                  )}
-                  {message.messageType === 'TEXT' && (
-                    <p className={`text-sm ${message.isRequest ? 'text-gray-700' : ''}`}>
-                      {message.content}
-                    </p>
-                  )}
-                  
-                  {/* Show accept/reject buttons for message requests */}
-                  {message.isRequest && !isOwn && (
-                    <div className="mt-3 flex space-x-2">
-                      <Button
-                        onClick={() => handleAcceptRequest(message.requestId!)}
-                        size="sm"
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-xs"
-                      >
-                        Accept
-                      </Button>
-                      <Button
-                        onClick={() => handleRejectRequest(message.requestId!)}
-                        variant="outline"
-                        size="sm"
-                        className="border-gray-300 hover:border-red-500 hover:text-red-600 px-3 py-1 text-xs"
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-end space-x-1">
-                    {isOwn && !message.isRequest && (
-                      <span className="text-xs text-blue-200">
-                        {message.isRead ? '✓✓' : '✓'}
-                      </span>
+                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    isOwn 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-200 text-gray-900'
+                  }`}>
+                    {message.fileUrl && message.messageType === 'IMAGE' ? (
+                      <img 
+                        src={message.fileUrl} 
+                        alt="Image" 
+                        className="max-w-full h-auto rounded"
+                      />
+                    ) : message.fileUrl ? (
+                      <div className="flex items-center space-x-2">
+                        <Paperclip className="h-4 w-4" />
+                        <a 
+                          href={message.fileUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="underline"
+                        >
+                          {message.content}
+                        </a>
+                      </div>
+                    ) : (
+                      <p>{message.content}</p>
                     )}
-                    {message.isRequest && (
-                      <span className="text-xs text-yellow-600 font-medium">
-                        Message Request
-                      </span>
+                    
+                    {/* Show accept/reject buttons for message requests */}
+                    {message.isRequest && !isOwn && (
+                      <div className="mt-3 flex space-x-2">
+                        <Button
+                          onClick={() => handleAcceptRequest(message.requestId!)}
+                          size="sm"
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-xs"
+                        >
+                          Accept
+                        </Button>
+                        <Button
+                          onClick={() => handleRejectRequest(message.requestId!)}
+                          variant="outline"
+                          size="sm"
+                          className="border-gray-300 hover:border-red-500 hover:text-red-600 px-3 py-1 text-xs"
+                        >
+                          Reject
+                        </Button>
+                      </div>
                     )}
-                    <p className={`text-xs mt-1 text-right ${
-                      message.isRequest 
-                        ? 'text-yellow-600' 
-                        : isOwn 
-                          ? 'text-blue-100' 
-                          : 'text-gray-500'
-                    }`}>
-                      {formatTime(message.createdAt)}
-                    </p>
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -959,31 +840,49 @@ function MessagesPageContent() {
               onChange={handleFileChange}
               className="hidden"
               disabled={isUploading}
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
             />
+            
             <Button
               variant="ghost"
               size="icon"
               onClick={handleAttachmentClick}
               disabled={isUploading}
-              className="rounded-full w-10 h-10 p-0 text-gray-500"
+              className="rounded-full w-10 h-10 p-0 text-gray-500 hover:bg-gray-100"
+              title="Attach file"
             >
               {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
             </Button>
+            
             <Input
               value={newMessage}
               onChange={handleTypingChange}
-              placeholder="Message..."
+              placeholder="Type a message..."
               className="flex-1 rounded-full border-gray-300 bg-gray-100 focus:border-blue-500 focus:bg-white"
-              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+              onKeyDown={(e) => e.key === 'Enter' && e.shiftKey && setNewMessage(prev => prev + '\n')}
             />
+            
             <Button
               onClick={sendMessage}
               disabled={sending || !newMessage.trim()}
-              className="rounded-full bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 p-0"
+              className="rounded-full bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 p-0 disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
             </Button>
           </div>
+          
+          {/* Typing indicator */}
+          {isTyping && (
+            <div className="mt-2 text-sm text-gray-500 flex items-center">
+              <div className="flex space-x-1 mr-2">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              </div>
+              {selectedUser?.name} is typing...
+            </div>
+          )}
         </div>
       </div>
     )
@@ -1007,9 +906,65 @@ function MessagesPageContent() {
       {/* Header */}
       <div className="flex justify-between items-center px-4 pt-4 pb-2">
         <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-        <Button variant="ghost" size="icon" onClick={() => router.push('/student/search')}>
-          <Plus className="h-6 w-6 text-blue-500" />
-        </Button>
+                 <div className="flex space-x-2">
+           <Button variant="ghost" size="icon" onClick={() => router.push('/student/search')}>
+             <Plus className="h-6 w-6 text-blue-500" />
+           </Button>
+                       {selectedUser && (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem('token')
+                      const response = await fetch(`/api/debug/follow-status?otherUserId=${selectedUser.id}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      })
+                      if (response.ok) {
+                        const data = await response.json()
+                        console.log('Follow Status Debug:', data)
+                        alert(`Follow Status:\nFollow: ${data.follow ? 'Yes' : 'No'}\nRequest: ${data.followRequest?.status || 'None'}\nMessages: ${data.messageCount}`)
+                      }
+                    } catch (error) {
+                      console.error('Debug error:', error)
+                    }
+                  }}
+                  className="text-xs"
+                >
+                  Debug
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem('token')
+                      console.log('🔍 Testing API directly for user:', selectedUser.id);
+                      const response = await fetch(`/api/student/messages/${selectedUser.id}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      })
+                      console.log('📡 Direct API Response status:', response.status);
+                      if (response.ok) {
+                        const data = await response.json()
+                        console.log('📨 Direct API Response data:', data);
+                        alert(`Direct API Test:\nStatus: ${response.status}\nMessages: ${data?.length || 0}\nData: ${JSON.stringify(data, null, 2)}`)
+                      } else {
+                        const errorText = await response.text();
+                        alert(`Direct API Error:\nStatus: ${response.status}\nError: ${errorText}`)
+                      }
+                    } catch (error) {
+                      console.error('Direct API test error:', error)
+                      alert(`Direct API Test Error: ${error}`)
+                    }
+                  }}
+                  className="text-xs bg-red-100"
+                >
+                  Test API
+                </Button>
+              </>
+            )}
+         </div>
       </div>
 
       {/* Message Requests */}
@@ -1083,12 +1038,15 @@ function MessagesPageContent() {
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {filteredConversations.map((conversation) => (
-              <div
-                key={conversation.user.id}
-                onClick={() => setSelectedUser(conversation.user)}
-                className="p-4 hover:bg-gray-50 cursor-pointer flex items-center"
-              >
+                         {filteredConversations.map((conversation) => (
+               <div
+                 key={conversation.user.id}
+                 onClick={() => {
+                   console.log('Clicked on conversation with user:', conversation.user);
+                   setSelectedUser(conversation.user);
+                 }}
+                 className="p-4 hover:bg-gray-50 cursor-pointer flex items-center"
+               >
                 <div className="relative mr-4">
                   <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
                     {conversation.user.profilePhoto ? (
@@ -1101,7 +1059,6 @@ function MessagesPageContent() {
                       <span className="text-xl">{conversation.user.name.charAt(0).toUpperCase()}</span>
                     )}
                   </div>
-                  {/* Online status indicator */}
                   <span className="absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full bg-green-400 border-2 border-white"></span>
                 </div>
                 

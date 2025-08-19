@@ -182,11 +182,8 @@ export default function ProfilePage() {
       
       // Update the profile state based on the response
       if (result.type === 'request') {
-        // Follow request sent for private account
+        // Follow request sent (always now)
         setProfile(prev => prev ? { ...prev, followRequestStatus: 'PENDING' } : null)
-      } else if (result.type === 'follow') {
-        // Direct follow for public account
-        setProfile(prev => prev ? { ...prev, isFollowing: true, followRequestStatus: null } : null)
       }
 
       fetchProfile()
@@ -220,6 +217,35 @@ export default function ProfilePage() {
       fetchProfile()
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to unfollow user')
+    }
+  }
+
+  const handleCancelRequest = async () => {
+    if (!profile) return
+
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      const response = await fetch('/api/student/follow/cancel-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ targetUserId: profile.id })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel follow request')
+      }
+
+      fetchProfile()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to cancel follow request')
     }
   }
 
@@ -655,10 +681,17 @@ Current Relationship:
                   ) : profile.followRequestStatus === 'PENDING' ? (
                     <Button
                       variant="outline"
-                      disabled
-                      className="flex-1 rounded-xl border-gray-300 bg-gray-50 text-gray-500 h-12"
+                      onClick={handleCancelRequest}
+                      className="flex-1 rounded-xl border-orange-300 text-orange-600 hover:border-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200 h-12"
                     >
-                      Request Sent
+                      Cancel Request
+                    </Button>
+                  ) : profile.followRequestStatus === 'DECLINED' ? (
+                    <Button
+                      onClick={handleFollow}
+                      className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl h-12 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      Send Again
                     </Button>
                   ) : (
                     <Button

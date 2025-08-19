@@ -30,16 +30,17 @@ export async function GET(req: Request) {
     }
 
     const searchTerm = query.trim()
+    console.log(`🔍 Searching for: "${searchTerm}"`)
 
-    // Search users
-    const users = await prisma.user.findMany({
+    // Search users - try multiple approaches
+    let users = await prisma.user.findMany({
       where: {
         OR: [
           { name: { contains: searchTerm } },
           { email: { contains: searchTerm } },
           { course: { contains: searchTerm } }
         ],
-        role: 'USER'
+        role: 'STUDENT'
       },
       select: {
         id: true,
@@ -52,9 +53,36 @@ export async function GET(req: Request) {
       take: 10
     })
 
-    // Check if current user is following each user
+    // If no results with STUDENT role, try without role filter
+    if (users.length === 0) {
+      console.log('🔍 No STUDENT users found, trying without role filter...')
+      users = await prisma.user.findMany({
+        where: {
+          OR: [
+            { name: { contains: searchTerm } },
+            { email: { contains: searchTerm } },
+            { course: { contains: searchTerm } }
+          ]
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profilePhoto: true,
+          course: true,
+          year: true,
+          role: true
+        },
+        take: 10
+      })
+    }
+
+    console.log(`📊 Found ${users.length} users matching search term`)
+
+    // Check if current user is following each user AND follow request status
     const usersWithFollowStatus = await Promise.all(
       users.map(async (user: any) => {
+        // Check if we're following them
         const isFollowing = await prisma.follow.findUnique({
           where: {
             followerId_followingId: {
@@ -63,9 +91,33 @@ export async function GET(req: Request) {
             }
           }
         })
+        
+        // Check if they follow us back
+        const isFollowedBack = await prisma.follow.findUnique({
+          where: {
+            followerId_followingId: {
+              followerId: user.id,
+              followingId: decoded.userId
+            }
+          }
+        })
+        
+        // Check follow request status
+        const followRequest = await prisma.followRequest.findUnique({
+          where: {
+            senderId_receiverId: {
+              senderId: decoded.userId,
+              receiverId: user.id
+            }
+          }
+        })
+        
         return {
           ...user,
-          isFollowing: !!isFollowing
+          isFollowing: !!isFollowing,
+          isFollowedBack: !!isFollowedBack,
+          followRequestStatus: followRequest?.status || null,
+          canMessageDirectly: !!isFollowing // If you follow them, you can message them directly
         }
       })
     )

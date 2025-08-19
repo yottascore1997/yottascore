@@ -127,7 +127,7 @@ export async function POST(req: Request) {
       return new NextResponse('Receiver ID and content are required', { status: 400 })
     }
 
-    // Check if sender follows the receiver
+    // Check if sender follows the receiver (actual follow, not just request)
     const iFollowThem = await prisma.follow.findUnique({
       where: {
         followerId_followingId: {
@@ -138,83 +138,66 @@ export async function POST(req: Request) {
     });
 
     if (!iFollowThem) {
-      return new NextResponse(
-        'You can only message users you follow',
-        { status: 403 }
-      );
+      // Check if there's a pending follow request
+      const pendingRequest = await prisma.followRequest.findUnique({
+        where: {
+          senderId_receiverId: {
+            senderId: decoded.userId,
+            receiverId: receiverId,
+          },
+        },
+      });
+
+      if (pendingRequest && pendingRequest.status === 'PENDING') {
+        return new NextResponse(
+          'Your follow request is still pending. You can only message this user after they accept your follow request.',
+          { status: 403 }
+        );
+      } else if (pendingRequest && pendingRequest.status === 'DECLINED') {
+        return new NextResponse(
+          'Your follow request was declined. You need to send a new follow request before you can message this user.',
+          { status: 403 }
+        );
+      } else {
+        return new NextResponse(
+          'You need to follow this user before you can message them. Please send a follow request first.',
+          { status: 403 }
+        );
+      }
     }
 
-    // Check if they follow me back (mutual followers)
-    const theyFollowMe = await prisma.follow.findUnique({
-      where: {
-        followerId_followingId: {
-          followerId: receiverId,
-          followingId: decoded.userId,
-        },
+    // If you follow them, you can send direct message (regardless of whether they follow you back)
+    const message = await prisma.directMessage.create({
+      data: {
+        content,
+        messageType,
+        fileUrl,
+        senderId: decoded.userId,
+        receiverId
       },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            profilePhoto: true
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            profilePhoto: true
+          }
+        }
+      }
     });
 
-    if (theyFollowMe) {
-      // Mutual followers - send direct message
-      const message = await prisma.directMessage.create({
-        data: {
-          content,
-          messageType,
-          fileUrl,
-          senderId: decoded.userId,
-          receiverId
-        },
-        include: {
-          sender: {
-            select: {
-              id: true,
-              name: true,
-              profilePhoto: true
-            }
-          },
-          receiver: {
-            select: {
-              id: true,
-              name: true,
-              profilePhoto: true
-            }
-          }
-        }
-      })
+    // Note: Real-time notifications are now handled by the socket server
+    // when the frontend emits 'private_message' event
+    console.log(`✅ Direct message sent to database. Frontend should emit 'private_message' event.`);
 
-
-
-      return NextResponse.json({ type: 'direct', message })
-    } else {
-      // One-way follow - send message request
-      const messageRequest = await prisma.messageRequest.create({
-        data: {
-          content,
-          messageType,
-          fileUrl,
-          senderId: decoded.userId,
-          receiverId
-        },
-        include: {
-          sender: {
-            select: {
-              id: true,
-              name: true,
-              profilePhoto: true
-            }
-          },
-          receiver: {
-            select: {
-              id: true,
-              name: true,
-              profilePhoto: true
-            }
-          }
-        }
-      })
-
-      return NextResponse.json({ type: 'request', messageRequest })
-    }
+    return NextResponse.json({ type: 'direct', message });
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })

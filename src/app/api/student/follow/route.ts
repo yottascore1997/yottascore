@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       return new NextResponse('Cannot follow yourself', { status: 400 })
     }
 
-    // Check if target user exists and is private
+    // Check if target user exists
     const targetUser = await prisma.user.findUnique({
       where: { id: targetUserId }
     })
@@ -38,53 +38,40 @@ export async function POST(req: Request) {
       return new NextResponse('User not found', { status: 404 })
     }
 
-    if (targetUser.isPrivate) {
-      // Create follow request instead
-      const existingRequest = await prisma.followRequest.findUnique({
-        where: {
-          senderId_receiverId: {
-            senderId: decoded.userId,
-            receiverId: targetUserId
-          }
-        }
-      })
-
-      if (existingRequest) {
-        return new NextResponse('Follow request already sent', { status: 400 })
-      }
-
-      const followRequest = await prisma.followRequest.create({
-        data: {
+    // ALWAYS create follow request - no direct follows
+    const existingRequest = await prisma.followRequest.findUnique({
+      where: {
+        senderId_receiverId: {
           senderId: decoded.userId,
           receiverId: targetUserId
         }
-      })
-
-      return NextResponse.json({ type: 'request', data: followRequest })
-    } else {
-      // Direct follow
-      const existingFollow = await prisma.follow.findUnique({
-        where: {
-          followerId_followingId: {
-            followerId: decoded.userId,
-            followingId: targetUserId
-          }
-        }
-      })
-
-      if (existingFollow) {
-        return new NextResponse('Already following', { status: 400 })
       }
+    })
 
-      const follow = await prisma.follow.create({
-        data: {
-          followerId: decoded.userId,
-          followingId: targetUserId
-        }
-      })
-
-      return NextResponse.json({ type: 'follow', data: follow })
+    if (existingRequest) {
+      if (existingRequest.status === 'PENDING') {
+        return new NextResponse('Follow request already sent', { status: 400 })
+      } else if (existingRequest.status === 'DECLINED') {
+        // If previously declined, allow sending again
+        await prisma.followRequest.update({
+          where: { id: existingRequest.id },
+          data: { 
+            status: 'PENDING',
+            updatedAt: new Date()
+          }
+        })
+        return NextResponse.json({ type: 'request', data: existingRequest })
+      }
     }
+
+    const followRequest = await prisma.followRequest.create({
+      data: {
+        senderId: decoded.userId,
+        receiverId: targetUserId
+      }
+    })
+
+    return NextResponse.json({ type: 'request', data: followRequest })
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })

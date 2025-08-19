@@ -139,12 +139,26 @@ model User {
   
   // Support Tickets
   supportTickets SupportTicket[]
+  
+  // Push Notifications
+  pushNotifications PushNotification[]
+  sentNotifications PushNotification[] @relation("NotificationSender")
   supportTicketReplies SupportTicketReply[]
   
   // Stories
   stories        Story[]
   storyViews     StoryView[]
   storyLikes     StoryLike[]
+  
+  // Chat Relations
+  sentMessages     DirectMessage[] @relation("MessageSender")
+  receivedMessages DirectMessage[] @relation("MessageReceiver")
+  sentMessageRequests MessageRequest[] @relation("MessageRequestSender")
+  receivedMessageRequests MessageRequest[] @relation("MessageRequestReceiver")
+  
+  // Advanced Chat Features
+  messageReactions MessageReaction[]
+  forwardedMessages DirectMessage[] @relation("ForwardedMessageSender")
   
   // Referral System
   referralCode   String?   @unique
@@ -450,15 +464,41 @@ model SavedPost {
   @@unique([userId, postId])
 }
 
-// DirectMessage model - Commented out for now
-/*
+// DirectMessage model
 model DirectMessage {
   id          String    @id @default(cuid())
   content     String    @db.Text
   messageType MessageType @default(TEXT)
   fileUrl     String?   // For file attachments
+  fileName    String?   // Original filename
+  fileSize    Int?      // File size in bytes
+  fileType    String?   // MIME type
+  
+  // Advanced Features
   isRead      Boolean   @default(false)
+  readAt      DateTime? // When message was read
+  isEdited    Boolean   @default(false)
+  editedAt    DateTime? // When message was last edited
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime? // When message was deleted
+  isPinned    Boolean   @default(false)
+  pinnedAt    DateTime? // When message was pinned
+  
+  // Message Threading & Replies
+  replyToId   String?   // ID of message this is replying to
+  replyTo     DirectMessage? @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies     DirectMessage[] @relation("MessageReplies")
+  
+  // Message Reactions
+  reactions   MessageReaction[]
+  
+  // Message Forwarding
+  isForwarded Boolean   @default(false)
+  originalSenderId String? // ID of original sender if forwarded
+  originalSender User? @relation("ForwardedMessageSender", fields: [originalSenderId], references: [id])
+  
   createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
   
   // Relations
   sender      User      @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
@@ -468,11 +508,28 @@ model DirectMessage {
   
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, senderId, createdAt])
+  @@index([replyToId])
+  @@index([isPinned])
 }
-*/
 
-// MessageRequest model - Commented out for now
-/*
+// Message Reactions Model
+model MessageReaction {
+  id          String    @id @default(cuid())
+  reactionType ReactionType
+  createdAt   DateTime  @default(now())
+  
+  // Relations
+  message     DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId   String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  
+  @@unique([messageId, userId, reactionType])
+  @@index([messageId])
+  @@index([userId])
+}
+
+// MessageRequest model
 model MessageRequest {
   id          String    @id @default(cuid())
   content     String    @db.Text
@@ -491,7 +548,6 @@ model MessageRequest {
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, senderId, createdAt])
 }
-*/
 
 model Group {
   id          String    @id @default(cuid())
@@ -705,8 +761,28 @@ enum GroupRole {
 enum MessageType {
   TEXT
   IMAGE
+  VIDEO
+  AUDIO
   FILE
+  DOCUMENT
+  LOCATION
+  VOICE_NOTE
+  STICKER
   SYSTEM
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  LAUGH
+  WOW
+  SAD
+  ANGRY
+  THUMBS_UP
+  THUMBS_DOWN
+  HEART
+  CLAP
+  CELEBRATE
 }
 
 enum EventType {
@@ -1316,4 +1392,25 @@ model BattleQuizAmount {
   
   @@unique([categoryId, amount])
   @@index([categoryId, isActive])
+}
+
+// Push Notifications
+model PushNotification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String   @db.Text
+  type      String   @default("GENERAL") // GENERAL, EXAM, ANNOUNCEMENT, REMINDER
+  isRead    Boolean  @default(false)
+  sentBy    String   // Admin ID who sent the notification
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sentByUser  User     @relation("NotificationSender", fields: [sentBy], references: [id])
+  
+  @@index([userId, isRead])
+  @@index([type])
+  @@index([createdAt])
 }

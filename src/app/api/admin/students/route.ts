@@ -12,31 +12,47 @@ const getHandler = async (req: Request) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; role: string };
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      return NextResponse.json({ message: 'Unauthorized - Invalid token' }, { status: 401 });
+    }
+
     if (decoded.role !== 'ADMIN') {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ message: 'Admin access required' }, { status: 403 });
     }
 
     const students = await prisma.user.findMany({
       where: { role: 'STUDENT' },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phoneNumber: true,
-        course: true,
-        year: true,
-        createdAt: true,
-        updatedAt: true,
-        wallet: true,
-        isPrivate: true,
-        profilePhoto: true,
-        bio: true,
+      include: {
+        participatedExams: true,
+        participatedPracticeExams: true,
+        battleQuizParticipations: true,
+        referrerReferrals: true
       },
       orderBy: { createdAt: 'desc' },
     });
-    return NextResponse.json(students);
+
+    // Transform data to include calculated fields
+    const transformedStudents = students.map(student => ({
+      id: student.id,
+      name: student.name,
+      email: student.email,
+      phoneNumber: student.phoneNumber,
+      course: student.course,
+      year: student.year,
+      profilePhoto: student.profilePhoto,
+      createdAt: student.createdAt,
+      kycStatus: student.kycStatus,
+      walletBalance: student.wallet || 0,
+      totalExamsTaken: student.participatedExams.length + student.participatedPracticeExams.length + student.battleQuizParticipations.length,
+      totalWinnings: student.wallet || 0, // This would need to be calculated from actual winnings
+      referralCount: student.referrerReferrals?.length || 0
+    }));
+    return NextResponse.json(transformedStudents);
   } catch (error) {
     console.error('Error fetching students:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
@@ -49,10 +65,17 @@ const postHandler = async (req: Request) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; role: string };
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      return NextResponse.json({ message: 'Unauthorized - Invalid token' }, { status: 401 });
+    }
+
     if (decoded.role !== 'ADMIN') {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ message: 'Admin access required' }, { status: 403 });
     }
 
     const { name, email, password, phoneNumber, course, year } = await req.json();
