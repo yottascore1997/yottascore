@@ -59,7 +59,7 @@ export async function POST(
         unattempted++;
         continue;
       }
-      if (selectedOptionIndex === question.correct) {
+      if (selectedOptionIndex === question.correctAnswer) {
         correctAnswers++;
       } else {
         wrongAnswers++;
@@ -68,6 +68,12 @@ export async function POST(
 
     const totalQuestions = exam.questions.length;
     const score = (correctAnswers / totalQuestions) * 100;
+
+    // Calculate time taken
+    const startTime = new Date(participant.startedAt).getTime();
+    const endTime = new Date().getTime();
+    const timeTakenSeconds = Math.round((endTime - startTime) / 1000);
+    const timeTakenMinutes = Math.round(timeTakenSeconds / 60);
 
     // Save the result
     await prisma.liveExamParticipant.update({
@@ -84,12 +90,88 @@ export async function POST(
       }
     });
 
+    // Get current rank and prize amount
+    const allParticipants = await prisma.liveExamParticipant.findMany({
+      where: { 
+        examId: params.examId,
+        completedAt: { not: null }
+      },
+      include: { user: { select: { name: true } } },
+      orderBy: [
+        { score: 'desc' },
+        { completedAt: 'asc' }
+      ]
+    });
+
+    // Calculate rank
+    let currentRank = 0;
+    for (let i = 0; i < allParticipants.length; i++) {
+      if (allParticipants[i].userId === decoded.userId) {
+        currentRank = i + 1;
+        break;
+      }
+    }
+
+    // Calculate prize amount based on rank
+    const totalPrizePool = exam.spots * exam.entryFee;
+    const winningPool = totalPrizePool * 0.9;
+    let prizeAmount = 0;
+
+    if (currentRank === 1) {
+      prizeAmount = Math.floor(winningPool * 0.20);
+    } else if (currentRank === 2) {
+      prizeAmount = Math.floor(winningPool * 0.15);
+    } else if (currentRank === 3) {
+      prizeAmount = Math.floor(winningPool * 0.10);
+    } else if (currentRank >= 4 && currentRank <= 10) {
+      prizeAmount = Math.floor(winningPool * 0.25 / 7);
+    } else if (currentRank >= 11 && currentRank <= 25) {
+      prizeAmount = Math.floor(winningPool * 0.30 / 15);
+    }
+
+    // Format time taken
+    const formatTimeTaken = (seconds: number) => {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const remainingSeconds = seconds % 60;
+      
+      if (hours > 0) {
+        return `${hours}h ${minutes}m ${remainingSeconds}s`;
+      } else if (minutes > 0) {
+        return `${minutes}m ${remainingSeconds}s`;
+      } else {
+        return `${remainingSeconds}s`;
+      }
+    };
+
     return NextResponse.json({
-      score,
+      // Basic Results
+      score: Math.round(score * 100) / 100, // Round to 2 decimal places
       totalQuestions,
       correctAnswers,
       wrongAnswers,
-      unattempted
+      unattempted,
+      
+      // Time Information
+      examDuration: exam.duration, // Total exam duration in minutes
+      timeTakenSeconds,
+      timeTakenMinutes,
+      timeTakenFormatted: formatTimeTaken(timeTakenSeconds),
+      
+      // Rank and Prize
+      currentRank,
+      prizeAmount,
+      
+      // Additional Details
+      examTitle: exam.title,
+      completedAt: new Date().toISOString(),
+      
+      // Performance Analysis
+      accuracy: totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0,
+      timeEfficiency: exam.duration > 0 ? Math.round((timeTakenMinutes / exam.duration) * 100) : 0,
+      
+      // Success message
+      message: `Exam completed successfully! You scored ${Math.round(score * 100) / 100}% and secured rank #${currentRank}`
     });
   } catch (error) {
     console.error('Error submitting exam:', error);

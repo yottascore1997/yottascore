@@ -148,6 +148,14 @@ model User {
   // Stories
   stories        Story[]
   storyViews     StoryView[]
+  
+  // Spy Game Relations
+  hostedSpyGames SpyGame[] @relation("SpyGameHost")
+  spyGamePlayers SpyGamePlayer[]
+  spyGameVotes   SpyGameVote[] @relation("VotedFor")
+  spyGameVotesAsVoter SpyGameVote[] @relation("SpyGameVoter")
+  
+  // Story Relations
   storyLikes     StoryLike[]
   
   // Chat Relations
@@ -386,6 +394,10 @@ model Post {
   videoUrl    String?
   hashtags    Json?     // Array of hashtags
   isPrivate   Boolean   @default(false)
+  status      PostStatus @default(PENDING) // PENDING, APPROVED, REJECTED, FLAGGED
+  rejectionReason String? // Reason if post is rejected
+  reviewedBy  String?   // Admin ID who reviewed the post
+  reviewedAt  DateTime? // When the post was reviewed
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
@@ -402,6 +414,7 @@ model Post {
   taggedUsers Json?     // Array of tagged user IDs
   
   @@index([authorId, createdAt])
+  @@index([status, createdAt]) // For efficient review queue queries
 }
 
 model Follow {
@@ -1190,8 +1203,7 @@ enum TicketStatus {
   CLOSED
 }
 
-// Spy Game Models - Commented out for now
-/*
+// Spy Game Models
 model SpyGame {
   id          String   @id @default(cuid())
   roomCode    String   @unique
@@ -1244,7 +1256,7 @@ model SpyGameVote {
   gameId      String
   game        SpyGame  @relation(fields: [gameId], references: [id], onDelete: Cascade)
   voterId     String
-  voter       User     @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  voter       User     @relation("SpyGameVoter", fields: [voterId], references: [id], onDelete: Cascade)
   votedForId  String
   votedFor    User     @relation("VotedFor", fields: [votedForId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
@@ -1267,7 +1279,6 @@ enum GamePhase {
   VOTING
   REVEAL
 }
-*/
 
 // New Battle Room Models
 model BattleRoom {
@@ -1413,4 +1424,11 @@ model PushNotification {
   @@index([userId, isRead])
   @@index([type])
   @@index([createdAt])
+}
+
+enum PostStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
 }

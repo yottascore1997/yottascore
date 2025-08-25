@@ -1,10 +1,12 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from 'next/server'
+import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 
+const prisma = new PrismaClient()
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
-export async function GET(req: Request) {
+// GET - Fetch approved posts only
+export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -18,28 +20,24 @@ export async function GET(req: Request) {
       return new NextResponse('Forbidden', { status: 403 })
     }
 
-    const { searchParams } = new URL(req.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const hashtag = searchParams.get('hashtag')
-    const userId = searchParams.get('userId')
+    // Get user's following list
+    const following = await prisma.follow.findMany({
+      where: { followerId: decoded.userId },
+      select: { followingId: true }
+    })
 
-    const where: any = {
-      isPrivate: false
-    }
+    const followingIds = following.map(f => f.followingId)
 
-    if (hashtag) {
-      where.hashtags = {
-        array_contains: [hashtag]
-      }
-    }
-
-    if (userId) {
-      where.authorId = userId
-    }
-
+    // Fetch approved posts from user and their following
     const posts = await prisma.post.findMany({
-      where,
+      where: {
+        OR: [
+          { authorId: decoded.userId }, // User's own posts
+          { authorId: { in: followingIds } } // Posts from following
+        ],
+        status: 'APPROVED', // Only approved posts
+        isPrivate: false // Public posts only
+      },
       include: {
         author: {
           select: {
@@ -50,26 +48,6 @@ export async function GET(req: Request) {
             year: true
           }
         },
-        likes: {
-          where: {
-            userId: decoded.userId
-          }
-        },
-        comments: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                profilePhoto: true
-              }
-            }
-          },
-          orderBy: {
-            createdAt: 'desc'
-          },
-          take: 3
-        },
         _count: {
           select: {
             likes: true,
@@ -77,32 +55,29 @@ export async function GET(req: Request) {
           }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      skip: (page - 1) * limit,
-      take: limit
+      orderBy: { createdAt: 'desc' }
     })
 
-    // For each post, check if the current user has liked it
-    const postsWithLikeStatus = await Promise.all(
-      posts.map(async (post: any) => {
+    // Check if user has liked each post
+    const postsWithLikes = await Promise.all(
+      posts.map(async (post) => {
         const like = await prisma.like.findUnique({
           where: {
             userId_postId: {
               userId: decoded.userId,
-              postId: post.id,
-            },
-          },
-        });
+              postId: post.id
+            }
+          }
+        })
+
         return {
           ...post,
-          isLiked: !!like,
-        };
+          isLiked: !!like
+        }
       })
-    );
+    )
 
-    return NextResponse.json(postsWithLikeStatus)
+    return NextResponse.json(postsWithLikes)
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
@@ -112,7 +87,8 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+// POST - Create post with PENDING status
+export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -127,12 +103,25 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
+    console.log('Request body:', body) // Debug log
     const { content, imageUrl, videoUrl, hashtags, taggedUsers, isPrivate } = body
 
     if (!content) {
       return new NextResponse('Content is required', { status: 400 })
     }
 
+    console.log('Creating post with data:', {
+      content,
+      imageUrl,
+      videoUrl,
+      hashtags: hashtags || [],
+      taggedUsers: taggedUsers || [],
+      isPrivate: isPrivate || false,
+      status: 'PENDING',
+      authorId: decoded.userId
+    }) // Debug log
+
+    // Create post with PENDING status
     const post = await prisma.post.create({
       data: {
         content,
@@ -141,6 +130,7 @@ export async function POST(req: Request) {
         hashtags: hashtags || [],
         taggedUsers: taggedUsers || [],
         isPrivate: isPrivate || false,
+        status: 'PENDING', // All new posts start as pending
         authorId: decoded.userId
       },
       include: {
@@ -156,12 +146,23 @@ export async function POST(req: Request) {
       }
     })
 
-    return NextResponse.json(post)
+    console.log('Post created successfully:', post.id) // Debug log
+
+    // Return success message with review status
+    return NextResponse.json({
+      success: true,
+      message: 'Post submitted for review. It will be visible once approved.',
+      post: {
+        ...post,
+        status: 'PENDING'
+      }
+    })
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[POSTS_POST]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+    console.error('[POSTS_POST] Detailed error:', error) // Enhanced error logging
+    console.error('[POSTS_POST] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    return new NextResponse(`Internal Error: ${error instanceof Error ? error.message : 'Unknown error'}`, { status: 500 })
   }
 } 

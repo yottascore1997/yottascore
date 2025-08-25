@@ -271,8 +271,12 @@ export default function LiveExamDetailPage() {
       }
 
       const result = await response.json();
-      setResult(result);
-      setActiveTab('leaderboard');
+      
+      // Store result in localStorage for the result page
+      localStorage.setItem(`liveExamResult_${examId}`, JSON.stringify(result));
+      
+      // Redirect to beautiful result page
+      router.push(`/student/live-exams/${examId}/result`);
     } catch (error) {
       console.error('Error submitting answers:', error);
       alert(error instanceof Error ? error.message : 'Failed to submit answers');
