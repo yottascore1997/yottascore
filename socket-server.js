@@ -75,6 +75,12 @@ const io = new Server(httpServer, {
 // Store user socket mappings
 const userSockets = {};
 
+// Timetable reminder intervals
+const timetableReminderIntervals = new Map(); // userId -> interval
+
+// Live exam auto-end intervals
+const liveExamAutoEndIntervals = new Map(); // examId -> interval
+
 // Battle Quiz Matchmaking - Keep existing memory system as fallback
 const waitingPlayers = new Map(); // quizId -> array of waiting players
 const activeMatches = new Map(); // matchId -> match data
@@ -1190,6 +1196,110 @@ io.on('connection', (socket) => {
     console.log('🏓 Sent pong to socket:', socket.id);
   });
 
+  // Timetable reminder functionality
+  socket.on('start_timetable_reminders', async (data) => {
+    const { userId } = data;
+    console.log(`⏰ Starting timetable reminders for user ${userId}`);
+    
+    // Clear existing interval if any
+    if (timetableReminderIntervals.has(userId)) {
+      clearInterval(timetableReminderIntervals.get(userId));
+    }
+    
+    // Start new reminder interval (check every 5 minutes)
+    const interval = setInterval(async () => {
+      try {
+        await checkTimetableReminders(userId);
+      } catch (error) {
+        console.error(`❌ Error checking timetable reminders for user ${userId}:`, error);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+    
+    timetableReminderIntervals.set(userId, interval);
+    
+    // Also check immediately
+    await checkTimetableReminders(userId);
+    
+    socket.emit('timetable_reminders_started', { success: true });
+  });
+
+  socket.on('stop_timetable_reminders', (data) => {
+    const { userId } = data;
+    console.log(`⏰ Stopping timetable reminders for user ${userId}`);
+    
+    if (timetableReminderIntervals.has(userId)) {
+      clearInterval(timetableReminderIntervals.get(userId));
+      timetableReminderIntervals.delete(userId);
+    }
+    
+    socket.emit('timetable_reminders_stopped', { success: true });
+  });
+
+  // Live exam auto-end functionality
+  socket.on('setup_exam_auto_end', async (data) => {
+    const { examId, endTime } = data;
+    console.log(`⏰ Setting up auto-end for exam ${examId} at ${endTime}`);
+    
+    try {
+      // Clear any existing interval for this exam
+      if (liveExamAutoEndIntervals.has(examId)) {
+        clearInterval(liveExamAutoEndIntervals.get(examId));
+        liveExamAutoEndIntervals.delete(examId);
+      }
+      
+      const endTimeDate = new Date(endTime);
+      const now = new Date();
+      const timeUntilEnd = endTimeDate.getTime() - now.getTime();
+      
+      if (timeUntilEnd <= 0) {
+        console.log(`   - Exam ${examId} has already ended, ending immediately`);
+        await checkAndEndExpiredExams();
+        return;
+      }
+      
+      // Set up timer for this specific exam
+      const timer = setTimeout(async () => {
+        console.log(`⏰ Auto-ending exam ${examId}`);
+        await checkAndEndExpiredExams();
+        
+        // Clear the interval reference
+        if (liveExamAutoEndIntervals.has(examId)) {
+          liveExamAutoEndIntervals.delete(examId);
+        }
+      }, timeUntilEnd);
+      
+      liveExamAutoEndIntervals.set(examId, timer);
+      console.log(`   - Auto-end timer set for exam ${examId} in ${Math.floor(timeUntilEnd / 1000)} seconds`);
+      
+      socket.emit('exam_auto_end_setup', { 
+        examId, 
+        success: true, 
+        timeUntilEnd: Math.floor(timeUntilEnd / 1000) 
+      });
+      
+    } catch (error) {
+      console.error(`❌ Error setting up auto-end for exam ${examId}:`, error);
+      socket.emit('exam_auto_end_setup', { 
+        examId, 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
+  socket.on('cancel_exam_auto_end', (data) => {
+    const { examId } = data;
+    console.log(`⏰ Cancelling auto-end for exam ${examId}`);
+    
+    if (liveExamAutoEndIntervals.has(examId)) {
+      clearTimeout(liveExamAutoEndIntervals.get(examId));
+      liveExamAutoEndIntervals.delete(examId);
+      console.log(`   - Auto-end cancelled for exam ${examId}`);
+    }
+    
+    socket.emit('exam_auto_end_cancelled', { examId, success: true });
+  });
+
   // Test event to verify socket communication
   socket.on('test_answer', (data) => {
     console.log('🧪 Test answer event received:');
@@ -1218,6 +1328,13 @@ io.on('connection', (socket) => {
     if (userId) {
       delete userSockets[userId];
       console.log(`User ${userId} disconnected`);
+      
+      // Clean up timetable reminder interval
+      if (timetableReminderIntervals.has(userId)) {
+        clearInterval(timetableReminderIntervals.get(userId));
+        timetableReminderIntervals.delete(userId);
+        console.log(`🧹 Cleaned up timetable reminder interval for user ${userId}`);
+      }
     }
     
     // Remove from waiting queues using QueueManager
@@ -3412,10 +3529,164 @@ io.on('connection', (socket) => {
   });
 });
 
+// Timetable reminder check function
+async function checkTimetableReminders(userId) {
+  try {
+    console.log(`⏰ Checking timetable reminders for user ${userId}`);
+    
+    const now = new Date();
+    const reminderWindow = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes from now
+    const currentDay = now.getDay(); // 0-6 (Sunday-Saturday)
+    
+    // Find timetable slots that need reminders
+    const upcomingSlots = await prisma.timetableSlot.findMany({
+      where: {
+        userId: userId,
+        reminder: true,
+        reminderSent: false,
+        day: currentDay,
+        startTime: {
+          gte: new Date(now.getTime() - 5 * 60 * 1000), // 5 minutes before current time (for testing)
+          lte: reminderWindow
+        },
+        isCompleted: false
+      },
+      include: {
+        timetable: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+    
+    if (upcomingSlots.length === 0) {
+      console.log(`   - No upcoming reminders for user ${userId}`);
+      return;
+    }
+    
+    console.log(`   - Found ${upcomingSlots.length} upcoming reminders for user ${userId}`);
+    
+    for (const slot of upcomingSlots) {
+      // Create notification
+      const notification = await prisma.pushNotification.create({
+        data: {
+          userId: userId,
+          title: `Study Reminder: ${slot.subject}`,
+          message: `Your study session "${slot.subject}"${slot.topic ? ` - ${slot.topic}` : ''} starts in ${Math.round((new Date(slot.startTime).getTime() - now.getTime()) / (1000 * 60))} minutes.${slot.notes ? `\n\nNotes: ${slot.notes}` : ''}`,
+          type: 'REMINDER',
+          isRead: false,
+          sentBy: 'SYSTEM'
+        }
+      });
+      
+      // Mark reminder as sent
+      await prisma.timetableSlot.update({
+        where: { id: slot.id },
+        data: { reminderSent: true }
+      });
+      
+      // Send real-time notification via socket
+      const userSocketId = userSockets[userId];
+      if (userSocketId) {
+        const userSocket = io.sockets.sockets.get(userSocketId);
+        if (userSocket && userSocket.connected) {
+          userSocket.emit('timetable_reminder', {
+            slotId: slot.id,
+            subject: slot.subject,
+            topic: slot.topic,
+            startTime: slot.startTime,
+            notes: slot.notes,
+            notificationId: notification.id
+          });
+          console.log(`   - Sent real-time reminder for slot ${slot.id} to user ${userId}`);
+        }
+      }
+      
+      console.log(`   - Created reminder notification for slot ${slot.id}`);
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error checking timetable reminders for user ${userId}:`, error);
+  }
+}
+
+// Live exam auto-end check function
+async function checkAndEndExpiredExams() {
+  try {
+    console.log(`⏰ Checking for expired live exams...`);
+    
+    const now = new Date();
+    
+    // Find live exams that have ended (endTime is in the past)
+    const expiredExams = await prisma.liveExam.findMany({
+      where: {
+        isLive: true,
+        endTime: {
+          lt: now
+        }
+      },
+      select: {
+        id: true,
+        title: true,
+        endTime: true
+      }
+    });
+    
+    if (expiredExams.length === 0) {
+      console.log(`   - No expired exams found`);
+      return;
+    }
+    
+    console.log(`   - Found ${expiredExams.length} expired exams to end`);
+    
+    for (const exam of expiredExams) {
+      console.log(`   - Ending exam: ${exam.title} (ID: ${exam.id})`);
+      
+      // Update exam status to not live
+      await prisma.liveExam.update({
+        where: { id: exam.id },
+        data: { isLive: false }
+      });
+      
+      // Clear any existing interval for this exam
+      if (liveExamAutoEndIntervals.has(exam.id)) {
+        clearInterval(liveExamAutoEndIntervals.get(exam.id));
+        liveExamAutoEndIntervals.delete(exam.id);
+      }
+      
+      // Send notification to all connected users about exam ending
+      io.emit('exam_ended', {
+        examId: exam.id,
+        title: exam.title,
+        message: `Exam "${exam.title}" has ended. Results will be available soon.`
+      });
+      
+      console.log(`   - Successfully ended exam: ${exam.title}`);
+    }
+    
+    console.log(`   - Completed ending ${expiredExams.length} expired exams`);
+    
+  } catch (error) {
+    console.error(`❌ Error checking and ending expired exams:`, error);
+  }
+}
+
 // Start the server
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
   console.log(`🚀 Socket server running on port ${PORT}`);
   console.log(`🔗 WebSocket URL: ws://localhost:${PORT}/api/socket`);
   console.log(`🌐 HTTP URL: http://localhost:${PORT}`);
+  
+  // Start automatic exam ending check (every 1 minute)
+  setInterval(async () => {
+    try {
+      await checkAndEndExpiredExams();
+    } catch (error) {
+      console.error('❌ Error in automatic exam ending check:', error);
+    }
+  }, 60 * 1000); // Check every minute
+  
+  console.log(`⏰ Automatic exam ending check started (every 1 minute)`);
 });

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isToday, isSameDay } from 'date-fns'
 import { Calendar, Clock, BookOpen, Plus, ChevronLeft, ChevronRight, CheckCircle, Circle, Trash2, Edit3, Bell, Target, TrendingUp, CalendarDays, Grid3X3 } from 'lucide-react'
 import AddScheduleForm from './components/AddScheduleForm'
+import { io, Socket } from 'socket.io-client'
 
 interface TimetableSlot {
   id: string
@@ -34,11 +35,67 @@ export default function TimetablePage() {
   const [view, setView] = useState<'daily' | 'weekly'>('daily')
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showAddModal, setShowAddModal] = useState(false)
+  const [reminderInterval, setReminderInterval] = useState<NodeJS.Timeout | null>(null)
+  const [socket, setSocket] = useState<Socket | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     fetchTimetables()
+    startReminderCheck()
+    initializeSocket()
+    
+    return () => {
+      if (reminderInterval) {
+        clearInterval(reminderInterval)
+      }
+      if (socket) {
+        socket.disconnect()
+      }
+    }
   }, [])
+
+  const initializeSocket = () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const newSocket = io('http://localhost:3001', {
+        path: '/api/socket',
+        auth: { token }
+      })
+
+      newSocket.on('connect', () => {
+        console.log('🔌 Timetable socket connected')
+        // Start timetable reminders
+        newSocket.emit('start_timetable_reminders', { userId: payload.userId })
+      })
+
+      newSocket.on('timetable_reminder', (data) => {
+        console.log('⏰ Timetable reminder received:', data)
+        // Show notification to user
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(data.subject, {
+            body: `Your study session starts in ${Math.round((new Date(data.startTime).getTime() - Date.now()) / (1000 * 60))} minutes.${data.notes ? `\n\nNotes: ${data.notes}` : ''}`,
+            icon: '/favicon.ico'
+          })
+        }
+      })
+
+      newSocket.on('disconnect', () => {
+        console.log('🔌 Timetable socket disconnected')
+      })
+
+      setSocket(newSocket)
+    } catch (error) {
+      console.error('Error initializing socket:', error)
+    }
+  }
 
   const fetchTimetables = async () => {
     try {
@@ -94,6 +151,33 @@ export default function TimetablePage() {
     }
   }
 
+  const handleToggleReminder = async (slotId: string, reminder: boolean) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      const response = await fetch(`/api/student/timetable/${slotId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ reminder })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update reminder')
+      }
+
+      fetchTimetables()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update reminder')
+    }
+  }
+
   const handleDeleteSlot = async (slotId: string) => {
     if (!confirm('Are you sure you want to delete this slot?')) return
 
@@ -141,6 +225,71 @@ export default function TimetablePage() {
 
   const getTotalCount = () => {
     return getSlotsForDay(selectedDate).length
+  }
+
+  const startReminderCheck = () => {
+    // Check reminders every 5 minutes
+    const interval = setInterval(async () => {
+      await checkReminders()
+    }, 5 * 60 * 1000) // 5 minutes
+
+    setReminderInterval(interval)
+    
+    // Also check immediately when component loads
+    checkReminders()
+  }
+
+  const checkReminders = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/student/timetable/reminders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ checkReminders: true })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.reminders && result.reminders.length > 0) {
+          console.log('Reminders sent:', result.reminders)
+          alert(`✅ ${result.reminders.length} reminders sent!`)
+        } else {
+          alert('ℹ️ No upcoming reminders found')
+        }
+      }
+    } catch (error) {
+      console.error('Error checking reminders:', error)
+      alert('❌ Error checking reminders')
+    }
+  }
+
+  const resetReminders = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/student/timetable/reminders', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ resetAll: true })
+      })
+
+      if (response.ok) {
+        alert('✅ All reminder statuses reset!')
+        fetchTimetables()
+      }
+    } catch (error) {
+      console.error('Error resetting reminders:', error)
+      alert('❌ Error resetting reminders')
+    }
   }
 
   if (loading) {
@@ -221,13 +370,33 @@ export default function TimetablePage() {
                       Weekly
                     </Button>
                   </div>
-                  <Button 
-                    onClick={() => setShowAddModal(true)}
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl px-6 shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Schedule
-                  </Button>
+                  <div className="flex items-center space-x-3">
+                    <Button 
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl px-6 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Schedule
+                    </Button>
+                    <Button 
+                      onClick={checkReminders}
+                      variant="outline"
+                      className="rounded-xl border-green-200 hover:border-green-500 hover:bg-green-50 hover:text-green-600 transition-all duration-200"
+                      title="Test reminder system"
+                    >
+                      <Bell className="w-4 h-4 mr-2" />
+                      Test Reminders
+                    </Button>
+                    <Button 
+                      onClick={resetReminders}
+                      variant="outline"
+                      className="rounded-xl border-orange-200 hover:border-orange-500 hover:bg-orange-50 hover:text-orange-600 transition-all duration-200"
+                      title="Reset all reminder statuses"
+                    >
+                      <Clock className="w-4 h-4 mr-2" />
+                      Reset Reminders
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -377,6 +546,17 @@ export default function TimetablePage() {
                             <Circle className="w-5 h-5 text-gray-600" />
                           )}
                         </button>
+                        <button
+                          onClick={() => handleToggleReminder(slot.id, !slot.reminder)}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+                            slot.reminder 
+                              ? 'bg-blue-500 hover:bg-blue-600' 
+                              : 'bg-gray-200 hover:bg-gray-300'
+                          }`}
+                          title={slot.reminder ? 'Disable reminder' : 'Enable reminder'}
+                        >
+                          <Bell className={`w-4 h-4 ${slot.reminder ? 'text-white' : 'text-gray-600'}`} />
+                        </button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -470,20 +650,33 @@ export default function TimetablePage() {
                             }`}>
                               {slot.subject}
                             </p>
-                            <button
-                              onClick={() => handleToggleComplete(slot.id, !slot.isCompleted)}
-                              className={`w-5 h-5 rounded-full flex items-center justify-center transition-all duration-200 ${
-                                slot.isCompleted 
-                                  ? 'bg-green-500' 
-                                  : 'bg-gray-200 hover:bg-gray-300'
-                              }`}
-                            >
-                              {slot.isCompleted ? (
-                                <CheckCircle className="w-3 h-3 text-white" />
-                              ) : (
-                                <Circle className="w-3 h-3 text-gray-600" />
-                              )}
-                            </button>
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => handleToggleReminder(slot.id, !slot.reminder)}
+                                className={`w-4 h-4 rounded-full flex items-center justify-center transition-all duration-200 ${
+                                  slot.reminder 
+                                    ? 'bg-blue-500' 
+                                    : 'bg-gray-200 hover:bg-gray-300'
+                                }`}
+                                title={slot.reminder ? 'Disable reminder' : 'Enable reminder'}
+                              >
+                                <Bell className={`w-3 h-3 ${slot.reminder ? 'text-white' : 'text-gray-600'}`} />
+                              </button>
+                              <button
+                                onClick={() => handleToggleComplete(slot.id, !slot.isCompleted)}
+                                className={`w-4 h-4 rounded-full flex items-center justify-center transition-all duration-200 ${
+                                  slot.isCompleted 
+                                    ? 'bg-green-500' 
+                                    : 'bg-gray-200 hover:bg-gray-300'
+                                }`}
+                              >
+                                {slot.isCompleted ? (
+                                  <CheckCircle className="w-2 h-2 text-white" />
+                                ) : (
+                                  <Circle className="w-2 h-2 text-gray-600" />
+                                )}
+                              </button>
+                            </div>
                           </div>
                           <p className="text-xs text-gray-600">
                             {format(new Date(slot.startTime), 'h:mm a')}

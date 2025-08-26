@@ -183,6 +183,36 @@ export default function AdminLiveExams() {
     }
   };
 
+  const handleEndExpiredExams = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
+      const response = await fetch('/api/admin/end-expired-exams', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to end expired exams');
+      }
+
+      const result = await response.json();
+      alert(`Successfully ended ${result.ended} expired exams`);
+      
+      // Refresh the exams list to show updated status
+      fetchExams();
+    } catch (error) {
+      console.error('Error ending expired exams:', error);
+      alert(error instanceof Error ? error.message : 'Failed to end expired exams');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-IN', {
       year: 'numeric',
@@ -264,13 +294,22 @@ export default function AdminLiveExams() {
                   <p className="text-gray-600">Manage and monitor live exam competitions</p>
                 </div>
               </div>
-              <Button
-                onClick={() => router.push('/admin/live-exams/create')}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl px-6 py-3 shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Create New Exam
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleEndExpiredExams}
+                  className="bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 rounded-xl px-6 py-3 shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <Clock className="w-5 h-5 mr-2" />
+                  End Expired Exams
+                </Button>
+                <Button
+                  onClick={() => router.push('/admin/live-exams/create')}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl px-6 py-3 shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Create New Exam
+                </Button>
+              </div>
             </div>
           </div>
         </div>

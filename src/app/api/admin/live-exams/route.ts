@@ -149,6 +149,27 @@ export async function POST(req: Request) {
     });
 
     console.log('Live exam created successfully:', liveExam);
+    
+    // Set up auto-end timer for this exam if it has an endTime
+    if (liveExam.endTime) {
+      try {
+        const endTimeDate = new Date(liveExam.endTime);
+        const now = new Date();
+        const timeUntilEnd = endTimeDate.getTime() - now.getTime();
+        
+        if (timeUntilEnd > 0) {
+          console.log(`Setting up auto-end timer for exam ${liveExam.id} in ${Math.floor(timeUntilEnd / 1000)} seconds`);
+          
+          // Note: The actual timer will be set up by the socket server
+          // This is just for logging purposes
+        } else {
+          console.log(`Exam ${liveExam.id} has already ended, will be marked as not live`);
+        }
+      } catch (error) {
+        console.error('Error setting up auto-end timer:', error);
+      }
+    }
+    
     return NextResponse.json(liveExam);
   } catch (error) {
     console.error('[LIVE_EXAMS_POST] Detailed error:', error);

@@ -134,6 +134,24 @@ export default function LiveExamDetailPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Listen for exam ending notifications
+  useEffect(() => {
+    const handleExamEnded = (data: any) => {
+      if (data.examId === examId) {
+        console.log('Exam ended notification received:', data);
+        // Refresh the exam data to show updated status
+        window.location.reload();
+      }
+    };
+
+    // Add event listener for exam ending
+    window.addEventListener('exam_ended', handleExamEnded);
+    
+    return () => {
+      window.removeEventListener('exam_ended', handleExamEnded);
+    };
+  }, [examId]);
+
   // Auto-refresh leaderboard every 10s if tab is active
   useEffect(() => {
     let interval: NodeJS.Timeout;
