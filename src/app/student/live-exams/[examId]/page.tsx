@@ -23,6 +23,7 @@ interface Exam {
 interface Question {
   id: string;
   text: string;
+  type: "MCQ" | "TRUE_FALSE";
   options: string[];
 }
 
@@ -321,22 +322,63 @@ export default function LiveExamDetailPage() {
         <div className="space-y-6">
           {questions.map((q, idx) => (
             <div key={q.id} className="p-4 border rounded">
-              <div className="font-semibold mb-2">Q{idx + 1}: {q.text}</div>
-              <ul className="space-y-2">
-                {q.options.map((opt, i) => (
-                  <li key={i} className="flex items-center">
-                    <input
-                      type="radio"
-                      name={`q${q.id}`}
-                      id={`q${q.id}_opt${i}`}
-                      className="mr-2"
-                      checked={answers[q.id] === i}
-                      onChange={() => handleAnswerSelect(q.id, i)}
-                    />
-                    <label htmlFor={`q${q.id}_opt${i}`}>{opt}</label>
-                  </li>
-                ))}
-              </ul>
+              <div className="font-semibold mb-2">
+                Q{idx + 1}: {q.text}
+                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                  q.type === "TRUE_FALSE" 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-blue-100 text-blue-700'
+                }`}>
+                  {q.type === "TRUE_FALSE" ? "True/False" : "MCQ"}
+                </span>
+              </div>
+              {q.type === "TRUE_FALSE" ? (
+                // True/False options
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  {q.options.map((opt, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleAnswerSelect(q.id, i)}
+                      className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
+                        answers[q.id] === i
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          answers[q.id] === i 
+                            ? 'border-blue-500 bg-blue-500' 
+                            : 'border-gray-400'
+                        }`}>
+                          {answers[q.id] === i && (
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          )}
+                        </div>
+                        <span className="font-medium">{opt}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                // MCQ options
+                <ul className="space-y-2">
+                  {q.options.map((opt, i) => (
+                    <li key={i} className="flex items-center">
+                      <input
+                        type="radio"
+                        name={`q${q.id}`}
+                        id={`q${q.id}_opt${i}`}
+                        className="mr-2"
+                        checked={answers[q.id] === i}
+                        onChange={() => handleAnswerSelect(q.id, i)}
+                      />
+                      <label htmlFor={`q${q.id}_opt${i}`}>{opt}</label>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
           <div className="mt-6">

@@ -246,6 +246,7 @@ model LiveExamWinner {
 model Question {
   id          String    @id @default(cuid())
   text        String?   @db.Text
+  type        String    @default("MCQ") // "MCQ" or "TRUE_FALSE"
   options     Json?     // Array of options
   correctAnswer Int?    // Index of correct option
   exam        LiveExam? @relation(fields: [examId], references: [id])

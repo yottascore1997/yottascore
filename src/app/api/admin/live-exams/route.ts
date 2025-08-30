@@ -19,6 +19,7 @@ const createLiveExamSchema = z.object({
   entryFee: z.number().min(0),
   questions: z.array(z.object({
     question: z.string(),
+    type: z.enum(["MCQ", "TRUE_FALSE"]).default("MCQ"),
     options: z.array(z.string()),
     correctAnswer: z.number()
   }))
@@ -141,6 +142,7 @@ export async function POST(req: Request) {
         questions: {
           create: validatedData.questions.map((q: any) => ({
             text: q.question,
+            type: q.type || "MCQ",
             options: q.options,
             correctAnswer: q.correctAnswer
           }))

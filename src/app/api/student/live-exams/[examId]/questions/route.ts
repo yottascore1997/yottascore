@@ -32,6 +32,7 @@ export async function GET(req: Request, { params }: { params: { examId: string }
       select: {
         id: true,
         text: true,
+        type: true,
         options: true,
       },
       orderBy: { id: 'asc' },
