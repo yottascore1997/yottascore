@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { withCORS } from '@/lib/cors'
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(3),
   password: z.string().min(6),
 })
 
@@ -20,8 +20,8 @@ const handler = async (req: Request) => {
       )
     }
 
-    const { email, password } = validatedFields.data
-    const user = await validateUser(email, password)
+    const { identifier, password } = validatedFields.data
+    const user = await validateUser(identifier, password)
 
     if (!user) {
       return NextResponse.json(
@@ -42,6 +42,7 @@ const handler = async (req: Request) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        username: user.username,
       },
     })
   } catch (error) {

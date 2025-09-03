@@ -7,7 +7,7 @@ import Link from 'next/link'
 export default function Login() {
   const router = useRouter()
   const [formData, setFormData] = useState({
-    email: '',
+    identifier: '',
     password: '',
   })
   const [error, setError] = useState('')
@@ -31,16 +31,15 @@ export default function Login() {
       const data = await response.json()
 
       if (response.ok) {
-        // Store the token
         localStorage.setItem('token', data.token)
-        // Redirect based on role
-        if (data.role?.toUpperCase() === 'ADMIN') {
+        const role = data.user?.role || data.role
+        if (String(role).toUpperCase() === 'ADMIN') {
           router.push('/admin/dashboard')
         } else {
           router.push('/student/dashboard')
         }
       } else {
-        setError(data.message || 'Login failed')
+        setError(data.message || data.error || 'Login failed')
       }
     } catch (err) {
       setError('An error occurred. Please try again.')
@@ -88,10 +87,10 @@ export default function Login() {
               </div>
             )}
 
-            {/* Email field */}
+            {/* Identifier field */}
             <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address
+              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700">
+                Email or Username
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -100,14 +99,14 @@ export default function Login() {
                   </svg>
                 </div>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
+                  id="identifier"
+                  name="identifier"
+                  type="text"
                   required
                   className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="Enter email or username"
+                  value={formData.identifier}
+                  onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
                 />
               </div>
             </div>

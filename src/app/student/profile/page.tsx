@@ -11,6 +11,7 @@ interface UserProfile {
   id: string
   name: string
   email: string
+  username?: string
   profilePhoto?: string
   course?: string
   year?: string
@@ -575,8 +576,8 @@ Current Relationship:
                       )}
                     </div>
                     <p className="text-gray-600 mb-2 flex items-center">
-                      <Mail className="w-4 h-4 mr-2" />
-                      {profile.email}
+                      <User className="w-4 h-4 mr-2" />
+                      @{profile.username || 'username'}
                     </p>
                     {profile.course && (
                       <p className="text-gray-500 flex items-center">

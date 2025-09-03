@@ -11,26 +11,47 @@ const handler = async (req: Request) => {
     const body = await req.json()
     console.log('Registration request body:', body)
 
-    const { email, name, password, phoneNumber, referralCode } = body
+    const { email, name, password, phoneNumber, referralCode, username } = body
 
     // Validate required fields
-    if (!email || !name || !password || !phoneNumber) {
-      console.log('Missing required fields:', { email, name, password: !!password, phoneNumber })
+    if (!email || !name || !password || !phoneNumber || !username) {
+      console.log('Missing required fields:', { email, name, password: !!password, phoneNumber, username })
       return NextResponse.json(
         { message: 'All fields are required' },
         { status: 400 }
       )
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    })
+    // Normalize and validate username
+    const rawUsername: string = String(username).trim()
+    const normalizedUsername = rawUsername.toLowerCase()
+    const usernameRegex = /^[a-z0-9_\.]{3,20}$/
+    if (!usernameRegex.test(normalizedUsername)) {
+      return NextResponse.json(
+        { message: 'Invalid username. Use 3-20 chars: a-z, 0-9, underscore or dot' },
+        { status: 400 }
+      )
+    }
+
+    // Check if user already exists (email)
+    const existingUser = await prisma.user.findUnique({ where: { email } })
 
     if (existingUser) {
       console.log('User already exists:', email)
       return NextResponse.json(
         { message: 'User already exists' },
+        { status: 400 }
+      )
+    }
+
+    // Check username uniqueness
+    const existingUsername = await prisma.user.findUnique({
+      where: { username: normalizedUsername },
+      select: { id: true }
+    })
+    if (existingUsername) {
+      return NextResponse.json(
+        { message: 'Username not available' },
         { status: 400 }
       )
     }
@@ -73,6 +94,7 @@ const handler = async (req: Request) => {
         name,
         hashedPassword,
         phoneNumber,
+        username: normalizedUsername,
         role: 'STUDENT', // Default role is student
         referredBy: referralCode || null,
       },
@@ -139,10 +161,10 @@ const handler = async (req: Request) => {
     
     // Check for Prisma errors
     if ((error as any).code === 'P2002') {
-      return NextResponse.json(
-        { message: 'Email already exists' },
-        { status: 400 }
-      )
+      const target = (error as any).meta?.target as string[] | undefined
+      const field = Array.isArray(target) ? target.join(',') : String(target || '')
+      const message = field.includes('username') ? 'Username not available' : 'Email already exists'
+      return NextResponse.json({ message }, { status: 400 })
     }
 
     return NextResponse.json(

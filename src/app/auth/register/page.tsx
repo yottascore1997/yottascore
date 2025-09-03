@@ -13,11 +13,13 @@ function RegisterForm() {
   const [formData, setFormData] = useState({
     email: '',
     name: '',
+    username: '',
     password: '',
     phoneNumber: '',
     referralCode: '',
   })
   const [error, setError] = useState('')
+  const [usernameStatus, setUsernameStatus] = useState<{state: 'idle'|'checking'|'available'|'unavailable'|'invalid', message?: string}>({ state: 'idle' })
 
   // Get referral code from URL parameter
   useEffect(() => {
@@ -26,6 +28,36 @@ function RegisterForm() {
       setFormData(prev => ({ ...prev, referralCode: refCode }))
     }
   }, [searchParams])
+
+  // Debounced username availability check
+  useEffect(() => {
+    const username = formData.username.trim().toLowerCase()
+    if (!username) { 
+      setUsernameStatus({ state: 'idle' }); 
+      return 
+    }
+
+    const usernameRegex = /^[a-z0-9_\.]{3,20}$/
+    if (!usernameRegex.test(username)) {
+      setUsernameStatus({ state: 'invalid', message: 'Use 3-20 chars: a-z, 0-9, _ or .' })
+      return
+    }
+    
+    setUsernameStatus({ state: 'checking' })
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`)
+        const data = await res.json()
+        setUsernameStatus({ 
+          state: data.available ? 'available' : 'unavailable', 
+          message: data.available ? 'Username available' : 'Username not available' 
+        })
+      } catch (e) {
+        setUsernameStatus({ state: 'invalid', message: 'Could not verify username' })
+      }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [formData.username])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,6 +117,35 @@ function RegisterForm() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
+            </div>
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                Username
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className={`appearance-none relative block w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 sm:text-sm ${
+                  usernameStatus.state === 'unavailable' || usernameStatus.state === 'invalid' 
+                    ? 'border-red-400 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-gray-300 focus:ring-purple-500 focus:border-purple-500'
+                }`}
+                placeholder="Choose a unique username"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
+              />
+              <p className="mt-1 text-xs text-gray-500">You can login using your username or email.</p>
+              {usernameStatus.state !== 'idle' && (
+                <p className={`mt-1 text-xs ${
+                  usernameStatus.state === 'available' ? 'text-green-600' 
+                  : usernameStatus.state === 'checking' ? 'text-gray-500' 
+                  : 'text-red-600'
+                }`}>
+                  {usernameStatus.state === 'checking' ? 'Checking availability...' : usernameStatus.message}
+                </p>
+              )}
             </div>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">

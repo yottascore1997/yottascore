@@ -30,21 +30,26 @@ export async function comparePasswords(password: string, hashedPassword: string)
   return bcrypt.compare(password, hashedPassword);
 }
 
-export async function validateUser(email: string, password: string) {
-  const user = await prisma.user.findUnique({
-    where: { email }
-  });
+export async function validateUser(identifier: string, password: string) {
+  // Determine if identifier looks like an email
+  const isEmail = /.+@.+\..+/.test(identifier)
+
+  const user = await prisma.user.findFirst({
+    where: isEmail
+      ? { email: identifier }
+      : { username: identifier.toLowerCase() },
+  })
 
   if (!user || !user.hashedPassword) {
-    return null;
+    return null
   }
 
-  const isValid = await comparePasswords(password, user.hashedPassword);
+  const isValid = await comparePasswords(password, user.hashedPassword)
   if (!isValid) {
-    return null;
+    return null
   }
 
-  return user;
+  return user
 }
 
 export async function getUserFromToken(token: string) {
