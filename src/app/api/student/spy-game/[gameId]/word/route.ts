@@ -23,12 +23,16 @@ export async function GET(
 
     const { gameId } = params;
 
-    // Get the game with players and words
+    // Get the game with players and words (ordered for consistent mapping)
     const game = await prisma.spyGame.findUnique({
       where: { id: gameId },
       include: {
-        players: true,
-        words: true
+        players: {
+          orderBy: { joinedAt: 'asc' }
+        },
+        words: {
+          orderBy: { createdAt: 'asc' }
+        }
       }
     });
 

@@ -34,6 +34,7 @@ interface ChatInterfaceProps {
   currentTurn?: number;
   timeLeft?: number;
   isMyTurn?: boolean;
+  results?: any;
 }
 
 export default function ChatInterface({
@@ -46,7 +47,8 @@ export default function ChatInterface({
   isSpy,
   currentTurn = 0,
   timeLeft = 20,
-  isMyTurn = false
+  isMyTurn = false,
+  results
 }: ChatInterfaceProps) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -55,19 +57,32 @@ export default function ChatInterface({
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [myVote, setMyVote] = useState<string | null>(null);
+  const [votingActive, setVotingActive] = useState(false);
+  const [categoryVoteActive, setCategoryVoteActive] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<Array<{ id: string; name: string; description?: string }>>([]);
+  const [myCategoryVote, setMyCategoryVote] = useState<string | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const peersRef = useRef<Record<string, RTCPeerConnection>>({});
+  const remoteAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
+  const makingOfferRef = useRef<Record<string, boolean>>({});
+  const [revealData, setRevealData] = useState<any>(null);
+
+  const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
   // Listen for chat messages
   useEffect(() => {
     if (!socket) return;
 
     socket.on('chat_message_received', (data: ChatMessage) => {
-      setChatMessages(prev => [...prev, data]);
+      const safeId = data.id || generateUniqueId();
+      setChatMessages(prev => [...prev, { ...data, id: safeId }]);
     });
 
     socket.on('description_submitted', (data: { playerId: string; description: string; currentTurn: number }) => {
       // Add description as a special message type
       const descriptionMessage: ChatMessage = {
-        id: Date.now().toString(),
+        id: generateUniqueId(),
         userId: data.playerId,
         userName: game.players.find((p: any) => p.userId === data.playerId)?.name || 'Unknown',
         message: data.description,
@@ -78,9 +93,12 @@ export default function ChatInterface({
     });
 
     socket.on('voting_started', (data: { players: any[] }) => {
+      // Reset my vote at the start of voting
+      setMyVote(null);
+      setVotingActive(true);
       // Add voting phase message
       const systemMessage: ChatMessage = {
-        id: Date.now().toString(),
+        id: generateUniqueId(),
         userId: 'system',
         userName: 'Game System',
         message: '🗳️ Voting phase started! Vote for who you think is the spy.',
@@ -90,11 +108,38 @@ export default function ChatInterface({
       setChatMessages(prev => [...prev, systemMessage]);
     });
 
+    socket.on('vote_submitted', (data: { voterId: string; votedForId: string }) => {
+      // If I was the voter, confirm selection and show toast
+      if (data.voterId === user?.id) {
+        setMyVote(data.votedForId);
+        toast.success('Vote submitted!');
+      }
+    });
+
+    // Category vote flow
+    socket.on('category_vote_started', (data: { categories: Array<{ id: string; name: string; description?: string }>; timeoutSec?: number }) => {
+      setCategoryOptions(data.categories || []);
+      setCategoryVoteActive(true);
+      setMyCategoryVote(null);
+    });
+
+    socket.on('category_vote_submitted', (data: { userId: string; categoryId: string }) => {
+      if (data.userId === user?.id) {
+        toast.success('Category vote submitted!');
+      }
+    });
+
+    socket.on('category_vote_result', (data: { categoryId: string; categoryName: string }) => {
+      setCategoryVoteActive(false);
+      setMyCategoryVote(null);
+      toast.success(`Category selected: ${data.categoryName}`);
+    });
+
     socket.on('turn_ended', (data: { gameId: string; nextTurn: number }) => {
       if (data.nextTurn < game.players.length) {
         const nextPlayer = game.players[data.nextTurn];
         const systemMessage: ChatMessage = {
-          id: Date.now().toString(),
+          id: generateUniqueId(),
           userId: 'system',
           userName: 'Game System',
           message: `⏰ Time's up! ${nextPlayer?.name || `Player ${data.nextTurn + 1}`}'s turn now`,
@@ -127,11 +172,31 @@ export default function ChatInterface({
       // This is handled by the parent component
     });
 
+    // Ensure local UI exits voting when next phase starts or game ends
+    socket.on('description_phase_started', () => {
+      setVotingActive(false);
+      setMyVote(null);
+    });
+    socket.on('spy_game_ended', (data: any) => {
+      setVotingActive(false);
+      setRevealData(data);
+      try {
+        toast.success(data?.winner === 'VILLAGERS' ? 'Villagers Win! 🎉' : data?.winner === 'SPY' ? 'Spy Wins! 🕵️‍♂️' : 'Round Ended');
+      } catch {}
+    });
+
     return () => {
       socket.off('chat_message_received');
       socket.off('description_submitted');
+      socket.off('voting_started');
+      socket.off('vote_submitted');
+      socket.off('category_vote_started');
+      socket.off('category_vote_submitted');
+      socket.off('category_vote_result');
+      socket.off('description_phase_started');
+      socket.off('spy_game_ended');
     };
-  }, [socket, game]);
+  }, [socket, game, user?.id]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -154,7 +219,7 @@ export default function ChatInterface({
     if (!newMessage.trim() || !socket || !game) return;
     
     const messageData: ChatMessage = {
-      id: Date.now().toString(),
+      id: generateUniqueId(),
       userId: user?.id || '',
       userName: user?.name || 'Unknown',
       message: newMessage.trim(),
@@ -218,6 +283,171 @@ export default function ChatInterface({
       });
     }
   };
+
+  useEffect(() => {
+    if (!socket || !game?.id) return;
+
+    const handlePeers = async ({ peers }: { peers: string[] }) => {
+      for (const peerId of peers) {
+        await createOffer(peerId);
+      }
+    };
+
+    const handleUserJoined = async ({ socketId }: { socketId: string }) => {
+      await createOffer(socketId);
+    };
+
+    const handleOffer = async ({ from, sdp }: { from: string; sdp: RTCSessionDescriptionInit }) => {
+      const pc = await getPeer(from);
+      try {
+        // Simple glare handling: ignore offers when not stable
+        if (pc.signalingState !== 'stable') {
+          console.warn('Ignoring offer due to non-stable state:', pc.signalingState);
+          return;
+        }
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('webrtc_answer', { targetSocketId: from, sdp: answer });
+      } catch (e) {
+        console.error('Error handling offer:', e);
+      }
+    };
+
+    const handleAnswer = async ({ from, sdp }: { from: string; sdp: RTCSessionDescriptionInit }) => {
+      const pc = await getPeer(from);
+      try {
+        // Only accept answer if we have a local offer pending
+        if (pc.signalingState !== 'have-local-offer') {
+          console.warn('Ignoring answer in state:', pc.signalingState);
+          return;
+        }
+        // Avoid setting the same remote description again
+        if (pc.currentRemoteDescription && pc.currentRemoteDescription.sdp === (sdp as any).sdp) {
+          return;
+        }
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      } catch (e) {
+        console.error('Error handling answer:', e);
+      }
+    };
+
+    const handleCandidate = async ({ from, candidate }: { from: string; candidate: RTCIceCandidateInit }) => {
+      const pc = await getPeer(from);
+      try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
+    };
+
+    const handleUserLeft = ({ socketId }: { socketId: string }) => {
+      const pc = peersRef.current[socketId];
+      if (pc) {
+        pc.close();
+        delete peersRef.current[socketId];
+      }
+      const audio = remoteAudioRefs.current[socketId];
+      if (audio) {
+        audio.srcObject = null;
+        delete remoteAudioRefs.current[socketId];
+      }
+    };
+
+    // Join signaling
+    socket.emit('webrtc_join', { gameId: game.id });
+    socket.on('webrtc_peers', handlePeers);
+    socket.on('webrtc_user_joined', handleUserJoined);
+    socket.on('webrtc_offer', handleOffer);
+    socket.on('webrtc_answer', handleAnswer);
+    socket.on('webrtc_ice_candidate', handleCandidate);
+    socket.on('webrtc_user_left', handleUserLeft);
+
+    return () => {
+      socket.emit('webrtc_leave', { gameId: game.id });
+      socket.off('webrtc_peers', handlePeers);
+      socket.off('webrtc_user_joined', handleUserJoined);
+      socket.off('webrtc_offer', handleOffer);
+      socket.off('webrtc_answer', handleAnswer);
+      socket.off('webrtc_ice_candidate', handleCandidate);
+      socket.off('webrtc_user_left', handleUserLeft);
+      Object.values(peersRef.current).forEach((pc) => pc.close());
+      peersRef.current = {};
+    };
+  }, [socket, game?.id]);
+
+  async function ensureLocalStream() {
+    if (!localStreamRef.current) {
+      localStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Apply turn-based mic gating
+      setMicEnabled(isMyTurn);
+    }
+    return localStreamRef.current;
+  }
+
+  function setMicEnabled(enabled: boolean) {
+    const stream = localStreamRef.current;
+    if (stream) {
+      stream.getAudioTracks().forEach((t) => (t.enabled = enabled));
+    }
+  }
+
+  async function getPeer(peerId: string) {
+    if (peersRef.current[peerId]) return peersRef.current[peerId];
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        socket?.emit('webrtc_ice_candidate', { targetSocketId: peerId, candidate: e.candidate });
+      }
+    };
+
+    pc.ontrack = (e) => {
+      let audio = remoteAudioRefs.current[peerId];
+      if (!audio) {
+        audio = document.createElement('audio');
+        audio.autoplay = true;
+        // playsInline for iOS
+        audio.setAttribute('playsinline', 'true');
+        remoteAudioRefs.current[peerId] = audio;
+        // Attach to DOM in a hidden container
+        const container = document.getElementById('webrtc-audio-sink');
+        if (container) container.appendChild(audio);
+      }
+      audio.srcObject = e.streams[0];
+      // Force play to bypass autoplay restrictions when possible
+      const p = (audio as HTMLMediaElement).play?.();
+      if (p && typeof p.then === 'function') {
+        p.catch(() => {
+          // Will play after a user gesture
+        });
+      }
+    };
+
+    // Add local track
+    const stream = await ensureLocalStream();
+    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+    peersRef.current[peerId] = pc;
+    return pc;
+  }
+
+  async function createOffer(peerId: string) {
+    const pc = await getPeer(peerId);
+    // Only create offer when stable and not already making one
+    if (pc.signalingState !== 'stable' || makingOfferRef.current[peerId]) {
+      return;
+    }
+    makingOfferRef.current[peerId] = true;
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket?.emit('webrtc_offer', { targetSocketId: peerId, sdp: offer });
+    } finally {
+      makingOfferRef.current[peerId] = false;
+    }
+  }
+
+  // React to turn changes to gate mic
+  useEffect(() => {
+    setMicEnabled(isMyTurn);
+  }, [isMyTurn]);
 
   return (
     <div className="max-w-6xl mx-auto h-screen flex flex-col">
@@ -349,6 +579,31 @@ export default function ChatInterface({
 
         {/* Chat Area */}
         <div className="flex-1 flex flex-col">
+          {/* Reveal Banner */}
+          {(currentPhase === 'REVEAL' || revealData) && (results || revealData) && (
+            <div className="p-4 bg-gradient-to-r from-emerald-600/20 to-blue-600/20 border-b border-emerald-500/30">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white mb-1">
+                  {(results || revealData)?.winner === 'VILLAGERS' ? 'Villagers Win! 🎉' : (results || revealData)?.winner === 'SPY' ? 'Spy Wins! 🕵️‍♂️' : 'Results'}
+                </div>
+                <div className="text-gray-200">
+                  {(() => {
+                    const getNameById = (id?: string) => {
+                      if (!id) return 'Unknown';
+                      return (
+                        game?.players?.find((p: any) => p.userId === id)?.name ||
+                        (results || revealData)?.players?.find((p: any) => p.userId === id)?.name ||
+                        'Unknown'
+                      );
+                    };
+                    const votedOutName = getNameById((results || revealData)?.votedOutUserId);
+                    const spyName = getNameById((results || revealData)?.spyUserId);
+                    return `Voted out: ${votedOutName} • Spy: ${spyName}`;
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
           {/* Description Phase Timer */}
           {currentPhase === 'DESCRIBING' && (
             <div className="p-4 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-b border-purple-500/30">
@@ -454,7 +709,47 @@ export default function ChatInterface({
 
                     {/* Input Area */}
           <div className="p-4 border-t border-gray-700 bg-gray-800">
-            {currentPhase === 'VOTING' ? (
+            {(currentPhase === 'REVEAL' || revealData) ? (
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white mb-2">
+                    {(results || revealData)?.winner === 'VILLAGERS' ? 'Villagers Win! 🎉' : (results || revealData)?.winner === 'SPY' ? 'Spy Wins! 🕵️‍♂️' : 'Results'}
+                  </div>
+                  <div className="text-gray-300">
+                    {(() => {
+                      const getNameById = (id?: string) => {
+                        if (!id) return 'Unknown';
+                        return (
+                          game?.players?.find((p: any) => p.userId === id)?.name ||
+                          (results || revealData)?.players?.find((p: any) => p.userId === id)?.name ||
+                          'Unknown'
+                        );
+                      };
+                      const votedOutName = getNameById((results || revealData)?.votedOutUserId);
+                      const spyName = getNameById((results || revealData)?.spyUserId);
+                      return `Voted out: ${votedOutName} • Spy: ${spyName}`;
+                    })()}
+                  </div>
+                </div>
+                {(results || revealData)?.tally && (
+                  <div className="bg-gray-700/50 rounded-lg p-3">
+                    <div className="text-gray-300 text-sm mb-2">Vote Tally</div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {Object.entries((results || revealData).tally).map(([userId, count]: any) => (
+                        <div key={userId} className="flex items-center justify-between text-white text-sm">
+                          <span>{
+                            game?.players?.find((p: any) => p.userId === userId)?.name ||
+                            (results || revealData)?.players?.find((p: any) => p.userId === userId)?.name ||
+                            'Unknown'
+                          }</span>
+                          <span className="font-mono">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (currentPhase === 'VOTING' || votingActive) ? (
               <div className="space-y-3">
                 <div className="text-center text-white font-medium mb-3">
                   🗳️ Vote for who you think is the spy:
@@ -464,20 +759,26 @@ export default function ChatInterface({
                     <Button
                       key={player.userId}
                       onClick={() => {
-                        if (socket && game) {
+                        if (socket && game && !myVote) {
                           socket.emit('submit_vote', {
                             gameId: game.id,
                             votedForId: player.userId
                           });
+                          // Optimistically block re-vote
+                          setMyVote(player.userId);
                         }
                       }}
-                      variant="outline"
-                      className="border-gray-600 text-white hover:bg-gray-600"
+                      disabled={!socket || !!myVote}
+                      variant={myVote === player.userId ? "default" : "outline"}
+                      className={myVote === player.userId ? "bg-green-600 text-white" : "border-gray-600 text-white hover:bg-gray-600"}
                     >
                       {player.name}
                     </Button>
                   ))}
                 </div>
+                {myVote && (
+                  <div className="text-center text-gray-300 text-sm">Vote submitted. Waiting for others...</div>
+                )}
               </div>
             ) : (
               <div className="flex space-x-2">
@@ -515,6 +816,44 @@ export default function ChatInterface({
           </div>
         </div>
       </div>
+      {/* Category Vote Modal */}
+      {categoryVoteActive && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-gray-800 rounded-xl border border-gray-700 p-4 shadow-xl">
+            <div className="mb-4">
+              <h3 className="text-white text-lg font-semibold">Select a Category</h3>
+              <p className="text-gray-300 text-sm">Everyone votes. Majority wins. Random picks a random category.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              {categoryOptions.map((opt) => (
+                <Button
+                  key={opt.id}
+                  onClick={() => {
+                    if (!socket || !game || myCategoryVote) return;
+                    socket.emit('submit_category_vote', { gameId: game.id, categoryId: opt.id });
+                    setMyCategoryVote(opt.id);
+                  }}
+                  disabled={!socket || !!myCategoryVote}
+                  variant={myCategoryVote === opt.id ? 'default' : 'outline'}
+                  className={myCategoryVote === opt.id ? 'bg-green-600 text-white' : 'border-gray-600 text-white hover:bg-gray-700'}
+                >
+                  <div className="text-left">
+                    <div className="font-medium">{opt.name}</div>
+                    {opt.description && (
+                      <div className="text-xs opacity-75">{opt.description}</div>
+                    )}
+                  </div>
+                </Button>
+              ))}
+            </div>
+            {myCategoryVote && (
+              <div className="text-center text-gray-300 text-sm mt-3">Vote submitted. Waiting for others...</div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Hidden audio sink for remote peers */}
+      <div id="webrtc-audio-sink" style={{ display: 'none' }} />
     </div>
   );
 } 

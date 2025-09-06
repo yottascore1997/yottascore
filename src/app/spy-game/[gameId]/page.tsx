@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
 import { toast } from 'react-hot-toast';
 import ChatInterface from './chat-interface';
@@ -30,8 +30,8 @@ export default function SpyGameRoomPage() {
   const params = useParams();
   const router = useRouter();
   const { socket, isConnected } = useSocket();
-  const searchParams = new URLSearchParams(window.location.search);
-  const roomCodeFromUrl = searchParams.get('roomCode');
+  const searchParams = useSearchParams();
+  const roomCodeFromUrl = searchParams?.get('roomCode') || null;
   
   const [user, setUser] = useState<any>(null);
   const [game, setGame] = useState<SpyGame | null>(null);
@@ -85,6 +85,11 @@ export default function SpyGameRoomPage() {
         };
         setGame(updatedGameData);
         toast.success('Game started! Check your word.');
+      } else {
+        // Fallback: fetch via API if user not yet loaded or mapping missed
+        const gid = data.gameData.id;
+        setGame({ ...data.gameData, currentPhase: 'WORD_ASSIGNMENT' });
+        setTimeout(() => fetchPlayerWord(gid), 0);
       }
     });
 
@@ -114,6 +119,10 @@ export default function SpyGameRoomPage() {
       setCurrentTurn(data.currentTurn);
       setTimeLeft(data.timeLeft);
       setIsMyTurn(data.currentTurn === game?.players.findIndex(p => p.userId === user?.id));
+      if (!myWord) {
+        // Ensure word is set before describing phase
+        fetchPlayerWord(data.gameId);
+      }
       toast.success('Description phase started!');
     });
 
@@ -154,6 +163,7 @@ export default function SpyGameRoomPage() {
     socket.on('spy_game_ended', (data: any) => {
       setGameResults(data);
       setGame(prev => prev ? { ...prev, currentPhase: 'REVEAL' } : null);
+      toast.success(data.winner === 'VILLAGERS' ? 'Villagers Win! 🎉' : data.winner === 'SPY' ? 'Spy Wins! 🕵️‍♂️' : 'Round Ended');
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
@@ -347,6 +357,7 @@ export default function SpyGameRoomPage() {
         currentTurn={currentTurn}
         timeLeft={timeLeft}
         isMyTurn={isMyTurn}
+        results={gameResults}
       />
     </div>
   );
