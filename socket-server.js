@@ -2113,7 +2113,7 @@ io.on('connection', (socket) => {
     const nextTurn = gameData.currentTurn + 1;
     if (nextTurn < gameData.players.length) {
       gameData.currentTurn = nextTurn;
-      gameData.timeLeft = 20;
+      gameData.timeLeft = 10;
       
       // Start timer for next player
       setTimeout(() => {
@@ -2121,11 +2121,11 @@ io.on('connection', (socket) => {
           io.to(`spy_game_${gameId}`).emit('turn_started', {
             gameId: gameId,
             currentTurn: nextTurn,
-            timeLeft: 20
+            timeLeft: 10
           });
           
           // Start countdown timer
-          let timeLeft = 20;
+          let timeLeft = 10;
           const timer = setInterval(() => {
             timeLeft--;
             gameData.timeLeft = timeLeft;
@@ -2357,10 +2357,10 @@ io.on('connection', (socket) => {
               setTimeout(() => {
                 gameData.currentPhase = 'DESCRIBING';
                 gameData.currentTurn = 0;
-                gameData.timeLeft = 20;
+                gameData.timeLeft = 10;
                 gameData.descriptions = {};
-                io.to(`spy_game_${gameId}`).emit('description_phase_started', { gameId: gameId, currentTurn: 0, timeLeft: 20 });
-                let timeLeft = 20;
+                io.to(`spy_game_${gameId}`).emit('description_phase_started', { gameId: gameId, currentTurn: 0, timeLeft: 10 });
+                let timeLeft = 10;
                 const timer = setInterval(() => {
                   timeLeft--;
                   gameData.timeLeft = timeLeft;
@@ -2370,11 +2370,11 @@ io.on('connection', (socket) => {
                     const nextTurn = 1;
                     if (nextTurn < gameData.players.length) {
                       gameData.currentTurn = nextTurn;
-                      gameData.timeLeft = 20;
+                      gameData.timeLeft = 10;
                       io.to(`spy_game_${gameId}`).emit('turn_ended', { gameId: gameId, nextTurn: nextTurn });
                       setTimeout(() => {
-                        io.to(`spy_game_${gameId}`).emit('turn_started', { gameId: gameId, currentTurn: nextTurn, timeLeft: 20 });
-                        let nextTimeLeft = 20;
+                        io.to(`spy_game_${gameId}`).emit('turn_started', { gameId: gameId, currentTurn: nextTurn, timeLeft: 10 });
+                        let nextTimeLeft = 10;
                         const nextTimer = setInterval(() => {
                           nextTimeLeft--;
                           gameData.timeLeft = nextTimeLeft;
@@ -2511,94 +2511,87 @@ io.on('connection', (socket) => {
       setTimeout(() => {
         gameData.currentPhase = 'DESCRIBING';
         gameData.currentTurn = 0;
-        gameData.timeLeft = 20;
+        gameData.timeLeft = 10;
         gameData.descriptions = {};
         
         io.to(`spy_game_${gameId}`).emit('description_phase_started', {
           gameId: gameId,
           currentTurn: 0,
-          timeLeft: 20
+          timeLeft: 10
         });
-        
-        // Start timer for first player
-        let timeLeft = 20;
-        const timer = setInterval(() => {
-          timeLeft--;
-          gameData.timeLeft = timeLeft;
-          
-          // Only emit timer update (not system message) every second
-          io.to(`spy_game_${gameId}`).emit('timer_update', {
-            gameId: gameId,
-            currentTurn: 0,
-            timeLeft: timeLeft
-          });
-          
-          if (timeLeft <= 0) {
-            clearInterval(timer);
-            // Move to next player when time runs out
-            const nextTurn = 1;
-            if (nextTurn < gameData.players.length) {
-              gameData.currentTurn = nextTurn;
-              gameData.timeLeft = 20;
-              
-              io.to(`spy_game_${gameId}`).emit('turn_ended', {
-                gameId: gameId,
-                nextTurn: nextTurn
-              });
-              
-              // Start timer for next player
-              setTimeout(() => {
-                io.to(`spy_game_${gameId}`).emit('turn_started', {
-                  gameId: gameId,
-                  currentTurn: nextTurn,
-                  timeLeft: 20
-                });
-                
-                let nextTimeLeft = 20;
-                const nextTimer = setInterval(() => {
-                  nextTimeLeft--;
-                  gameData.timeLeft = nextTimeLeft;
-                  
-                  io.to(`spy_game_${gameId}`).emit('timer_update', {
-                    gameId: gameId,
-                    currentTurn: nextTurn,
-                    timeLeft: nextTimeLeft
-                  });
-                  
-                  if (nextTimeLeft <= 0) {
-                    clearInterval(nextTimer);
-                    // Continue to next player or end game
-                    if (nextTurn + 1 < gameData.players.length) {
-                      gameData.currentTurn = nextTurn + 1;
-                      io.to(`spy_game_${gameId}`).emit('turn_ended', {
-                        gameId: gameId,
-                        nextTurn: nextTurn + 1
-                      });
-                    } else {
-                      // All players have described, move to voting
-                      gameData.currentPhase = 'VOTING';
-                      io.to(`spy_game_${gameId}`).emit('voting_started', {
-                        players: gameData.players
-                      });
-                    }
-                  }
-                }, 1000);
-              }, 1000);
-            } else {
-              // All players have described, move to voting
-              gameData.currentPhase = 'VOTING';
-              io.to(`spy_game_${gameId}`).emit('voting_started', {
-                players: gameData.players
-              });
-            }
+
+        // Generic turn runner to avoid getting stuck with 3+ players
+        const runTurnFrom = (turnIndex) => {
+          if (turnIndex >= gameData.players.length) {
+            gameData.currentPhase = 'VOTING';
+            // Reset helper state for safety
+            gameData.timeLeft = 0;
+            // Clear watchdog if present
+            try { if (gameData.votingWatchdog) { clearTimeout(gameData.votingWatchdog); gameData.votingWatchdog = null; } } catch {}
+            io.to(`spy_game_${gameId}`).emit('voting_started', { players: gameData.players });
+            return;
           }
-        }, 1000);
+          // Refresh current sockets in room for debugging
+          try {
+            const room = io.sockets.adapter.rooms.get(`spy_game_${gameId}`) || new Set();
+            console.log(`🎯 Running turn ${turnIndex}. Room sockets:`, Array.from(room));
+          } catch {}
+          gameData.currentTurn = turnIndex;
+          gameData.timeLeft = 10;
+          io.to(`spy_game_${gameId}`).emit('turn_started', { gameId: gameId, currentTurn: turnIndex, timeLeft: 10 });
+          let left = 10;
+          const interval = setInterval(() => {
+            left--;
+            gameData.timeLeft = left;
+            io.to(`spy_game_${gameId}`).emit('timer_update', { gameId: gameId, currentTurn: turnIndex, timeLeft: left });
+            if (left <= 0) {
+              clearInterval(interval);
+              io.to(`spy_game_${gameId}`).emit('turn_ended', { gameId: gameId, nextTurn: turnIndex + 1 });
+              setTimeout(() => runTurnFrom(turnIndex + 1), 800);
+            }
+          }, 1000);
+        };
+
+        // Kick off from player 0
+        runTurnFrom(0);
+
+        // Safety watchdog: force voting if something gets stuck
+        try {
+          if (gameData.votingWatchdog) { clearTimeout(gameData.votingWatchdog); }
+          const bufferMs = 3000; // small buffer
+          const perPlayerMs = 11000; // 10s turn + buffer
+          gameData.votingWatchdog = setTimeout(() => {
+            if (gameData.currentPhase !== 'VOTING') {
+              console.log('⚠️ Watchdog forcing voting phase for game', gameId);
+              gameData.currentPhase = 'VOTING';
+              io.to(`spy_game_${gameId}`).emit('voting_started', { players: gameData.players });
+            }
+          }, gameData.players.length * perPlayerMs + bufferMs);
+        } catch {}
       }, 5000);
       
     } catch (error) {
       console.error('Error starting spy game:', error);
       socket.emit('spy_game_error', { message: 'Failed to start game' });
     }
+  });
+
+  // Allow all players to submit category votes during the voting window
+  socket.on('submit_category_vote', (payload) => {
+    try {
+      const { gameId, categoryId } = payload || {};
+      if (!gameId || !categoryId) return;
+      const gameData = spyGames.get(gameId);
+      if (!gameData) return;
+      if (!socket.userId) return;
+      // Ensure this user is part of the game
+      const isInGame = Array.isArray(gameData.players) && gameData.players.some(p => p.userId === socket.userId);
+      if (!isInGame) return;
+      if (!gameData.categoryVotes) gameData.categoryVotes = {};
+      gameData.categoryVotes[socket.userId] = categoryId;
+      // Acknowledge to the voter only
+      io.to(socket.id).emit('category_vote_submitted', { userId: socket.userId, categoryId });
+    } catch {}
   });
 
   socket.on('submit_description', (data) => {
@@ -2629,51 +2622,7 @@ io.on('connection', (socket) => {
     });
     
     console.log(`📝 Description from ${player.name}: ${description}`);
-    
-    // Move to next player
-    const nextTurn = gameData.currentTurn + 1;
-    if (nextTurn < gameData.players.length) {
-      gameData.currentTurn = nextTurn;
-      gameData.timeLeft = 20;
-      
-      // Start timer for next player
-      setTimeout(() => {
-        if (gameData.currentTurn === nextTurn) {
-          io.to(`spy_game_${gameId}`).emit('turn_started', {
-            gameId: gameId,
-            currentTurn: nextTurn,
-            timeLeft: 20
-          });
-          
-          // Start countdown timer
-          let timeLeft = 20;
-          const timer = setInterval(() => {
-            timeLeft--;
-            gameData.timeLeft = timeLeft;
-            
-            io.to(`spy_game_${gameId}`).emit('turn_started', {
-              gameId: gameId,
-              currentTurn: nextTurn,
-              timeLeft: timeLeft
-            });
-            
-            if (timeLeft <= 0) {
-              clearInterval(timer);
-              io.to(`spy_game_${gameId}`).emit('turn_ended', {
-                gameId: gameId,
-                nextTurn: nextTurn + 1
-              });
-            }
-          }, 1000);
-        }
-      }, 1000);
-    } else {
-      // All players have described, move to voting phase
-      gameData.currentPhase = 'VOTING';
-      io.to(`spy_game_${gameId}`).emit('voting_started', {
-        players: gameData.players
-      });
-    }
+    // Do not auto-advance here; the generic turn runner controls progression
   });
 
   socket.on('submit_vote', async (data) => {

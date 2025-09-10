@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Send, MessageSquare, Users, Crown, Eye, Play, Copy, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+// Daily integration toggle (set NEXT_PUBLIC_USE_DAILY=true in env to enable)
+const USE_DAILY = process.env.NEXT_PUBLIC_USE_DAILY === 'true';
 import { toast } from 'react-hot-toast';
 
 interface ChatMessage {
@@ -46,7 +48,7 @@ export default function ChatInterface({
   myWord,
   isSpy,
   currentTurn = 0,
-  timeLeft = 20,
+  timeLeft = 10,
   isMyTurn = false,
   results
 }: ChatInterfaceProps) {
@@ -67,6 +69,13 @@ export default function ChatInterface({
   const remoteAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
   const makingOfferRef = useRef<Record<string, boolean>>({});
   const [revealData, setRevealData] = useState<any>(null);
+  const prevIsMyTurnRef = useRef<boolean>(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Daily voice call integration (web)
+  const [dailyLib, setDailyLib] = useState<any>(null);
+  const [dailyCall, setDailyCall] = useState<any>(null);
+  const [isDailyJoined, setIsDailyJoined] = useState(false);
 
   const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -285,7 +294,7 @@ export default function ChatInterface({
   };
 
   useEffect(() => {
-    if (!socket || !game?.id) return;
+    if (!socket || !game?.id || USE_DAILY) return;
 
     const handlePeers = async ({ peers }: { peers: string[] }) => {
       for (const peerId of peers) {
@@ -373,6 +382,7 @@ export default function ChatInterface({
   }, [socket, game?.id]);
 
   async function ensureLocalStream() {
+    if (USE_DAILY) return null;
     if (!localStreamRef.current) {
       localStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
       // Apply turn-based mic gating
@@ -382,10 +392,12 @@ export default function ChatInterface({
   }
 
   function setMicEnabled(enabled: boolean) {
-    const stream = localStreamRef.current;
-    if (stream) {
-      stream.getAudioTracks().forEach((t) => (t.enabled = enabled));
+    if (USE_DAILY) {
+      try { dailyCall?.setLocalAudio(!!enabled); } catch {}
+      return;
     }
+    const stream = localStreamRef.current;
+    if (stream) { stream.getAudioTracks().forEach((t) => (t.enabled = enabled)); }
   }
 
   async function getPeer(peerId: string) {
@@ -422,7 +434,9 @@ export default function ChatInterface({
 
     // Add local track
     const stream = await ensureLocalStream();
-    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+    if (stream) {
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+    }
 
     peersRef.current[peerId] = pc;
     return pc;
@@ -444,10 +458,101 @@ export default function ChatInterface({
     }
   }
 
-  // React to turn changes to gate mic
+  // Daily: lazy-load SDK and create call object
   useEffect(() => {
-    setMicEnabled(isMyTurn);
-  }, [isMyTurn]);
+    if (!USE_DAILY) return;
+    let disposed = false;
+    (async () => {
+      try {
+        const lib = await import(/* webpackIgnore: true */ '@daily-co/daily-js').catch(() => null as any);
+        if (!lib) return;
+        if (disposed) return;
+        setDailyLib(lib);
+        const call = lib.createCallObject({ audioSource: true, videoSource: false });
+        setDailyCall(call);
+        call.on('joined-meeting', () => { setIsDailyJoined(true); try { toast.success('Voice connected'); } catch {} });
+        call.on('left-meeting', () => setIsDailyJoined(false));
+        call.on('error', (e: any) => { try { console.error('Daily error', e); toast.error('Voice error'); } catch {} });
+      } catch (e) {
+        try { console.error('Failed to load Daily SDK', e); toast.error('Unable to init voice'); } catch {}
+      }
+    })();
+    return () => {
+      disposed = true;
+      try { dailyCall?.leave?.(); dailyCall?.destroy?.(); } catch {}
+    };
+  }, []);
+
+  // Play a short beep when it's my turn
+  const playTurnBeep = () => {
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioCtx();
+      const ctx = audioCtxRef.current as AudioContext;
+      if (!ctx) return;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 880;
+      o.connect(g);
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, (ctx as AudioContext).currentTime);
+      g.gain.exponentialRampToValueAtTime(0.3, (ctx as AudioContext).currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, (ctx as AudioContext).currentTime + 0.2);
+      o.start();
+      o.stop((ctx as AudioContext).currentTime + 0.22);
+    } catch {}
+  };
+
+  // Detect start of my turn to play cue and ensure mic gating
+  useEffect(() => {
+    if (currentPhase === 'DESCRIBING') {
+      if (isMyTurn && !prevIsMyTurnRef.current) {
+        playTurnBeep();
+      }
+    }
+    prevIsMyTurnRef.current = isMyTurn;
+  }, [isMyTurn, currentPhase]);
+
+  // Join Daily room when enabling voice or entering describing phase
+  const joinDailyIfNeeded = async () => {
+    if (!USE_DAILY) return;
+    if (!dailyCall || isDailyJoined) return;
+    const url = process.env.NEXT_PUBLIC_DAILY_URL;
+    if (!url) { try { toast.error('Missing DAILY URL'); } catch {} return; }
+    try {
+      await dailyCall.join({ url, audioSource: true, videoSource: false });
+      // Gate mic initially by turn/voice toggle
+      dailyCall.setLocalAudio(isMyTurn && isVoiceEnabled);
+    } catch (e) {
+      try { console.error('Daily join failed', e); toast.error('Voice join failed'); } catch {}
+    }
+  };
+
+  // React to turn / toggle changes to gate mic
+  useEffect(() => {
+    setMicEnabled(isMyTurn && isVoiceEnabled);
+    if (USE_DAILY && isVoiceEnabled) { joinDailyIfNeeded(); }
+  }, [isMyTurn, isVoiceEnabled]);
+
+  // Auto manage voice for Description phase only (join on start, leave on end)
+  useEffect(() => {
+    if (!USE_DAILY) return;
+    if (!dailyCall) return;
+    if (currentPhase === 'DESCRIBING') {
+      // Ensure we are joined and voice UI on
+      setIsVoiceEnabled(true);
+      (async () => {
+        await joinDailyIfNeeded();
+        try { dailyCall?.setLocalAudio(isMyTurn); } catch {}
+      })();
+    } else {
+      try { dailyCall?.leave?.(); } catch {}
+      setIsDailyJoined(false);
+      setIsVoiceEnabled(false);
+    }
+  }, [currentPhase, dailyCall, isMyTurn]);
 
   return (
     <div className="max-w-6xl mx-auto h-screen flex flex-col">
@@ -488,30 +593,40 @@ export default function ChatInterface({
           </div>
           
           <div className="space-y-3">
-            {game?.players?.map((player: Player, index: number) => (
-              <div
-                key={player.userId}
-                className="flex items-center space-x-3 p-2 rounded-lg bg-gray-700/50 hover:bg-gray-700/70 transition-colors"
-              >
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center relative">
-                  <span className="text-white font-bold text-sm">
-                    {player.name.charAt(0).toUpperCase()}
-                  </span>
-                  {player.isHost && (
-                    <Crown className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-white text-sm font-medium truncate">
-                    {player.name}
+            {game?.players?.map((player: Player, index: number) => {
+              const isSpeaking = currentPhase === 'DESCRIBING' && index === currentTurn;
+              return (
+                <div
+                  key={player.userId}
+                  className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${
+                    isSpeaking ? 'bg-green-600/20 border border-green-500/40' : 'bg-gray-700/50 hover:bg-gray-700/70'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center relative ${
+                    isSpeaking ? 'bg-green-500/40 ring-2 ring-green-400 animate-pulse' : 'bg-gradient-to-br from-blue-400 to-purple-500'
+                  }`}>
+                    <span className="text-white font-bold text-sm">
+                      {player.name.charAt(0).toUpperCase()}
+                    </span>
+                    {player.isHost && (
+                      <Crown className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />
+                    )}
                   </div>
-                  <div className="text-gray-400 text-xs">
-                    {player.isHost ? 'Host' : `Player ${index + 1}`}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white text-sm font-medium truncate flex items-center gap-2">
+                      {player.name}
+                      {isSpeaking && (
+                        <span className="text-green-300 text-[10px] uppercase tracking-wide">Speaking now</span>
+                      )}
+                    </div>
+                    <div className="text-gray-400 text-xs">
+                      {player.isHost ? 'Host' : `Player ${index + 1}`}
+                    </div>
                   </div>
+                  <div className={`w-2 h-2 rounded-full ${isSpeaking ? 'bg-green-400' : 'bg-green-500'}`}></div>
                 </div>
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Game Controls */}
@@ -561,6 +676,35 @@ export default function ChatInterface({
                     <Copy className="w-3 h-3" />
                   </Button>
                 </div>
+              </div>
+
+              {/* Voice Controls (always visible) */}
+              <div className="p-3 bg-gray-700/50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="text-gray-300 text-xs">Voice</div>
+                  {USE_DAILY && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${isDailyJoined ? 'bg-green-600/40 text-green-200 border border-green-500/40' : 'bg-gray-600/40 text-gray-200 border border-gray-500/40'}`}>
+                      {isDailyJoined ? 'Connected' : 'Off'}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <Button
+                    onClick={() => {
+                      const next = !isVoiceEnabled;
+                      setIsVoiceEnabled(next);
+                      if (USE_DAILY) {
+                        if (next) { joinDailyIfNeeded(); }
+                        try { dailyCall?.setLocalAudio(isMyTurn && next); } catch {}
+                      }
+                    }}
+                    size="sm"
+                    className={isVoiceEnabled ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-600 hover:bg-gray-700 text-white'}
+                  >
+                    {isVoiceEnabled ? 'Voice On' : 'Voice Off'}
+                  </Button>
+                </div>
+                <div className="text-xs text-gray-400 mt-1">Mic opens on your turn.</div>
               </div>
             </div>
           )}
@@ -615,20 +759,49 @@ export default function ChatInterface({
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
+                  {USE_DAILY && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${isDailyJoined ? 'bg-green-600/40 text-green-200 border border-green-500/40' : 'bg-gray-600/40 text-gray-200 border border-gray-500/40'}`}>
+                      {isDailyJoined ? 'Voice Connected' : 'Voice Off'}
+                    </span>
+                  )}
                   <div className="text-white font-mono text-lg">{timeLeft}s</div>
                   <div className="w-24 bg-gray-700 rounded-full h-2">
                     <div 
                       className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-1000"
-                      style={{ width: `${(timeLeft / 20) * 100}%` }}
+                      style={{ width: `${(timeLeft / 10) * 100}%` }}
                     ></div>
                   </div>
+                </div>
+              </div>
+              {/* Now Speaking Banner */}
+              <div className="mt-3">
+                <div className="flex items-center justify-center gap-3 bg-green-600/15 border border-green-500/30 rounded-lg px-3 py-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+                  <div className="text-white text-sm">
+                    <span className="opacity-80 mr-1">Now speaking:</span>
+                    <span className="font-semibold">
+                      {game?.players?.[currentTurn]?.name || `Player ${currentTurn + 1}`}
+                    </span>
+                  </div>
+                  {game?.players && currentTurn + 1 < game.players.length && (
+                    <div className="text-gray-300 text-xs ml-2">
+                      <span className="opacity-70">Up next:</span> {game.players[currentTurn + 1].name}
+                    </div>
+                  )}
                 </div>
               </div>
               
               {/* Voice Chat Controls */}
               <div className="flex items-center justify-center space-x-4 mt-3">
                 <Button
-                  onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                  onClick={() => {
+                    const next = !isVoiceEnabled;
+                    setIsVoiceEnabled(next);
+                    if (USE_DAILY) {
+                      if (next) { joinDailyIfNeeded(); }
+                      try { dailyCall?.setLocalAudio(isMyTurn && next); } catch {}
+                    }
+                  }}
                   variant={isVoiceEnabled ? "default" : "outline"}
                   size="sm"
                   className={isVoiceEnabled ? "bg-green-600 hover:bg-green-700" : "border-gray-600 text-gray-300"}
@@ -637,7 +810,7 @@ export default function ChatInterface({
                   {isVoiceEnabled ? 'Voice On' : 'Voice Off'}
                 </Button>
                 
-                {isMyTurn && (
+                {isMyTurn && !USE_DAILY && (
                   <Button
                     onClick={() => setIsRecording(!isRecording)}
                     variant={isRecording ? "destructive" : "outline"}

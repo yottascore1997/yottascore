@@ -42,7 +42,7 @@ export default function SpyGameRoomPage() {
   const [votes, setVotes] = useState<{[key: string]: string}>({});
   const [gameResults, setGameResults] = useState<any>(null);
   const [copied, setCopied] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(20);
+  const [timeLeft, setTimeLeft] = useState(10);
   const [currentTurn, setCurrentTurn] = useState(0);
   const [isMyTurn, setIsMyTurn] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -139,7 +139,7 @@ export default function SpyGameRoomPage() {
     socket.on('turn_ended', (data: { gameId: string; nextTurn: number }) => {
       setCurrentTurn(data.nextTurn);
       setIsMyTurn(false);
-      setTimeLeft(20);
+      setTimeLeft(10);
     });
 
     socket.on('timer_update', (data: { gameId: string; currentTurn: number; timeLeft: number }) => {
@@ -196,6 +196,16 @@ export default function SpyGameRoomPage() {
       socket.off('spy_game_data_received');
     };
   }, [socket, isConnected, user?.id]);
+
+  // Rejoin game room on socket reconnect to ensure we receive turn events
+  useEffect(() => {
+    if (!socket) return;
+    if (!isConnected) return;
+    if (!roomCodeFromUrl || !user?.id) return;
+    try {
+      socket.emit('get_spy_game_data', { roomCode: roomCodeFromUrl, userId: user.id });
+    } catch {}
+  }, [socket, isConnected, roomCodeFromUrl, user?.id]);
 
   const fetchUserProfile = async () => {
     try {

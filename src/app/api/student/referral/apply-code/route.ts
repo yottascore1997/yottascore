@@ -90,8 +90,16 @@ export const POST = withCORS(async (req: NextRequest) => {
         where: { id: referrer.id },
         data: {
           referralCount: { increment: 1 },
-          totalReferralEarnings: { increment: 100 },
-          wallet: { increment: 100 }
+          totalReferralEarnings: { increment: 50 },
+          wallet: { increment: 50 }
+        }
+      });
+
+      // Update referred user's wallet
+      await tx.user.update({
+        where: { id: decoded.userId },
+        data: {
+          wallet: { increment: 50 }
         }
       });
 
@@ -99,7 +107,17 @@ export const POST = withCORS(async (req: NextRequest) => {
       await tx.transaction.create({
         data: {
           userId: referrer.id,
-          amount: 100,
+          amount: 50,
+          type: 'REFERRAL_BONUS',
+          status: 'COMPLETED'
+        }
+      });
+
+      // Create transaction record for referred user
+      await tx.transaction.create({
+        data: {
+          userId: decoded.userId,
+          amount: 50,
           type: 'REFERRAL_BONUS',
           status: 'COMPLETED'
         }
@@ -107,7 +125,7 @@ export const POST = withCORS(async (req: NextRequest) => {
     });
 
     return NextResponse.json({ 
-      message: 'Referral code applied successfully! Your friend earned ₹100.',
+      message: 'Referral code applied successfully! Both you and your friend earned ₹50 each.',
       referrerName: referrer.name
     });
 

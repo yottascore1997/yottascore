@@ -88,7 +88,7 @@ export async function GET(req: Request) {
       statistics: {
         totalReferrals,
         totalReferralEarnings: totalReferralEarnings._sum.totalReferralEarnings || 0,
-        totalReferralBonus: totalReferrals * 100 // ₹100 per referral
+        totalReferralBonus: totalReferrals * 100 // ₹50 per referral (₹50 referrer + ₹50 referred = ₹100 total)
       },
       topReferrers,
       recentReferrals: recentReferrals.map((ref: any) => ({

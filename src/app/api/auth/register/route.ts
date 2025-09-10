@@ -121,8 +121,16 @@ const handler = async (req: Request) => {
             where: { id: referrerId },
             data: {
               referralCount: { increment: 1 },
-              totalReferralEarnings: { increment: 100 },
-              wallet: { increment: 100 }
+              totalReferralEarnings: { increment: 50 },
+              wallet: { increment: 50 }
+            }
+          });
+
+          // Update new user's wallet
+          await tx.user.update({
+            where: { id: user.id },
+            data: {
+              wallet: { increment: 50 }
             }
           });
 
@@ -130,7 +138,17 @@ const handler = async (req: Request) => {
           await tx.transaction.create({
             data: {
               userId: referrerId,
-              amount: 100,
+              amount: 50,
+              type: 'REFERRAL_BONUS',
+              status: 'COMPLETED'
+            }
+          });
+
+          // Create transaction record for new user
+          await tx.transaction.create({
+            data: {
+              userId: user.id,
+              amount: 50,
               type: 'REFERRAL_BONUS',
               status: 'COMPLETED'
             }

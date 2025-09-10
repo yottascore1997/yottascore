@@ -66,6 +66,16 @@ export async function POST(req: Request) {
               status: 'COMPLETED'
             }
           });
+          // Create LiveExamWinner record for leaderboard
+          await prisma.liveExamWinner.create({
+            data: {
+              examId: exam.id,
+              userId: p.userId,
+              rank: i + 1,
+              prizeAmount: prize,
+              paid: true
+            }
+          });
         }
       }
       // Mark exam as winnings distributed
