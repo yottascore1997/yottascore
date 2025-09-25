@@ -29,6 +29,7 @@ interface LiveExam {
   description: string;
   instructions?: string;
   category?: string;
+  imageUrl?: string;
   duration: number;
   totalMarks: number;
   startTime: string;
@@ -439,10 +440,25 @@ export default function AdminLiveExams() {
                   </div>
 
                   <div className="flex items-start justify-between mb-4">
-                    <div className="font-bold text-xl text-gray-900 truncate max-w-[70%]">{exam.title}</div>
-                    <div className="w-16 h-16 flex-shrink-0">
-                      <img src="/trophy.png" alt="Trophy" className="w-full h-full object-contain" />
+                    <div className="flex items-start space-x-4 flex-1">
+                      {exam.imageUrl && (
+                        <div className="flex-shrink-0">
+                          <img
+                            src={exam.imageUrl}
+                            alt={`${exam.title} logo`}
+                            className="w-16 h-16 object-contain rounded-lg border border-gray-200 bg-white p-2"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <div className="font-bold text-xl text-gray-900 truncate">{exam.title}</div>
+                      </div>
                     </div>
+                    {!exam.imageUrl && (
+                      <div className="w-16 h-16 flex-shrink-0">
+                        <img src="/trophy.png" alt="Trophy" className="w-full h-full object-contain" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="text-sm text-gray-500 mb-4 flex flex-wrap gap-2">

@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Default: return available categories for battle quiz
+    // Default: return available categories that have active battle quizzes
     const categories = await prisma.questionCategory.findMany({
       select: {
         id: true,
@@ -128,11 +128,19 @@ export async function GET(request: NextRequest) {
         }
       },
       where: {
-        questions: {
-          some: {}
+        isActive: true,
+        battleQuizzes: {
+          some: {
+            isActive: true,
+            status: {
+              in: ['WAITING', 'ACTIVE']
+            }
+          }
         }
       }
     });
+
+    console.log(`Found ${categories.length} categories with active battle quizzes:`, categories.map(c => ({ name: c.name, questionCount: c._count.questions })));
 
     return NextResponse.json(categories.map((cat: any) => ({
       id: cat.id,

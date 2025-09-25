@@ -89,6 +89,11 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     console.log('Request body:', body);
+    console.log('🔍 ImageUrl in request:', {
+      imageUrl: body.imageUrl,
+      hasImageUrl: !!body.imageUrl,
+      imageUrlType: typeof body.imageUrl
+    });
 
     let validatedData;
     try {
@@ -151,6 +156,12 @@ export async function POST(req: Request) {
     });
 
     console.log('Live exam created successfully:', liveExam);
+    console.log('💾 Saved exam imageUrl:', {
+      id: liveExam.id,
+      title: liveExam.title,
+      imageUrl: liveExam.imageUrl,
+      hasImageUrl: !!liveExam.imageUrl
+    });
     
     // Set up auto-end timer for this exam if it has an endTime
     if (liveExam.endTime) {

@@ -69,7 +69,15 @@ const io = new Server(httpServer, {
   path: '/api/socket',
   addTrailingSlash: false,
   allowEIO3: true,
-  transports: ['polling', 'websocket']
+  transports: ['websocket', 'polling'], // Prefer websocket for better performance
+  pingTimeout: 60000, // 60 seconds
+  pingInterval: 25000, // 25 seconds
+  maxHttpBufferSize: 1e6, // 1MB
+  // Connection limits
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+    skipMiddlewares: true,
+  }
 });
 
 // Store user socket mappings
@@ -239,10 +247,18 @@ function cleanupMemory() {
       });
 
       console.log(`🧹 Memory cleanup completed. Active matches: ${activeMatches.size}, Private rooms: ${privateRooms.size}`);
+      console.log(`   - Total connections: ${io.engine.clientsCount}`);
+      
+      // Memory usage warning
+      const totalConnections = io.engine.clientsCount;
+      if (totalConnections > 1500) {
+        console.log(`⚠️ High connection count: ${totalConnections}. Consider scaling.`);
+      }
+      
     } catch (error) {
       console.error('❌ Error during memory cleanup:', error);
     }
-  }, 60000); // Every minute
+  }, 30000); // Every 30 seconds for high load
 }
 
 // Debug function to clear all active matches
@@ -3518,11 +3534,15 @@ async function startPrivateRoomGame(roomCode) {
   console.log(`Private room game started: ${roomCode}`);
 }
 
+// Function to end a match and calculate results
 async function endMatch(matchId) {
   const match = activeMatches.get(matchId);
-  if (!match) return;
+  if (!match) {
+    console.log('❌ Match not found for ending:', matchId);
+    return;
+  }
   
-  console.log(`Ending match ${matchId}`);
+  console.log(`🏁 Ending match ${matchId}`);
   
   // Calculate scores
   let player1Score = 0;
@@ -3538,7 +3558,114 @@ async function endMatch(matchId) {
     const p2Answer = match.player2Answers[i];
     const question = match.questions[i];
     
-  }}
+    console.log(`\n📝 Question ${i + 1} analysis:`);
+    console.log('   - Question:', question.text.substring(0, 50) + '...');
+    console.log('   - Correct answer:', question.correct);
+    console.log('   - Player 1 answer:', p1Answer);
+    console.log('   - Player 2 answer:', p2Answer);
+    
+    // Check player 1 answer
+    if (p1Answer && !p1Answer.timedOut) {
+      let p1Correct = false;
+      
+      // Handle different answer formats
+      if (typeof p1Answer.answer === 'number') {
+        p1Correct = p1Answer.answer === question.correct;
+      } else if (typeof p1Answer.answer === 'string') {
+        const answerIndex = question.options.findIndex(option => 
+          option.toLowerCase() === p1Answer.answer.toLowerCase()
+        );
+        p1Correct = answerIndex === question.correct;
+      } else if (typeof p1Answer.answer === 'string' && !isNaN(parseInt(p1Answer.answer))) {
+        p1Correct = parseInt(p1Answer.answer) === question.correct;
+      }
+      
+      if (p1Correct) {
+        player1Score += 10;
+        console.log('   ✅ Player 1 correct (+10 points)');
+      } else {
+        console.log('   ❌ Player 1 incorrect');
+      }
+    } else {
+      console.log('   ⏰ Player 1 timed out or no answer');
+    }
+    
+    // Check player 2 answer
+    if (p2Answer && !p2Answer.timedOut) {
+      let p2Correct = false;
+      
+      // Handle different answer formats
+      if (typeof p2Answer.answer === 'number') {
+        p2Correct = p2Answer.answer === question.correct;
+      } else if (typeof p2Answer.answer === 'string') {
+        const answerIndex = question.options.findIndex(option => 
+          option.toLowerCase() === p2Answer.answer.toLowerCase()
+        );
+        p2Correct = answerIndex === question.correct;
+      } else if (typeof p2Answer.answer === 'string' && !isNaN(parseInt(p2Answer.answer))) {
+        p2Correct = parseInt(p2Answer.answer) === question.correct;
+      }
+      
+      if (p2Correct) {
+        player2Score += 10;
+        console.log('   ✅ Player 2 correct (+10 points)');
+      } else {
+        console.log('   ❌ Player 2 incorrect');
+      }
+    } else {
+      console.log('   ⏰ Player 2 timed out or no answer');
+    }
+  }
+  
+  console.log(`\n🏆 Final Scores:`);
+  console.log(`   - Player 1 (${match.player1Id}): ${player1Score}`);
+  console.log(`   - Player 2 (${match.player2Id}): ${player2Score}`);
+  
+  const winner = player1Score > player2Score ? match.player1Id : 
+                player2Score > player1Score ? match.player2Id : null;
+  
+  console.log(`   - Winner: ${winner || 'Draw'}`);
+  
+  // Send match results to both players
+  const player1Socket = io.sockets.sockets.get(match.player1SocketId);
+  const player2Socket = io.sockets.sockets.get(match.player2SocketId);
+  
+  const matchResult = {
+    matchId,
+    player1Score,
+    player2Score,
+    winner,
+    isDraw: player1Score === player2Score
+  };
+  
+  if (player1Socket && player1Socket.connected) {
+    console.log('📤 Sending match_ended to player 1:', match.player1SocketId);
+    player1Socket.emit('match_ended', {
+      ...matchResult,
+      myScore: player1Score,
+      opponentScore: player2Score,
+      myPosition: 'player1'
+    });
+  } else {
+    console.log('❌ Player 1 socket not found or disconnected:', match.player1SocketId);
+  }
+  
+  if (player2Socket && player2Socket.connected) {
+    console.log('📤 Sending match_ended to player 2:', match.player2SocketId);
+    player2Socket.emit('match_ended', {
+      ...matchResult,
+      myScore: player2Score,
+      opponentScore: player1Score,
+      myPosition: 'player2'
+    });
+  } else {
+    console.log('❌ Player 2 socket not found or disconnected:', match.player2SocketId);
+  }
+  
+  // Clean up the match
+  activeMatches.delete(matchId);
+  console.log(`🗑️ Match ${matchId} cleaned up`);
+}
 
 // Start HTTP server
 const PORT = process.env.PORT || 3001;

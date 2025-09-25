@@ -10,6 +10,7 @@ interface Notification {
   month: number;
   applyLastDate: string;
   applyLink: string;
+  logoUrl?: string;
 }
 
 export default function NotificationDetailsPage({ params }: { params: { id: string } }) {
@@ -65,7 +66,20 @@ export default function NotificationDetailsPage({ params }: { params: { id: stri
       </div>
 
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <h1 className="text-3xl font-bold mb-4">{notification.title}</h1>
+        <div className="flex items-start space-x-6 mb-6">
+          {notification.logoUrl && (
+            <div className="flex-shrink-0">
+              <img
+                src={notification.logoUrl}
+                alt={`${notification.title} logo`}
+                className="w-24 h-24 object-contain rounded-lg border border-gray-200 bg-white p-3"
+              />
+            </div>
+          )}
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold mb-4">{notification.title}</h1>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-gray-50 p-4 rounded">

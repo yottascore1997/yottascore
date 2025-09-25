@@ -133,7 +133,7 @@ model User {
   createdQuizzes  GroupQuiz[]
   quizAttempts    GroupQuizAttempt[]
   createdPolls    GroupPoll[]
-  pollVotes       GroupPollVote[]
+  groupPollVotes  GroupPollVote[]
   
   // KYC Documents
   kycDocuments   KYCDocument[]
@@ -178,6 +178,10 @@ model User {
   // Referral Relations
   referrerReferrals Referral[] @relation("ReferrerReferrals")
   referredUserReferrals Referral[] @relation("ReferredUserReferrals")
+  
+  // Poll and Question Relations
+  pollVotes PollVote[]
+  questionAnswers QuestionAnswer[]
   
   // Spy Game - Commented out for now
   // spyGamePlayers SpyGamePlayer[]
@@ -324,6 +328,7 @@ model GovtExamNotification {
   month         Int
   applyLastDate DateTime
   applyLink     String
+  logoUrl       String?  // URL for exam logo/image
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -403,6 +408,18 @@ model Post {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
+  // Post Type
+  postType    PostType  @default(TEXT) // TEXT, POLL, QUESTION
+  
+  // Poll specific fields
+  pollOptions Json?     // Array of poll options
+  pollEndTime DateTime? // When poll ends
+  allowMultipleVotes Boolean @default(false) // Allow multiple option voting
+  
+  // Question specific fields
+  questionType QuestionType? // MCQ, TRUE_FALSE, OPEN_ENDED
+  questionOptions Json? // Array of options for MCQ questions
+  
   // Relations
   author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId    String
@@ -411,6 +428,8 @@ model Post {
   likes       Like[]
   comments    Comment[]
   savedBy     SavedPost[]
+  pollVotes   PollVote[]
+  questionAnswers QuestionAnswer[]
   
   // Tags
   taggedUsers Json?     // Array of tagged user IDs
@@ -1433,4 +1452,40 @@ enum PostStatus {
   APPROVED
   REJECTED
   FLAGGED
+}
+
+enum PostType {
+  TEXT
+  POLL
+  QUESTION
+}
+
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+  OPEN_ENDED
+}
+
+model PollVote {
+  id        String    @id @default(cuid())
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  optionIndex Int     // Which option user voted for (0, 1, 2, etc.)
+  createdAt DateTime  @default(now())
+
+  @@unique([postId, userId]) // One vote per user per poll
+}
+
+model QuestionAnswer {
+  id        String    @id @default(cuid())
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  answer    String    @db.Text // User's answer
+  createdAt DateTime  @default(now())
+
+  @@unique([postId, userId]) // One answer per user per question
 }

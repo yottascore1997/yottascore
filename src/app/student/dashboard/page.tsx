@@ -11,6 +11,7 @@ interface Quiz {
   id: string
   title: string
   description: string
+  imageUrl?: string
   startTime: string
   duration: number
   spots: number
@@ -119,11 +120,22 @@ function BattleQuizList() {
                 
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="font-bold text-lg text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
-                        {quiz.title}
-                      </h3>
-                      <p className="text-gray-600 mb-3 line-clamp-2">{quiz.description}</p>
+                    <div className="flex items-start space-x-4 flex-1">
+                      {quiz.imageUrl && (
+                        <div className="flex-shrink-0">
+                          <img
+                            src={quiz.imageUrl}
+                            alt={`${quiz.title} logo`}
+                            className="w-16 h-16 object-contain rounded-lg border border-gray-200 bg-white p-2"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
+                          {quiz.title}
+                        </h3>
+                        <p className="text-gray-600 mb-3 line-clamp-2">{quiz.description}</p>
+                      </div>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                       isExpired 

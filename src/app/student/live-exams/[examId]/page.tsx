@@ -10,6 +10,7 @@ interface Exam {
   id: string;
   title: string;
   description: string;
+  imageUrl?: string;
   startTime: string;
   endTime?: string;
   duration: number;
@@ -317,7 +318,20 @@ export default function LiveExamDetailPage() {
   if (questions.length > 0 && !(attempt && attempt.completedAt)) {
     return (
       <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-4">{exam.title}</h1>
+        <div className="flex items-start space-x-4 mb-4">
+          {exam.imageUrl && (
+            <div className="flex-shrink-0">
+              <img
+                src={exam.imageUrl}
+                alt={`${exam.title} logo`}
+                className="w-16 h-16 object-contain rounded-lg border border-gray-200 bg-white p-2"
+              />
+            </div>
+          )}
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold">{exam.title}</h1>
+          </div>
+        </div>
         <div className="mb-6">Exam Started!</div>
         <div className="space-y-6">
           {questions.map((q, idx) => (

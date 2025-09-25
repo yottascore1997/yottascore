@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-// Use the current window location for the socket URL
+// Use the standalone socket server URL
 const SOCKET_URL = typeof window !== 'undefined' 
   ? 'http://localhost:3001'
   : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';

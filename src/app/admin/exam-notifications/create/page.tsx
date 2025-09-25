@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, FileText, Globe, CalendarDays, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Calendar, FileText, Globe, CalendarDays, AlertCircle, CheckCircle2, Image } from "lucide-react";
 
 export default function CreateExamNotificationPage() {
   const router = useRouter();
@@ -17,6 +17,8 @@ export default function CreateExamNotificationPage() {
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [applyLastDate, setApplyLastDate] = useState("");
   const [applyLink, setApplyLink] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   const months = [
@@ -37,19 +39,45 @@ export default function CreateExamNotificationPage() {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("year", year.toString());
+      formData.append("month", month.toString());
+      formData.append("applyLastDate", applyLastDate);
+      formData.append("applyLink", applyLink);
+      
+      if (logoFile) {
+        formData.append("logo", logoFile);
+      }
+      
       const res = await fetch("/api/admin/exam-notifications", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title, description, year, month, applyLastDate, applyLink }),
+        body: formData,
       });
+      
       if (res.ok) {
         router.push("/admin/exam-notifications");
       } else {
@@ -195,6 +223,38 @@ export default function CreateExamNotificationPage() {
                   className="h-12 text-base border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
+              </div>
+
+              {/* Logo Upload Field */}
+              <div className="space-y-2">
+                <Label htmlFor="logo" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Image className="w-4 h-4 text-blue-600" />
+                  Exam Logo (Optional)
+                </Label>
+                <div className="space-y-4">
+                  <Input
+                    id="logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                    className="h-12 text-base border-gray-200 focus:border-blue-500 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {logoPreview && (
+                    <div className="mt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+                      <div className="inline-block p-2 border-2 border-gray-200 rounded-lg bg-gray-50">
+                        <img
+                          src={logoPreview}
+                          alt="Logo preview"
+                          className="h-20 w-20 object-contain rounded"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Upload a logo or image to help students identify the exam type. Recommended size: 200x200px or similar.
+                </p>
               </div>
 
               {/* Action Buttons */}

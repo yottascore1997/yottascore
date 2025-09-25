@@ -8,6 +8,7 @@ interface Notification {
   year: number;
   month: number;
   applyLastDate: string;
+  logoUrl?: string;
 }
 
 export default function AdminExamNotificationsPage() {
@@ -201,17 +202,28 @@ export default function AdminExamNotificationsPage() {
                   
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
-                          {notification.title}
-                        </h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <span className="flex items-center">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {notification.year} - {notification.month}
-                          </span>
+                      <div className="flex items-start space-x-4 flex-1">
+                        {notification.logoUrl && (
+                          <div className="flex-shrink-0">
+                            <img
+                              src={notification.logoUrl}
+                              alt={`${notification.title} logo`}
+                              className="w-16 h-16 object-contain rounded-lg border border-gray-200 bg-white p-2"
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <h3 className="font-bold text-lg text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
+                            {notification.title}
+                          </h3>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <span className="flex items-center">
+                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {notification.year} - {notification.month}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${

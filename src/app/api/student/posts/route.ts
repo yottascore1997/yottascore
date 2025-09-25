@@ -51,8 +51,18 @@ export async function GET(req: NextRequest) {
         _count: {
           select: {
             likes: true,
-            comments: true
+            comments: true,
+            pollVotes: true,
+            questionAnswers: true
           }
+        },
+        pollVotes: {
+          where: { userId: decoded.userId },
+          select: { optionIndex: true }
+        },
+        questionAnswers: {
+          where: { userId: decoded.userId },
+          select: { answer: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -104,10 +114,43 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     console.log('Request body:', body) // Debug log
-    const { content, imageUrl, videoUrl, hashtags, taggedUsers, isPrivate } = body
+    const { 
+      content, 
+      imageUrl, 
+      videoUrl, 
+      hashtags, 
+      taggedUsers, 
+      isPrivate,
+      postType = 'TEXT',
+      pollOptions,
+      pollEndTime,
+      allowMultipleVotes = false,
+      questionType,
+      questionOptions
+    } = body
 
     if (!content) {
       return new NextResponse('Content is required', { status: 400 })
+    }
+
+    // Validate poll data
+    if (postType === 'POLL') {
+      if (!pollOptions || !Array.isArray(pollOptions) || pollOptions.length < 2) {
+        return new NextResponse('Poll must have at least 2 options', { status: 400 })
+      }
+      if (pollOptions.length > 10) {
+        return new NextResponse('Poll can have maximum 10 options', { status: 400 })
+      }
+    }
+
+    // Validate question data
+    if (postType === 'QUESTION') {
+      if (!questionType) {
+        return new NextResponse('Question type is required', { status: 400 })
+      }
+      if (questionType === 'MCQ' && (!questionOptions || !Array.isArray(questionOptions) || questionOptions.length < 2)) {
+        return new NextResponse('MCQ question must have at least 2 options', { status: 400 })
+      }
     }
 
     console.log('Creating post with data:', {
@@ -117,6 +160,12 @@ export async function POST(req: NextRequest) {
       hashtags: hashtags || [],
       taggedUsers: taggedUsers || [],
       isPrivate: isPrivate || false,
+      postType,
+      pollOptions,
+      pollEndTime,
+      allowMultipleVotes,
+      questionType,
+      questionOptions,
       status: 'PENDING',
       authorId: decoded.userId
     }) // Debug log
@@ -130,6 +179,12 @@ export async function POST(req: NextRequest) {
         hashtags: hashtags || [],
         taggedUsers: taggedUsers || [],
         isPrivate: isPrivate || false,
+        postType,
+        pollOptions: pollOptions || null,
+        pollEndTime: pollEndTime ? new Date(pollEndTime) : null,
+        allowMultipleVotes,
+        questionType: questionType || null,
+        questionOptions: questionOptions || null,
         status: 'PENDING', // All new posts start as pending
         authorId: decoded.userId
       },

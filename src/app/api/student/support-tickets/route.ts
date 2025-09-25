@@ -13,21 +13,30 @@ function generateTicketId(): string {
 // GET - Fetch user's support tickets
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 [SUPPORT_TICKETS_GET] Starting request');
+    
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
     if (!token) {
+      console.log('❌ [SUPPORT_TICKETS_GET] No token provided');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log('🔑 [SUPPORT_TICKETS_GET] Token found, verifying...');
     const user = await verifyToken(token);
     if (!user) {
+      console.log('❌ [SUPPORT_TICKETS_GET] Invalid token');
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
+
+    console.log('✅ [SUPPORT_TICKETS_GET] User verified:', { userId: user.userId, role: user.role });
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
+
+    console.log('📋 [SUPPORT_TICKETS_GET] Query params:', { status, page, limit, skip });
 
     let whereClause: any = {
       userId: user.userId,
@@ -36,6 +45,9 @@ export async function GET(request: NextRequest) {
     if (status && status !== 'ALL') {
       whereClause.status = status;
     }
+
+    console.log('🔍 [SUPPORT_TICKETS_GET] Where clause:', whereClause);
+    console.log('📊 [SUPPORT_TICKETS_GET] Fetching tickets from database...');
 
     const tickets = await prisma.supportTicket.findMany({
       where: whereClause,
@@ -47,13 +59,13 @@ export async function GET(request: NextRequest) {
             email: true,
           },
         },
-        assignedTo: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        // assignedTo: {
+        //   select: {
+        //     id: true,
+        //     name: true,
+        //     email: true,
+        //   },
+        // },
         replies: {
           orderBy: {
             createdAt: 'asc',
@@ -81,9 +93,12 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    const total = await prisma.supportTicket.count({ where: whereClause });
+    console.log('✅ [SUPPORT_TICKETS_GET] Tickets fetched successfully:', tickets.length);
 
-    return NextResponse.json({ 
+    const total = await prisma.supportTicket.count({ where: whereClause });
+    console.log('📊 [SUPPORT_TICKETS_GET] Total tickets count:', total);
+
+    const response = { 
       tickets,
       pagination: {
         page,
@@ -91,10 +106,26 @@ export async function GET(request: NextRequest) {
         total,
         pages: Math.ceil(total / limit),
       },
-    });
+    };
+
+    console.log('🎉 [SUPPORT_TICKETS_GET] Response prepared successfully');
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching support tickets:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('❌ [SUPPORT_TICKETS_GET] Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'Unknown'
+    });
+    
+    // Check if it's a Prisma error
+    if (error && typeof error === 'object' && 'code' in error) {
+      console.error('🔍 [SUPPORT_TICKETS_GET] Prisma error code:', (error as any).code);
+    }
+    
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    }, { status: 500 });
   }
 }
 
@@ -162,14 +193,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Send notification
-    if (ticket.user.email) {
-      const notification = createTicketCreatedNotification(
-        ticket.user.email,
-        ticket.ticketId,
-        ticket.title
-      );
-      await sendSupportNotification(notification);
+    // Send notification (with error handling)
+    try {
+      if (ticket.user.email) {
+        const notification = createTicketCreatedNotification(
+          ticket.user.email,
+          ticket.ticketId,
+          ticket.title
+        );
+        await sendSupportNotification(notification);
+        console.log('✅ [SUPPORT_TICKETS_POST] Notification sent successfully');
+      }
+    } catch (notificationError) {
+      console.error('⚠️ [SUPPORT_TICKETS_POST] Notification failed (non-critical):', notificationError);
+      // Don't fail the entire request if notification fails
     }
 
     return NextResponse.json({ 

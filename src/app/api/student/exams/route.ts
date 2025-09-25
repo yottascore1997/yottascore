@@ -75,6 +75,12 @@ export async function GET(req: Request) {
     })
 
     console.log(`Found ${exams.length} available exams`)
+    console.log('Sample exam data:', exams.length > 0 ? {
+      id: exams[0].id,
+      title: exams[0].title,
+      imageUrl: exams[0].imageUrl,
+      hasImageUrl: !!exams[0].imageUrl
+    } : 'No exams found')
     return NextResponse.json(exams)
   } catch (error) {
     console.error('[STUDENT_EXAMS_GET] Detailed error:', error)

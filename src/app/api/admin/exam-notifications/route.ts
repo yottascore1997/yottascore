@@ -45,10 +45,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    console.log("Received body:", body); // Debug log
+    // Handle FormData for file upload
+    const formData = await req.formData();
+    console.log("Received form data:", Object.fromEntries(formData.entries())); // Debug log
 
-    const { title, description, year, month, applyLastDate, applyLink } = body;
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const year = formData.get("year") as string;
+    const month = formData.get("month") as string;
+    const applyLastDate = formData.get("applyLastDate") as string;
+    const applyLink = formData.get("applyLink") as string;
+    const logoFile = formData.get("logo") as File | null;
 
     // Validate required fields
     if (!title || !description || !year || !month || !applyLastDate || !applyLink) {
@@ -60,18 +67,55 @@ export async function POST(req: Request) {
     }
 
     // Validate year and month
-    if (year < 2000 || year > 2100) {
+    if (parseInt(year) < 2000 || parseInt(year) > 2100) {
       return NextResponse.json(
         { error: "Invalid year" },
         { status: 400 }
       );
     }
 
-    if (month < 1 || month > 12) {
+    if (parseInt(month) < 1 || parseInt(month) > 12) {
       return NextResponse.json(
         { error: "Invalid month" },
         { status: 400 }
       );
+    }
+
+    // Handle logo upload
+    let logoUrl = null;
+    if (logoFile && logoFile.size > 0) {
+      try {
+        // Create a unique filename
+        const timestamp = Date.now();
+        const fileExtension = logoFile.name.split('.').pop();
+        const fileName = `exam-logo-${timestamp}.${fileExtension}`;
+        
+        // Convert file to buffer
+        const bytes = await logoFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        
+        // Save file to public/uploads directory
+        const fs = require('fs');
+        const path = require('path');
+        
+        const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        
+        const filePath = path.join(uploadDir, fileName);
+        fs.writeFileSync(filePath, buffer);
+        
+        // Set the URL for the uploaded file
+        logoUrl = `/uploads/${fileName}`;
+        console.log("Logo uploaded successfully:", logoUrl);
+      } catch (error) {
+        console.error("Error uploading logo:", error);
+        return NextResponse.json(
+          { error: "Failed to upload logo" },
+          { status: 500 }
+        );
+      }
     }
 
     // Create notification
@@ -83,6 +127,7 @@ export async function POST(req: Request) {
         month: parseInt(month),
         applyLastDate: new Date(applyLastDate),
         applyLink,
+        logoUrl,
       },
     });
 

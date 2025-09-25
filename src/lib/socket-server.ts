@@ -297,6 +297,82 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
         }
       });
 
+      // Battle Quiz System Events
+      socket.on('get_match_status', async (data: { matchId: string }) => {
+        console.log('🔍 get_match_status received:', data);
+        // For now, just emit match_started to simulate a match
+        socket.emit('match_started', {
+          matchId: data.matchId,
+          totalQuestions: 5,
+          timePerQuestion: 10
+        });
+      });
+
+      socket.on('answer_question', async (data: { 
+        matchId: string; 
+        userId: string; 
+        questionIndex: number; 
+        answer: number; 
+        timeSpent: number 
+      }) => {
+        console.log('📝 answer_question received:', data);
+        
+        // Find opponent in the same match
+        const opponentId = matches[socket.id];
+        if (opponentId) {
+          // Notify opponent that this player answered
+          io.to(opponentId).emit('opponent_answered', {
+            questionIndex: data.questionIndex,
+            answer: data.answer
+          });
+        }
+
+        // Check if this is the last question (question 4 = 5th question, 0-indexed)
+        if (data.questionIndex === 4) {
+          // This is the last question, end the match
+          setTimeout(() => {
+            const finalData = {
+              matchId: data.matchId,
+              player1Score: Math.floor(Math.random() * 5) + 1, // Random score for demo
+              player2Score: Math.floor(Math.random() * 5) + 1,
+              winner: data.userId, // For demo, current user wins
+              isDraw: false,
+              myScore: Math.floor(Math.random() * 5) + 1,
+              opponentScore: Math.floor(Math.random() * 5) + 1,
+              myPosition: 'player1' as const
+            };
+            
+            console.log('🏁 Emitting match_ended:', finalData);
+            socket.emit('match_ended', finalData);
+            
+            if (opponentId) {
+              io.to(opponentId).emit('match_ended', {
+                ...finalData,
+                myScore: finalData.opponentScore,
+                opponentScore: finalData.myScore,
+                winner: opponentId,
+                myPosition: 'player2' as const
+              });
+            }
+          }, 2000); // 2 second delay before showing results
+        } else {
+          // Not the last question, move to next question
+          setTimeout(() => {
+            socket.emit('next_question', {
+              questionIndex: data.questionIndex + 1,
+              timeLeft: 10
+            });
+            
+            if (opponentId) {
+              io.to(opponentId).emit('next_question', {
+                questionIndex: data.questionIndex + 1,
+                timeLeft: 10
+              });
+            }
+          }, 3000); // 3 second delay before next question
+        }
+      });
+
       socket.on('disconnect', () => {
         console.log('Client disconnected:', socket.id);
         

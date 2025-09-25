@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     // For now, just return an empty array to test if the basic API works
     const allAttempts = []
 
-    // Try to fetch live exam attempts with minimal data
+    // Try to fetch live exam attempts with detailed data
     try {
       const liveAttempts = await prisma.liveExamParticipant.findMany({
         where: {
@@ -33,10 +33,18 @@ export async function GET(req: Request) {
           id: true,
           examId: true,
           score: true,
+          answers: true,
+          startedAt: true,
           completedAt: true,
           exam: {
             select: {
-              title: true
+              title: true,
+              duration: true,
+              _count: {
+                select: {
+                  questions: true
+                }
+              }
             }
           }
         }
@@ -44,25 +52,35 @@ export async function GET(req: Request) {
 
       console.log('[MY_EXAMS_GET] Live attempts found:', liveAttempts.length)
 
-      const transformedLiveAttempts = liveAttempts.map((attempt: any) => ({
-        id: attempt.id,
-        examId: attempt.examId,
-        examName: attempt.exam.title,
-        examType: 'LIVE' as const,
-        score: attempt.score || 0,
-        totalQuestions: 0,
-        correctAnswers: 0,
-        timeTaken: 0,
-        completedAt: attempt.completedAt?.toISOString(),
-        status: 'COMPLETED' as const
-      }))
+      const transformedLiveAttempts = liveAttempts.map((attempt: any) => {
+        const totalQuestions = attempt.exam._count.questions;
+        const correctAnswers = attempt.score ? Math.floor(attempt.score / 10) : 0; // Assuming 10 points per correct answer
+        const timeTaken = attempt.completedAt && attempt.startedAt 
+          ? Math.floor((new Date(attempt.completedAt).getTime() - new Date(attempt.startedAt).getTime()) / 1000 / 60) // in minutes
+          : 0;
+        const accuracy = totalQuestions > 0 ? Math.min(100, Math.round((correctAnswers / totalQuestions) * 100)) : 0;
+
+        return {
+          id: attempt.id,
+          examId: attempt.examId,
+          examName: attempt.exam.title,
+          examType: 'LIVE' as const,
+          score: attempt.score || 0,
+          totalQuestions,
+          correctAnswers,
+          timeTaken,
+          accuracy,
+          completedAt: attempt.completedAt?.toISOString(),
+          status: 'COMPLETED' as const
+        };
+      })
 
       allAttempts.push(...transformedLiveAttempts)
     } catch (error) {
       console.error('[MY_EXAMS_GET] Error fetching live attempts:', error)
     }
 
-    // Try to fetch practice exam attempts with minimal data
+    // Try to fetch practice exam attempts with detailed data
     try {
       const practiceAttempts = await prisma.practiceExamParticipant.findMany({
         where: {
@@ -72,10 +90,18 @@ export async function GET(req: Request) {
           id: true,
           examId: true,
           score: true,
+          answers: true,
+          startedAt: true,
           completedAt: true,
           exam: {
             select: {
-              title: true
+              title: true,
+              duration: true,
+              _count: {
+                select: {
+                  questions: true
+                }
+              }
             }
           }
         }
@@ -83,25 +109,35 @@ export async function GET(req: Request) {
 
       console.log('[MY_EXAMS_GET] Practice attempts found:', practiceAttempts.length)
 
-      const transformedPracticeAttempts = practiceAttempts.map((attempt: any) => ({
-        id: attempt.id,
-        examId: attempt.examId,
-        examName: attempt.exam.title,
-        examType: 'PRACTICE' as const,
-        score: attempt.score || 0,
-        totalQuestions: 0,
-        correctAnswers: 0,
-        timeTaken: 0,
-        completedAt: attempt.completedAt?.toISOString(),
-        status: 'COMPLETED' as const
-      }))
+      const transformedPracticeAttempts = practiceAttempts.map((attempt: any) => {
+        const totalQuestions = attempt.exam._count.questions;
+        const correctAnswers = attempt.score ? Math.floor(attempt.score / 10) : 0; // Assuming 10 points per correct answer
+        const timeTaken = attempt.completedAt && attempt.startedAt 
+          ? Math.floor((new Date(attempt.completedAt).getTime() - new Date(attempt.startedAt).getTime()) / 1000 / 60) // in minutes
+          : 0;
+        const accuracy = totalQuestions > 0 ? Math.min(100, Math.round((correctAnswers / totalQuestions) * 100)) : 0;
+
+        return {
+          id: attempt.id,
+          examId: attempt.examId,
+          examName: attempt.exam.title,
+          examType: 'PRACTICE' as const,
+          score: attempt.score || 0,
+          totalQuestions,
+          correctAnswers,
+          timeTaken,
+          accuracy,
+          completedAt: attempt.completedAt?.toISOString(),
+          status: 'COMPLETED' as const
+        };
+      })
 
       allAttempts.push(...transformedPracticeAttempts)
     } catch (error) {
       console.error('[MY_EXAMS_GET] Error fetching practice attempts:', error)
     }
 
-    // Try to fetch battle quiz attempts with minimal data
+    // Try to fetch battle quiz attempts with detailed data
     try {
       const battleAttempts = await prisma.battleQuizParticipant.findMany({
         where: {
@@ -114,7 +150,13 @@ export async function GET(req: Request) {
           joinedAt: true,
           quiz: {
             select: {
-              title: true
+              title: true,
+              duration: true,
+              _count: {
+                select: {
+                  questions: true
+                }
+              }
             }
           }
         }
@@ -122,18 +164,26 @@ export async function GET(req: Request) {
 
       console.log('[MY_EXAMS_GET] Battle attempts found:', battleAttempts.length)
 
-      const transformedBattleAttempts = battleAttempts.map((attempt: any) => ({
-        id: attempt.id,
-        examId: attempt.quizId,
-        examName: attempt.quiz.title,
-        examType: 'BATTLE' as const,
-        score: attempt.score || 0,
-        totalQuestions: 0,
-        correctAnswers: 0,
-        timeTaken: 0,
-        completedAt: attempt.joinedAt.toISOString(),
-        status: 'COMPLETED' as const
-      }))
+      const transformedBattleAttempts = battleAttempts.map((attempt: any) => {
+        const totalQuestions = attempt.quiz._count.questions;
+        const correctAnswers = attempt.score ? Math.floor(attempt.score / 10) : 0; // Assuming 10 points per correct answer
+        const timeTaken = attempt.quiz.duration || 0; // Battle quizzes have fixed duration
+        const accuracy = totalQuestions > 0 ? Math.min(100, Math.round((correctAnswers / totalQuestions) * 100)) : 0;
+
+        return {
+          id: attempt.id,
+          examId: attempt.quizId,
+          examName: attempt.quiz.title,
+          examType: 'BATTLE' as const,
+          score: attempt.score || 0,
+          totalQuestions,
+          correctAnswers,
+          timeTaken,
+          accuracy,
+          completedAt: attempt.joinedAt.toISOString(),
+          status: 'COMPLETED' as const
+        };
+      })
 
       allAttempts.push(...transformedBattleAttempts)
     } catch (error) {
@@ -141,6 +191,20 @@ export async function GET(req: Request) {
     }
 
     console.log('[MY_EXAMS_GET] Total attempts found:', allAttempts.length)
+    
+    // Log sample data for debugging
+    if (allAttempts.length > 0) {
+      console.log('[MY_EXAMS_GET] Sample attempt data:', {
+        examName: allAttempts[0].examName,
+        examType: allAttempts[0].examType,
+        score: allAttempts[0].score,
+        totalQuestions: allAttempts[0].totalQuestions,
+        correctAnswers: allAttempts[0].correctAnswers,
+        timeTaken: allAttempts[0].timeTaken,
+        accuracy: allAttempts[0].accuracy
+      });
+    }
+    
     return NextResponse.json(allAttempts)
 
   } catch (error) {

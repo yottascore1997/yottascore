@@ -153,6 +153,12 @@ export default function LiveExams() {
     });
   };
 
+  // Filter out expired exams on client side as well
+  const activeExams = exams.filter(exam => {
+    const endTime = new Date(exam.endTime || exam.startTime).getTime();
+    return endTime > now;
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
@@ -210,8 +216,23 @@ export default function LiveExams() {
       {/* Main Content */}
       <div className="relative z-10 p-6 pb-12">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {exams.map((exam) => {
+          {activeExams.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Clock className="w-12 h-12 text-gray-400" />
+              </div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-2">No Live Exams Available</h3>
+              <p className="text-gray-600 mb-6">There are currently no active live exams. Check back later for new competitions!</p>
+              <Button 
+                onClick={() => window.location.reload()}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              >
+                Refresh
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {activeExams.map((exam) => {
               const totalSpots = exam.totalSpots || exam.spots || 0;
               const spotsLeft = exam.spotsLeft || 0;
               const percent = totalSpots ? (spotsLeft / totalSpots) * 100 : 0;
@@ -352,19 +373,8 @@ export default function LiveExams() {
                 </div>
               );
             })}
-
-            {exams.length === 0 && (
-              <div className="col-span-full text-center py-16">
-                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-12 max-w-md mx-auto">
-                  <div className="w-20 h-20 bg-gradient-to-r from-gray-400 to-gray-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Award className="w-10 h-10 text-white" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Live Exams</h3>
-                  <p className="text-gray-600">No live exams are available at the moment. Check back later!</p>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 

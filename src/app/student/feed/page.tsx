@@ -36,8 +36,18 @@ interface Post {
   _count: {
     likes: number
     comments: number
+    pollVotes: number
+    questionAnswers: number
   }
   isLiked: boolean
+  postType: 'TEXT' | 'POLL' | 'QUESTION'
+  pollOptions?: string[]
+  pollEndTime?: string
+  allowMultipleVotes?: boolean
+  questionType?: 'MCQ' | 'TRUE_FALSE' | 'OPEN_ENDED'
+  questionOptions?: string[]
+  pollVotes?: { optionIndex: number }[]
+  questionAnswers?: { answer: string }[]
 }
 
 export default function FeedPage() {
@@ -46,6 +56,7 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showCreatePost, setShowCreatePost] = useState(false)
+  const [pollResults, setPollResults] = useState<{[postId: string]: {[optionIndex: number]: number}}>({})
   const [showCreateStory, setShowCreateStory] = useState(false)
   const [selectedStoryGroup, setSelectedStoryGroup] = useState<any>(null)
   const [storyRefreshTrigger, setStoryRefreshTrigger] = useState(0)
@@ -54,7 +65,13 @@ export default function FeedPage() {
     imageUrl: '',
     videoUrl: '',
     hashtags: '',
-    isPrivate: false
+    isPrivate: false,
+    postType: 'TEXT' as 'TEXT' | 'POLL' | 'QUESTION',
+    pollOptions: [] as string[],
+    pollEndTime: '',
+    allowMultipleVotes: false,
+    questionType: 'OPEN_ENDED' as 'MCQ' | 'TRUE_FALSE' | 'OPEN_ENDED',
+    questionOptions: [] as string[]
   })
   const [uploading, setUploading] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
@@ -71,6 +88,15 @@ export default function FeedPage() {
     fetchPosts()
     fetchPendingPosts()
   }, [])
+
+  // Fetch poll results when posts change
+  useEffect(() => {
+    posts.forEach(post => {
+      if (post.postType === 'POLL') {
+        fetchPollResults(post.id)
+      }
+    })
+  }, [posts])
 
   const fetchPosts = async () => {
     try {
@@ -174,7 +200,13 @@ export default function FeedPage() {
       imageUrl: '',
       videoUrl: '',
       hashtags: '',
-      isPrivate: false
+      isPrivate: false,
+      postType: 'TEXT',
+      pollOptions: [],
+      pollEndTime: '',
+      allowMultipleVotes: false,
+      questionType: 'OPEN_ENDED',
+      questionOptions: []
     })
     setSelectedImage(null)
     setSelectedVideo(null)
@@ -224,7 +256,13 @@ export default function FeedPage() {
           imageUrl: imageUrl || undefined,
           videoUrl: videoUrl || undefined,
           hashtags,
-          isPrivate: newPost.isPrivate
+          isPrivate: newPost.isPrivate,
+          postType: newPost.postType,
+          pollOptions: newPost.pollOptions.length > 0 ? newPost.pollOptions : undefined,
+          pollEndTime: newPost.pollEndTime || undefined,
+          allowMultipleVotes: newPost.allowMultipleVotes,
+          questionType: newPost.questionType,
+          questionOptions: newPost.questionOptions.length > 0 ? newPost.questionOptions : undefined
         })
       })
 
@@ -277,6 +315,104 @@ export default function FeedPage() {
       }
     } catch (error) {
       console.error('Failed to toggle like:', error)
+    }
+  }
+
+  const fetchPollResults = async (postId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(`/api/student/posts/${postId}/vote`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const results: {[optionIndex: number]: number} = {}
+        data.results.forEach((result: any) => {
+          results[result.optionIndex] = result._count.optionIndex
+        })
+        setPollResults(prev => ({
+          ...prev,
+          [postId]: results
+        }))
+      }
+    } catch (error) {
+      console.error('Error fetching poll results:', error)
+    }
+  }
+
+  const handlePollVote = async (postId: string, optionIndex: number) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(`/api/student/posts/${postId}/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ optionIndex })
+      })
+
+      if (response.ok) {
+        // Update the specific post's poll data immediately
+        setPosts(prevPosts => 
+          prevPosts.map(post => {
+            if (post.id === postId) {
+              return {
+                ...post,
+                pollVotes: [{ optionIndex }],
+                _count: {
+                  ...post._count,
+                  pollVotes: (post._count?.pollVotes || 0) + 1
+                }
+              }
+            }
+            return post
+          })
+        )
+        // Fetch updated poll results
+        fetchPollResults(postId)
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to vote')
+      }
+    } catch (error) {
+      console.error('Error voting on poll:', error)
+      alert('Failed to vote')
+    }
+  }
+
+  const handleQuestionAnswer = async (postId: string, answer: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(`/api/student/posts/${postId}/answer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ answer })
+      })
+
+      if (response.ok) {
+        // Refresh posts to get updated answers
+        fetchPosts()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to submit answer')
+      }
+    } catch (error) {
+      console.error('Error answering question:', error)
+      alert('Failed to submit answer')
     }
   }
 
@@ -545,6 +681,137 @@ export default function FeedPage() {
                       </div>
                     )}
 
+                    {/* Poll Display */}
+                    {post.postType === 'POLL' && post.pollOptions && (
+                      <div className="bg-gray-50 rounded-lg p-4 mb-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-lg">📊</span>
+                          <span className="font-semibold text-gray-900">Poll</span>
+                          {post.pollEndTime && (
+                            <span className="text-sm text-gray-500">
+                              Ends {format(new Date(post.pollEndTime), 'MMM d, yyyy')}
+                            </span>
+                          )}
+                          {post.pollEndTime && new Date(post.pollEndTime) < new Date() && (
+                            <span className="text-sm text-red-500 font-medium">
+                              (Ended)
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          {post.pollOptions.map((option, index) => {
+                            const isVoted = post.pollVotes && post.pollVotes.length > 0 && post.pollVotes[0].optionIndex === index;
+                            const optionVoteCount = pollResults[post.id]?.[index] || 0;
+                            const isPollEnded = post.pollEndTime ? new Date(post.pollEndTime) < new Date() : false;
+                            
+                            return (
+                              <button
+                                key={index}
+                                onClick={() => handlePollVote(post.id, index)}
+                                disabled={isVoted || isPollEnded}
+                                className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                  isVoted 
+                                    ? 'bg-blue-100 border-blue-300 text-blue-900' 
+                                    : isPollEnded
+                                    ? 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span>{option}</span>
+                                  <div className="flex items-center gap-2">
+                                    {optionVoteCount > 0 && (
+                                      <span className="text-sm text-gray-500">
+                                        {optionVoteCount} vote{optionVoteCount !== 1 ? 's' : ''}
+                                      </span>
+                                    )}
+                                    {isVoted && <span className="text-blue-600">✓</span>}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="text-sm text-gray-500 mt-2">
+                          Total: {post._count?.pollVotes || 0} vote{(post._count?.pollVotes || 0) !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Question Display */}
+                    {post.postType === 'QUESTION' && (
+                      <div className="bg-yellow-50 rounded-lg p-4 mb-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-lg">❓</span>
+                          <span className="font-semibold text-gray-900">Question</span>
+                          <span className="text-sm text-gray-500">({post.questionType})</span>
+                        </div>
+                        
+                        {post.questionType === 'TRUE_FALSE' && (
+                          <div className="space-y-2">
+                            {['True', 'False'].map((option, index) => {
+                              const isAnswered = post.questionAnswers && post.questionAnswers.length > 0;
+                              return (
+                                <button
+                                  key={index}
+                                  onClick={() => handleQuestionAnswer(post.id, option)}
+                                  disabled={isAnswered}
+                                  className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                    isAnswered 
+                                      ? 'bg-yellow-100 border-yellow-300 text-yellow-900' 
+                                      : 'bg-white border-gray-200 hover:border-yellow-300 hover:bg-yellow-50'
+                                  }`}
+                                >
+                                  {option}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {post.questionType === 'MCQ' && post.questionOptions && (
+                          <div className="space-y-2">
+                            {post.questionOptions.map((option, index) => {
+                              const isAnswered = post.questionAnswers && post.questionAnswers.length > 0;
+                              return (
+                                <button
+                                  key={index}
+                                  onClick={() => handleQuestionAnswer(post.id, option)}
+                                  disabled={isAnswered}
+                                  className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                    isAnswered 
+                                      ? 'bg-yellow-100 border-yellow-300 text-yellow-900' 
+                                      : 'bg-white border-gray-200 hover:border-yellow-300 hover:bg-yellow-50'
+                                  }`}
+                                >
+                                  {option}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {post.questionType === 'OPEN_ENDED' && (
+                          <div className="space-y-2">
+                            <textarea
+                              placeholder="Type your answer here..."
+                              className="w-full p-3 border border-gray-200 rounded-lg resize-none"
+                              rows={3}
+                              onBlur={(e) => {
+                                if (e.target.value.trim()) {
+                                  handleQuestionAnswer(post.id, e.target.value.trim());
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        <div className="text-sm text-gray-500 mt-2">
+                          {post._count.questionAnswers} answer{post._count.questionAnswers !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex items-center space-x-4">
                       <button
                         onClick={() => handleLikeToggle(post.id)}
@@ -619,6 +886,214 @@ export default function FeedPage() {
                     placeholder="Add hashtags (e.g., #study #exam)"
                   />
                 </div>
+
+                {/* Post Type Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Post Type</label>
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewPost({ ...newPost, postType: 'TEXT' })}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        newPost.postType === 'TEXT'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      📝 Text
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultEndTime = new Date();
+                        defaultEndTime.setDate(defaultEndTime.getDate() + 7); // 7 days from now
+                        
+                        setNewPost({ 
+                          ...newPost, 
+                          postType: 'POLL',
+                          pollOptions: newPost.pollOptions.length === 0 ? ['', ''] : newPost.pollOptions,
+                          pollEndTime: newPost.pollEndTime || defaultEndTime.toISOString().slice(0, 16)
+                        })
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        newPost.postType === 'POLL'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      📊 Poll
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewPost({ 
+                        ...newPost, 
+                        postType: 'QUESTION',
+                        questionOptions: newPost.questionOptions.length === 0 ? ['', ''] : newPost.questionOptions
+                      })}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        newPost.postType === 'QUESTION'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      ❓ Question
+                    </button>
+                  </div>
+                </div>
+
+                {/* Poll Options */}
+                {newPost.postType === 'POLL' && (
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-gray-700">Poll Options</label>
+                    {newPost.pollOptions.map((option, index) => (
+                      <div key={index} className="flex space-x-2">
+                        <Input
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...newPost.pollOptions];
+                            newOptions[index] = e.target.value;
+                            setNewPost({ ...newPost, pollOptions: newOptions });
+                          }}
+                          placeholder={`Option ${index + 1}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const newOptions = newPost.pollOptions.filter((_, i) => i !== index);
+                            setNewPost({ ...newPost, pollOptions: newOptions });
+                          }}
+                          className="px-3"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        if (newPost.pollOptions.length < 10) {
+                          setNewPost({ ...newPost, pollOptions: [...newPost.pollOptions, ''] });
+                        }
+                      }}
+                      disabled={newPost.pollOptions.length >= 10}
+                      className="w-full"
+                    >
+                      + Add Option
+                    </Button>
+                    
+                    <div className="space-y-2">
+                      <input
+                        type="datetime-local"
+                        value={newPost.pollEndTime || ''}
+                        onChange={(e) => setNewPost({ ...newPost, pollEndTime: e.target.value })}
+                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        min={new Date().toISOString().slice(0, 16)}
+                        placeholder="Set poll end time (optional)"
+                      />
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="allowMultipleVotes"
+                          checked={newPost.allowMultipleVotes}
+                          onChange={(e) => setNewPost({ ...newPost, allowMultipleVotes: e.target.checked })}
+                          className="rounded"
+                        />
+                        <label htmlFor="allowMultipleVotes" className="text-sm text-gray-600">
+                          Allow multiple votes
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Question Options */}
+                {newPost.postType === 'QUESTION' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
+                      <div className="flex space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setNewPost({ ...newPost, questionType: 'OPEN_ENDED' })}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            newPost.questionType === 'OPEN_ENDED'
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                        >
+                          Open Ended
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewPost({ ...newPost, questionType: 'TRUE_FALSE' })}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            newPost.questionType === 'TRUE_FALSE'
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                        >
+                          True/False
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewPost({ ...newPost, questionType: 'MCQ' })}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            newPost.questionType === 'MCQ'
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                        >
+                          MCQ
+                        </button>
+                      </div>
+                    </div>
+
+                    {newPost.questionType === 'MCQ' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Answer Options</label>
+                        {newPost.questionOptions.map((option, index) => (
+                          <div key={index} className="flex space-x-2 mb-2">
+                            <Input
+                              value={option}
+                              onChange={(e) => {
+                                const newOptions = [...newPost.questionOptions];
+                                newOptions[index] = e.target.value;
+                                setNewPost({ ...newPost, questionOptions: newOptions });
+                              }}
+                              placeholder={`Option ${index + 1}`}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                const newOptions = newPost.questionOptions.filter((_, i) => i !== index);
+                                setNewPost({ ...newPost, questionOptions: newOptions });
+                              }}
+                              className="px-3"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            if (newPost.questionOptions.length < 6) {
+                              setNewPost({ ...newPost, questionOptions: [...newPost.questionOptions, ''] });
+                            }
+                          }}
+                          disabled={newPost.questionOptions.length >= 6}
+                          className="w-full"
+                        >
+                          + Add Option
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 
                 <div className="flex space-x-2">
                   <input

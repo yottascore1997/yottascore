@@ -9,16 +9,25 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log('🔍 [SUPPORT_TICKET_GET] Starting request for ticket:', params.id);
+    
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
     if (!token) {
+      console.log('❌ [SUPPORT_TICKET_GET] No token provided');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log('🔑 [SUPPORT_TICKET_GET] Token found, verifying...');
     const user = await verifyToken(token);
     if (!user) {
+      console.log('❌ [SUPPORT_TICKET_GET] Invalid token');
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    console.log('✅ [SUPPORT_TICKET_GET] User verified:', { userId: user.userId, role: user.role });
+
+    console.log('📊 [SUPPORT_TICKET_GET] Fetching ticket from database...');
+    
     const ticket = await prisma.supportTicket.findFirst({
       where: {
         id: params.id,
@@ -32,13 +41,13 @@ export async function GET(
             email: true,
           },
         },
-        assignedTo: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        // assignedTo: {
+        //   select: {
+        //     id: true,
+        //     name: true,
+        //     email: true,
+        //   },
+        // },
         replies: {
           orderBy: {
             createdAt: 'asc',
@@ -59,13 +68,34 @@ export async function GET(
     });
 
     if (!ticket) {
+      console.log('❌ [SUPPORT_TICKET_GET] Ticket not found for user');
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
+    console.log('✅ [SUPPORT_TICKET_GET] Ticket fetched successfully:', {
+      id: ticket.id,
+      title: ticket.title,
+      status: ticket.status,
+      repliesCount: ticket.replies.length
+    });
+
     return NextResponse.json(ticket);
   } catch (error) {
-    console.error('Error fetching support ticket:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('❌ [SUPPORT_TICKET_GET] Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'Unknown'
+    });
+    
+    // Check if it's a Prisma error
+    if (error && typeof error === 'object' && 'code' in error) {
+      console.error('🔍 [SUPPORT_TICKET_GET] Prisma error code:', (error as any).code);
+    }
+    
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    }, { status: 500 });
   }
 }
 
@@ -150,15 +180,21 @@ export async function POST(
       },
     });
 
-    // Send notification to admin
-    if (ticket.user.email) {
-      const notification = createTicketReplyNotification(
-        ticket.user.email,
-        ticket.ticketId,
-        ticket.title,
-        content
-      );
-      await sendSupportNotification(notification);
+    // Send notification to admin (with error handling)
+    try {
+      if (ticket.user.email) {
+        const notification = createTicketReplyNotification(
+          ticket.user.email,
+          ticket.ticketId,
+          ticket.title,
+          content
+        );
+        await sendSupportNotification(notification);
+        console.log('✅ [SUPPORT_TICKET_POST] Notification sent successfully');
+      }
+    } catch (notificationError) {
+      console.error('⚠️ [SUPPORT_TICKET_POST] Notification failed (non-critical):', notificationError);
+      // Don't fail the entire request if notification fails
     }
 
     return NextResponse.json({ 

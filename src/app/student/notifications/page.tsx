@@ -10,6 +10,7 @@ interface Notification {
   month: number;
   applyLastDate: string;
   applyLink: string;
+  logoUrl?: string;
 }
 
 export default function NotificationsPage() {
@@ -60,12 +61,25 @@ export default function NotificationsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {ns.map((n) => (
                 <div key={n.id} className="bg-white rounded shadow p-4 flex flex-col gap-2">
-                  <Link 
-                    href={`/student/notifications/${n.id}`}
-                    className="font-bold text-lg mb-1 hover:text-blue-700 transition"
-                  >
-                    {n.title}
-                  </Link>
+                  <div className="flex items-start space-x-3">
+                    {n.logoUrl && (
+                      <div className="flex-shrink-0">
+                        <img
+                          src={n.logoUrl}
+                          alt={`${n.title} logo`}
+                          className="w-12 h-12 object-contain rounded border border-gray-200 bg-white p-1"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <Link 
+                        href={`/student/notifications/${n.id}`}
+                        className="font-bold text-lg mb-1 hover:text-blue-700 transition block"
+                      >
+                        {n.title}
+                      </Link>
+                    </div>
+                  </div>
                   <div className="text-xs text-gray-600">Apply Last Date: {new Date(n.applyLastDate).toLocaleDateString()}</div>
                   <div className="text-sm text-gray-700 line-clamp-2 mb-2">
                     {n.description}

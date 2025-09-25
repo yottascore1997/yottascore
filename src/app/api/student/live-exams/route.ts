@@ -17,10 +17,16 @@ export const GET = withCORS(async (req: Request) => {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Get all live exams (isLive = true)
+    // Get current time to filter expired exams
+    const now = new Date();
+
+    // Get all live exams (isLive = true) that haven't ended yet
     const liveExams = await prisma.liveExam.findMany({
       where: {
-        isLive: true
+        isLive: true,
+        endTime: {
+          gt: now // Only show exams that haven't ended yet
+        }
       },
       orderBy: {
         startTime: 'asc'
@@ -38,6 +44,14 @@ export const GET = withCORS(async (req: Request) => {
       ...exam,
       attempted: exam.participants.length > 0 && !!exam.participants[0].completedAt
     }));
+
+    console.log(`Found ${liveExams.length} live exams`)
+    console.log('Sample live exam data:', liveExams.length > 0 ? {
+      id: liveExams[0].id,
+      title: liveExams[0].title,
+      imageUrl: liveExams[0].imageUrl,
+      hasImageUrl: !!liveExams[0].imageUrl
+    } : 'No live exams found')
 
     return NextResponse.json(examsWithAttempted);
   } catch (error) {

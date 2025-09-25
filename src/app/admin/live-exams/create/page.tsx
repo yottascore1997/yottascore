@@ -145,17 +145,26 @@ export default function CreateLiveExam() {
     }
 
     try {
+      const requestData = {
+        ...formData,
+        startTime: formData.startTime.toISOString(),
+        endTime: formData.endTime.toISOString(),
+      };
+      
+      console.log('🚀 Sending live exam data:', {
+        title: requestData.title,
+        imageUrl: requestData.imageUrl,
+        hasImageUrl: !!requestData.imageUrl,
+        formDataImageUrl: formData.imageUrl
+      });
+      
       const response = await fetch('/api/admin/live-exams', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          ...formData,
-          startTime: formData.startTime.toISOString(),
-          endTime: formData.endTime.toISOString(),
-        }),
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
@@ -347,9 +356,15 @@ export default function CreateLiveExam() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('📸 Image upload successful:', {
+          url: data.url,
+          fileName: file.name,
+          fileSize: file.size
+        });
         setFormData(prev => ({ ...prev, imageUrl: data.url }));
         setImagePreview(data.url);
         setImageFile(file);
+        console.log('✅ FormData updated with imageUrl:', data.url);
       } else {
         throw new Error('Failed to upload image');
       }
