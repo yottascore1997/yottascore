@@ -215,6 +215,20 @@ class QueueManager {
 
 const queueManager = new QueueManager();
 
+// Helper function to check if a player is in any active match
+function isPlayerInActiveMatch(userId) {
+  return Array.from(activeMatches.values()).some(match => 
+    match.player1Id === userId || match.player2Id === userId
+  );
+}
+
+// Helper function to get active match for a player
+function getActiveMatchForPlayer(userId) {
+  return Array.from(activeMatches.values()).find(match => 
+    match.player1Id === userId || match.player2Id === userId
+  );
+}
+
 // Memory cleanup function
 function cleanupMemory() {
   setInterval(() => {
@@ -990,8 +1004,16 @@ io.on('connection', (socket) => {
   socket.on('private_message', (data) => {
     console.log('📨 Received private_message event:', data);
     const { message } = data;
-    const receiverId = message.receiver.id;
-    const senderId = message.sender.id;
+    
+    // Handle both object and string formats for sender/receiver
+    const receiverId = message.receiver?.id || message.receiverId;
+    const senderId = message.sender?.id || message.senderId;
+    
+    // Validate that we have both IDs
+    if (!receiverId || !senderId) {
+      console.error('❌ Missing sender or receiver ID in private_message event:', { senderId, receiverId, message });
+      return;
+    }
     
     // Create chat room ID for this conversation
     const chatId = [senderId, receiverId].sort().join('-');
@@ -3118,8 +3140,8 @@ async function tryMatchPlayers(quizId) {
     }
     
     // Check if either player is already in an active match
-    const player1InMatch = activeMatches.has(player1.userId);
-    const player2InMatch = activeMatches.has(player2.userId);
+    const player1InMatch = isPlayerInActiveMatch(player1.userId);
+    const player2InMatch = isPlayerInActiveMatch(player2.userId);
     
     if (player1InMatch || player2InMatch) {
       console.log(`⚠️ WARNING: Player already in active match!`);
@@ -3626,6 +3648,91 @@ async function endMatch(matchId) {
   
   console.log(`   - Winner: ${winner || 'Draw'}`);
   
+  // Update wallet for winner (if not a draw)
+  if (winner && player1Score !== player2Score) {
+    const totalPrizePool = (match.entryFee || 10) * 2; // Both players' entry fees
+    const winnerPrize = Math.floor(totalPrizePool * 0.8); // Winner gets 80%
+    const appCommission = totalPrizePool - winnerPrize; // App gets 20%
+    
+    console.log(`💰 Prize distribution:`);
+    console.log(`   - Total Prize Pool: ₹${totalPrizePool} (₹${match.entryFee} × 2 players)`);
+    console.log(`   - Winner Prize (80%): ₹${winnerPrize}`);
+    console.log(`   - App Commission (20%): ₹${appCommission}`);
+    console.log(`   - Example: ₹20 total → Winner gets ₹16, App gets ₹4`);
+    
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Add 80% prize to winner's wallet
+        await tx.user.update({
+          where: { id: winner },
+          data: { wallet: { increment: winnerPrize } }
+        });
+        
+        // Create transaction record for winner (80%)
+        await tx.transaction.create({
+          data: {
+            userId: winner,
+            amount: winnerPrize,
+            type: 'BATTLE_QUIZ_WIN',
+            status: 'COMPLETED'
+          }
+        });
+        
+        // App commission is automatically calculated (20% of total pool)
+        // No need to create separate transaction record for commission
+        // The difference between total pool and winner prize is the app commission
+      });
+      
+      console.log(`✅ Winner ${winner} received ₹${winnerPrize} (80% of ₹${totalPrizePool})`);
+      console.log(`💰 App commission: ₹${appCommission} (20% of ₹${totalPrizePool})`);
+      
+    } catch (error) {
+      console.error('❌ Error updating winner wallet:', error);
+    }
+  } else if (player1Score === player2Score) {
+    console.log(`🤝 Draw - refunding entry fees to both players`);
+    
+    try {
+      const refundAmount = match.entryFee || 10;
+      await prisma.$transaction(async (tx) => {
+        // Refund to player 1
+        await tx.user.update({
+          where: { id: match.player1Id },
+          data: { wallet: { increment: refundAmount } }
+        });
+        
+        // Refund to player 2
+        await tx.user.update({
+          where: { id: match.player2Id },
+          data: { wallet: { increment: refundAmount } }
+        });
+        
+        // Create transaction records for refunds
+        await tx.transaction.createMany({
+          data: [
+            {
+              userId: match.player1Id,
+              amount: refundAmount,
+              type: 'BATTLE_QUIZ_REFUND',
+              status: 'COMPLETED'
+            },
+            {
+              userId: match.player2Id,
+              amount: refundAmount,
+              type: 'BATTLE_QUIZ_REFUND',
+              status: 'COMPLETED'
+            }
+          ]
+        });
+      });
+      
+      console.log(`✅ Both players refunded ₹${refundAmount} each`);
+      
+    } catch (error) {
+      console.error('❌ Error refunding draw match:', error);
+    }
+  }
+  
   // Send match results to both players
   const player1Socket = io.sockets.sockets.get(match.player1SocketId);
   const player2Socket = io.sockets.sockets.get(match.player2SocketId);
@@ -3662,8 +3769,21 @@ async function endMatch(matchId) {
     console.log('❌ Player 2 socket not found or disconnected:', match.player2SocketId);
   }
   
-  // Clean up the match
+  // Clean up the match and remove players from active matches tracking
   activeMatches.delete(matchId);
+  
+  // Check if players are still in any other active matches
+  const player1StillInMatch = isPlayerInActiveMatch(match.player1Id);
+  const player2StillInMatch = isPlayerInActiveMatch(match.player2Id);
+  
+  if (!player1StillInMatch) {
+    console.log(`✅ Player 1 (${match.player1Id}) is now free to join new matches`);
+  }
+  
+  if (!player2StillInMatch) {
+    console.log(`✅ Player 2 (${match.player2Id}) is now free to join new matches`);
+  }
+  
   console.log(`🗑️ Match ${matchId} cleaned up`);
 }
 

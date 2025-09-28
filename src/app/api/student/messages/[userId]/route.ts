@@ -52,36 +52,51 @@ export async function GET(
 
     console.log('Follow relationships found:', { iFollowThem, theyFollowMe });
 
-    // Allow viewing messages if either user follows the other
+    // Allow viewing messages if either user follows the other OR if there's existing message history
     if (!iFollowThem && !theyFollowMe) {
-      // Check if there's a pending follow request
-      const pendingRequest = await prisma.followRequest.findUnique({
+      // Check if there are any existing messages between these users
+      const existingMessages = await prisma.directMessage.findFirst({
         where: {
-          senderId_receiverId: {
-            senderId: decoded.userId,
-            receiverId: userId,
-          },
-        },
+          OR: [
+            { senderId: decoded.userId, receiverId: userId },
+            { senderId: userId, receiverId: decoded.userId }
+          ]
+        }
       });
 
-      console.log('Pending follow request:', pendingRequest);
+      console.log('Existing messages found:', existingMessages);
 
-      if (pendingRequest && pendingRequest.status === 'PENDING') {
-        return new NextResponse(
-          'Your follow request is still pending. You can only view messages after they accept your follow request.',
-          { status: 403 }
-        );
-      } else if (pendingRequest && pendingRequest.status === 'DECLINED') {
-        return new NextResponse(
-          'Your follow request was declined. You need to send a new follow request before you can view messages.',
-          { status: 403 }
-        );
-      } else {
-        return new NextResponse(
-          'You can only view messages with users you follow or who follow you. Please send a follow request first.',
-          { status: 403 }
-        );
+      // If no existing messages, check for follow request
+      if (!existingMessages) {
+        const pendingRequest = await prisma.followRequest.findUnique({
+          where: {
+            senderId_receiverId: {
+              senderId: decoded.userId,
+              receiverId: userId,
+            },
+          },
+        });
+
+        console.log('Pending follow request:', pendingRequest);
+
+        if (pendingRequest && pendingRequest.status === 'PENDING') {
+          return new NextResponse(
+            'Your follow request is still pending. You can only view messages after they accept your follow request.',
+            { status: 403 }
+          );
+        } else if (pendingRequest && pendingRequest.status === 'DECLINED') {
+          return new NextResponse(
+            'Your follow request was declined. You need to send a new follow request before you can view messages.',
+            { status: 403 }
+          );
+        } else {
+          return new NextResponse(
+            'You can only view messages with users you follow or who follow you. Please send a follow request first.',
+            { status: 403 }
+          );
+        }
       }
+      // If there are existing messages, allow viewing them regardless of follow status
     }
 
     // Build where clause with optional since parameter

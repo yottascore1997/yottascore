@@ -43,12 +43,67 @@ export async function POST(req: Request) {
     if (decoded.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    const body = await req.json();
-    console.log('Request body:', JSON.stringify(body, null, 2));
     
-    const { title, description, instructions, startTime, endTime, duration, spots, questions, category, subcategory } = body;
+    // Handle FormData for file upload
+    const formData = await req.formData();
+    console.log('FormData received');
+    
+    const title = formData.get('title') as string;
+    const description = formData.get('description') as string;
+    const instructions = formData.get('instructions') as string;
+    const category = formData.get('category') as string;
+    const subcategory = formData.get('subcategory') as string;
+    const startTime = formData.get('startTime') as string;
+    const endTime = formData.get('endTime') as string;
+    const duration = parseInt(formData.get('duration') as string);
+    const spots = parseInt(formData.get('spots') as string);
+    const questions = JSON.parse(formData.get('questions') as string);
+    const logoFile = formData.get('logo') as File | null;
+    
+    console.log('Parsed form data:', {
+      title, description, instructions, category, subcategory,
+      startTime, endTime, duration, spots, questionsCount: questions?.length
+    });
     if (!title || !startTime || !duration || !spots || !category || !subcategory) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+    
+    // Handle logo upload
+    let logoUrl = null;
+    if (logoFile && logoFile.size > 0) {
+      console.log('Processing logo file:', {
+        name: logoFile.name,
+        size: logoFile.size,
+        type: logoFile.type
+      });
+      
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        
+        // Create uploads directory if it doesn't exist
+        const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        
+        // Generate unique filename
+        const timestamp = Date.now();
+        const fileExtension = path.extname(logoFile.name);
+        const fileName = `${timestamp}-${Math.random().toString(36).substring(2)}${fileExtension}`;
+        const filePath = path.join(uploadsDir, fileName);
+        
+        // Save file
+        const bytes = await logoFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        fs.writeFileSync(filePath, buffer);
+        
+        logoUrl = `/uploads/${fileName}`;
+        console.log('Logo saved successfully:', logoUrl);
+      } catch (fileError) {
+        console.error('Error saving logo file:', fileError);
+        // Continue without logo if file save fails
+      }
     }
     
     // Test database connection first
@@ -88,6 +143,7 @@ export async function POST(req: Request) {
       spots,
       spotsLeft: spots,
       createdById: decoded.userId,
+      logoUrl,
     };
     
     console.log('Exam data without questions:', examData);

@@ -128,6 +128,7 @@ export async function POST(req: Request) {
     }
 
     // Check if sender follows the receiver (actual follow, not just request)
+    console.log(`🔍 Checking follow relationship: ${decoded.userId} -> ${receiverId}`);
     const iFollowThem = await prisma.follow.findUnique({
       where: {
         followerId_followingId: {
@@ -136,6 +137,8 @@ export async function POST(req: Request) {
         },
       },
     });
+
+    console.log(`📊 Follow relationship found:`, iFollowThem);
 
     if (!iFollowThem) {
       // Check if there's a pending follow request
@@ -167,6 +170,7 @@ export async function POST(req: Request) {
     }
 
     // If you follow them, you can send direct message (regardless of whether they follow you back)
+    console.log(`💾 Creating message: ${decoded.userId} -> ${receiverId}: "${content}"`);
     const message = await prisma.directMessage.create({
       data: {
         content,

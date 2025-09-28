@@ -24,6 +24,8 @@ export default function CreatePracticeExamPage() {
     duration: 30,
     spots: 10,
   });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,18 @@ export default function CreatePracticeExamPage() {
 
   const handleRemoveQuestion = (idx: number) => {
     setQuestions((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleExcelImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,13 +142,30 @@ export default function CreatePracticeExamPage() {
     
     try {
       const token = localStorage.getItem("token");
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("title", form.title);
+      formData.append("description", form.description);
+      formData.append("instructions", form.instructions);
+      formData.append("category", form.category);
+      formData.append("subcategory", form.subcategory);
+      formData.append("startTime", form.startTime);
+      formData.append("endTime", form.endTime);
+      formData.append("duration", form.duration.toString());
+      formData.append("spots", form.spots.toString());
+      formData.append("questions", JSON.stringify(questions));
+      
+      if (logoFile) {
+        formData.append("logo", logoFile);
+      }
+      
       const res = await fetch("/api/admin/practice-exams", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ ...form, questions }),
+        body: formData,
       });
       
       if (!res.ok) {
@@ -275,6 +306,31 @@ export default function CreatePracticeExamPage() {
                         required
                       />
                     </div>
+                  </div>
+
+                  {/* Logo Upload */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Logo</label>
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        />
+                      </div>
+                      {logoPreview && (
+                        <div className="w-16 h-16 border-2 border-gray-300 rounded-lg overflow-hidden">
+                          <img
+                            src={logoPreview}
+                            alt="Logo preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Upload a logo for this exam (optional)</p>
                   </div>
                 </div>
 

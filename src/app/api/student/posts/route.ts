@@ -20,21 +20,9 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Forbidden', { status: 403 })
     }
 
-    // Get user's following list
-    const following = await prisma.follow.findMany({
-      where: { followerId: decoded.userId },
-      select: { followingId: true }
-    })
-
-    const followingIds = following.map(f => f.followingId)
-
-    // Fetch approved posts from user and their following
+    // Fetch all approved public posts (no filtering by user or following)
     const posts = await prisma.post.findMany({
       where: {
-        OR: [
-          { authorId: decoded.userId }, // User's own posts
-          { authorId: { in: followingIds } } // Posts from following
-        ],
         status: 'APPROVED', // Only approved posts
         isPrivate: false // Public posts only
       },

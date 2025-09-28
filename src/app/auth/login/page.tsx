@@ -171,6 +171,30 @@ export default function Login() {
             </button>
           </form>
 
+          {/* Firebase OTP Login Option */}
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or</span>
+              </div>
+            </div>
+            
+            <div className="mt-6">
+              <a
+                href="/firebase-test"
+                className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                📱 Login with OTP (Phone)
+              </a>
+              <p className="mt-2 text-xs text-gray-500 text-center">
+                Quick and secure login with your phone number
+              </p>
+            </div>
+          </div>
+
           {/* Footer */}
           <div className="text-center space-y-4">
             <div className="relative">

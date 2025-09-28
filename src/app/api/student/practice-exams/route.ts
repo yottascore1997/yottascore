@@ -15,7 +15,18 @@ export async function GET(req: Request) {
     if (decoded.role !== 'STUDENT') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+    
+    // Get category filter from query parameters
+    const { searchParams } = new URL(req.url);
+    const category = searchParams.get('category');
+    
+    console.log('Practice exams request - Category filter:', category);
+    
+    // Build where clause for category filtering
+    const whereClause = category ? { category } : {};
+    
     const exams = await prisma.practiceExam.findMany({
+      where: whereClause,
       orderBy: { startTime: 'asc' },
       include: {
         participants: {
@@ -27,12 +38,14 @@ export async function GET(req: Request) {
     const examsWithAttempted = exams.map((exam: any) => ({
       id: exam.id,
       title: exam.title,
+      description: exam.description,
       category: exam.category,
       subcategory: exam.subcategory,
       spots: exam.spots,
       spotsLeft: exam.spotsLeft,
       startTime: exam.startTime,
       endTime: exam.endTime,
+      logoUrl: exam.logoUrl,
       attempted: exam.participants.length > 0 && !!exam.participants[0].completedAt
     }));
     return NextResponse.json(examsWithAttempted);
