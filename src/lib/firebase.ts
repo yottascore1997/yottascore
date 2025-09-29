@@ -21,20 +21,10 @@ if (!firebaseConfig.messagingSenderId) missingConfig.push('NEXT_PUBLIC_FIREBASE_
 if (!firebaseConfig.appId) missingConfig.push('NEXT_PUBLIC_FIREBASE_APP_ID');
 
 if (missingConfig.length > 0) {
-  console.error('❌ Missing Firebase configuration:', missingConfig);
-  console.error('Please set up your .env.local file with Firebase configuration');
-  console.error('Go to: http://localhost:3000/firebase-setup for step-by-step guide');
+  // Missing Firebase configuration
 }
 
-// Debug: Log configuration
-console.log('Firebase Config:', {
-  apiKey: firebaseConfig.apiKey ? 'Set' : 'Missing',
-  authDomain: firebaseConfig.authDomain ? 'Set' : 'Missing',
-  projectId: firebaseConfig.projectId ? 'Set' : 'Missing',
-  storageBucket: firebaseConfig.storageBucket ? 'Set' : 'Missing',
-  messagingSenderId: firebaseConfig.messagingSenderId ? 'Set' : 'Missing',
-  appId: firebaseConfig.appId ? 'Set' : 'Missing',
-});
+// Firebase configuration loaded
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

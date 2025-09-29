@@ -6,7 +6,7 @@ import {
   FaDownload, FaQrcode, FaStar, FaTrophy, FaUsers, FaShieldAlt, FaGift, FaDice, FaGamepad, 
   FaGraduationCap, FaBook, FaBrain, FaUsersCog, FaLightbulb, FaRocket, FaMedal, FaGlobe, 
   FaPuzzlePiece, FaComments, FaUserFriends, FaClock, FaBell, FaEye, FaMoneyBillWave,
-  FaChartLine, FaCalendarAlt, FaMobile, FaDesktop, FaUserSecret
+  FaChartLine, FaCalendarAlt, FaMobile, FaDesktop, FaUserSecret, FaBars, FaTimes
 } from 'react-icons/fa';
 
 export default function HomePage() {
@@ -14,6 +14,7 @@ export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [testimonialSlide, setTestimonialSlide] = useState(0);
   const [phoneSlide, setPhoneSlide] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Hero slides
   const heroSlides = [
@@ -219,19 +220,22 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-purple-50">
-      {/* Header */}
+      {/* Mobile-First Header */}
       <header className="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                <FaGraduationCap className="text-white text-xl" />
+            {/* Logo */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                <FaGraduationCap className="text-white text-lg sm:text-xl" />
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 YottaScore
               </h1>
             </div>
-            <div className="flex items-center space-x-4">
+            
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-4">
               <Link 
                 href="/blogs" 
                 className="text-gray-700 hover:text-blue-600 font-medium transition duration-300"
@@ -251,11 +255,48 @@ export default function HomePage() {
                 Register
               </Link>
             </div>
+
+            {/* Mobile Menu Button */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 text-gray-700 hover:text-blue-600 transition duration-300"
+            >
+              {isMobileMenuOpen ? <FaTimes className="text-xl" /> : <FaBars className="text-xl" />}
+            </button>
           </div>
+
+          {/* Mobile Menu */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden mt-4 py-4 border-t border-gray-200 bg-white/95 backdrop-blur-xl">
+              <div className="flex flex-col space-y-3">
+                <Link 
+                  href="/blogs" 
+                  className="text-gray-700 hover:text-blue-600 font-medium transition duration-300 py-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Blogs
+                </Link>
+                <Link 
+                  href="/login" 
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full font-semibold hover:from-blue-700 hover:to-purple-700 transition duration-300 text-center"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Login
+                </Link>
+                <Link 
+                  href="/register" 
+                  className="bg-gradient-to-r from-green-500 to-teal-500 text-white px-6 py-3 rounded-full font-semibold hover:from-green-600 hover:to-teal-600 transition duration-300 text-center"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Register
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
-      <div className="h-20"></div>
+      <div className="h-16 sm:h-20"></div>
 
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800">
@@ -269,69 +310,68 @@ export default function HomePage() {
           <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-gradient-to-r from-green-400 to-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse" style={{animationDelay: '1s'}}></div>
         </div>
         
-        <div className="container mx-auto px-4 relative z-10 h-full flex items-center">
+        <div className="container mx-auto px-3 sm:px-4 relative z-10 h-full flex items-center">
           <div className="max-w-7xl mx-auto w-full">
-            <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-center h-full">
+            <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-center h-full">
               {/* Left Side - Content */}
               <div className="text-center lg:text-left">
                 {/* Educational Badge */}
-                <div className="inline-flex items-center bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-3 rounded-full text-lg font-bold mb-8 shadow-2xl border border-white/30 animate-pulse">
-                  <span className="w-3 h-3 bg-white rounded-full mr-3 animate-ping"></span>
-                  <FaGraduationCap className="mr-3 text-yellow-300" />
-                  🎓 LIVE - India's #1 Educational Platform
-        </div>
+                <div className="inline-flex items-center bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-sm sm:text-lg font-bold mb-4 sm:mb-8 shadow-2xl border border-white/30 animate-pulse">
+                  <span className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full mr-2 sm:mr-3 animate-ping"></span>
+                  <FaGraduationCap className="mr-2 sm:mr-3 text-yellow-300 text-sm sm:text-base" />
+                  <span className="text-xs sm:text-base">🎓 LIVE - India's #1 Educational Platform</span>
+                </div>
 
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-4 md:mb-6 leading-tight">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black mb-3 sm:mb-4 md:mb-6 leading-tight">
                   <span className="bg-gradient-to-r from-white via-blue-200 to-indigo-200 bg-clip-text text-transparent drop-shadow-2xl">
                     {heroSlides[currentSlide].headline}
                   </span>
                 </h1>
                 
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 md:mb-4 drop-shadow-lg">
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white mb-2 sm:mb-3 md:mb-4 drop-shadow-lg">
                   {heroSlides[currentSlide].sub}
                 </p>
                 
-                <p className="text-base sm:text-lg text-white/90 mb-6 md:mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                <p className="text-sm sm:text-base md:text-lg text-white/90 mb-4 sm:mb-6 md:mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                   {heroSlides[currentSlide].description}
                 </p>
 
                 {/* Educational Stats Cards */}
-                <div className="flex flex-wrap gap-3 md:gap-4 mb-6 justify-center lg:justify-start">
-                  <div className="bg-gradient-to-r from-blue-500 to-indigo-500 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-xl border border-white/30 shadow-2xl transform hover:scale-105 transition-all duration-300">
-                    <span className="text-white font-bold text-sm md:text-lg">{heroSlides[currentSlide].stats}</span>
+                <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6 justify-center lg:justify-start">
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-500 backdrop-blur-sm px-3 sm:px-4 md:px-6 py-2 sm:py-2 md:py-3 rounded-xl border border-white/30 shadow-2xl transform hover:scale-105 transition-all duration-300">
+                    <span className="text-white font-bold text-xs sm:text-sm md:text-lg">{heroSlides[currentSlide].stats}</span>
                   </div>
-                  <div className="bg-white/20 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-xl border border-white/30 shadow-2xl hover:bg-white/30 transition-all duration-300">
-                    <span className="text-white font-bold text-sm md:text-lg">📚 4.9/5</span>
+                  <div className="bg-white/20 backdrop-blur-sm px-3 sm:px-4 md:px-6 py-2 sm:py-2 md:py-3 rounded-xl border border-white/30 shadow-2xl hover:bg-white/30 transition-all duration-300">
+                    <span className="text-white font-bold text-xs sm:text-sm md:text-lg">📚 4.9/5</span>
                   </div>
-                  <div className="bg-white/20 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-xl border border-white/30 shadow-2xl hover:bg-white/30 transition-all duration-300">
-                    <span className="text-white font-bold text-sm md:text-lg">🎓 1M+</span>
+                  <div className="bg-white/20 backdrop-blur-sm px-3 sm:px-4 md:px-6 py-2 sm:py-2 md:py-3 rounded-xl border border-white/30 shadow-2xl hover:bg-white/30 transition-all duration-300">
+                    <span className="text-white font-bold text-xs sm:text-sm md:text-lg">🎓 1M+</span>
                   </div>
                 </div>
-
 
                 {/* Educational Trust Indicators */}
-                <div className="flex flex-wrap items-center gap-4 md:gap-6 text-white/90 justify-center lg:justify-start">
-                  <div className="flex items-center gap-2">
-                    <FaShieldAlt className="text-green-400 text-base md:text-lg" />
-                    <span className="font-semibold text-xs md:text-sm">100% Secure</span>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 lg:gap-6 text-white/90 justify-center lg:justify-start">
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FaShieldAlt className="text-green-400 text-sm sm:text-base md:text-lg" />
+                    <span className="font-semibold text-xs sm:text-sm">100% Secure</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FaGraduationCap className="text-blue-400 text-base md:text-lg" />
-                    <span className="font-semibold text-xs md:text-sm">Expert Teachers</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FaGraduationCap className="text-blue-400 text-sm sm:text-base md:text-lg" />
+                    <span className="font-semibold text-xs sm:text-sm">Expert Teachers</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FaUsers className="text-indigo-400 text-base md:text-lg" />
-                    <span className="font-semibold text-xs md:text-sm">1M+ Students</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FaUsers className="text-indigo-400 text-sm sm:text-base md:text-lg" />
+                    <span className="font-semibold text-xs sm:text-sm">1M+ Students</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FaTrophy className="text-yellow-400 text-base md:text-lg" />
-                    <span className="font-semibold text-xs md:text-sm">Academic Excellence</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FaTrophy className="text-yellow-400 text-sm sm:text-base md:text-lg" />
+                    <span className="font-semibold text-xs sm:text-sm">Academic Excellence</span>
                   </div>
                 </div>
-          </div>
+              </div>
 
               {/* Right Side - Visual */}
-              <div className="relative">
+              <div className="relative hidden lg:block">
                 {/* Main Visual Container */}
                 <div className="relative w-full h-96 lg:h-[500px]">
                   {/* Phone Mockup */}
@@ -375,23 +415,23 @@ export default function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-white relative overflow-hidden">
+      <section className="py-12 sm:py-16 md:py-20 bg-white relative overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-10 left-10 w-72 h-72 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
           <div className="absolute bottom-10 right-10 w-80 h-80 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse" style={{animationDelay: '2s'}}></div>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{animationDelay: '4s'}}></div>
-                </div>
+        </div>
         
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+        <div className="container mx-auto px-3 sm:px-4 relative z-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center text-gray-800 transform hover:scale-105 transition-all duration-300">
-                <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-2xl">
-                  <stat.icon className="text-2xl md:text-3xl text-white" />
+                <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-4 md:mb-6 shadow-2xl">
+                  <stat.icon className="text-lg sm:text-2xl md:text-3xl text-white" />
                 </div>
-                <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black mb-2 md:mb-3 text-gray-800">{stat.number}</div>
-                <div className="text-sm sm:text-base md:text-lg lg:text-xl font-semibold text-gray-600">{stat.label}</div>
+                <div className="text-lg sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black mb-1 sm:mb-2 md:mb-3 text-gray-800">{stat.number}</div>
+                <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-semibold text-gray-600">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -399,53 +439,53 @@ export default function HomePage() {
       </section>
 
       {/* Awesome Features Section */}
-      <section className="py-20 bg-white relative overflow-hidden">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
+      <section className="py-12 sm:py-16 md:py-20 bg-white relative overflow-hidden">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-3 sm:mb-4 md:mb-6">
               Awesome Features
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
               Experience the power of YottaScore with our innovative features designed for modern students
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-12 items-center">
+          <div className="grid lg:grid-cols-3 gap-6 sm:gap-8 md:gap-12 items-center">
             {/* Left Features */}
-            <div className="space-y-8">
-              <div className="flex items-start space-x-4">
+            <div className="space-y-4 sm:space-y-6 md:space-y-8">
+              <div className="flex items-start space-x-3 sm:space-x-4">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
-                    <span className="text-2xl font-bold text-white">P</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
+                    <span className="text-lg sm:text-xl md:text-2xl font-bold text-white">P</span>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Custom Shortcuts</h3>
-                  <p className="text-gray-600">Create personalized shortcuts for quick access to your favorite features and boost your productivity.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 sm:mb-2">Custom Shortcuts</h3>
+                  <p className="text-sm sm:text-base text-gray-600">Create personalized shortcuts for quick access to your favorite features and boost your productivity.</p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-4">
+              <div className="flex items-start space-x-3 sm:space-x-4">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
-                    <span className="text-2xl font-bold text-white">9</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
+                    <span className="text-lg sm:text-xl md:text-2xl font-bold text-white">9</span>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Secure Integration</h3>
-                  <p className="text-gray-600">Bank-level security with seamless integration to keep your data safe while you focus on learning.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 sm:mb-2">Secure Integration</h3>
+                  <p className="text-sm sm:text-base text-gray-600">Bank-level security with seamless integration to keep your data safe while you focus on learning.</p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-4">
+              <div className="flex items-start space-x-3 sm:space-x-4">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full"></div>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Free Live Chat</h3>
-                  <p className="text-gray-600">Get instant help with our 24/7 live chat support. No waiting, no queues, just immediate assistance.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 sm:mb-2">Free Live Chat</h3>
+                  <p className="text-sm sm:text-base text-gray-600">Get instant help with our 24/7 live chat support. No waiting, no queues, just immediate assistance.</p>
                 </div>
               </div>
             </div>
@@ -767,40 +807,40 @@ export default function HomePage() {
             </div>
 
             {/* Right Features */}
-            <div className="space-y-8">
-              <div className="flex items-start space-x-4">
+            <div className="space-y-4 sm:space-y-6 md:space-y-8">
+              <div className="flex items-start space-x-3 sm:space-x-4">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
-                    <div className="w-4 h-4 border-2 border-white rounded"></div>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white rounded"></div>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Social Share</h3>
-                  <p className="text-gray-600">Share your achievements and progress with friends. Build a community of learners and stay motivated together.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 sm:mb-2">Social Share</h3>
+                  <p className="text-sm sm:text-base text-gray-600">Share your achievements and progress with friends. Build a community of learners and stay motivated together.</p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-4">
+              <div className="flex items-start space-x-3 sm:space-x-4">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
-                    <div className="w-4 h-4 border-2 border-white rounded"></div>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white rounded"></div>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Merge Files</h3>
-                  <p className="text-gray-600">Combine multiple study materials and resources into organized collections for efficient learning.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 sm:mb-2">Merge Files</h3>
+                  <p className="text-sm sm:text-base text-gray-600">Combine multiple study materials and resources into organized collections for efficient learning.</p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-4">
+              <div className="flex items-start space-x-3 sm:space-x-4">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
-                    <span className="text-2xl font-bold text-white">b</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center">
+                    <span className="text-lg sm:text-xl md:text-2xl font-bold text-white">b</span>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Action Reminder</h3>
-                  <p className="text-gray-600">Never miss important deadlines with smart reminders and notifications tailored to your study schedule.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 sm:mb-2">Action Reminder</h3>
+                  <p className="text-sm sm:text-base text-gray-600">Never miss important deadlines with smart reminders and notifications tailored to your study schedule.</p>
                 </div>
               </div>
             </div>
@@ -809,7 +849,7 @@ export default function HomePage() {
       </section>
 
       {/* Download Section */}
-      <section className="py-20 bg-black relative overflow-hidden">
+      <section className="py-12 sm:py-16 md:py-20 bg-black relative overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-10 left-10 w-72 h-72 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
@@ -817,232 +857,233 @@ export default function HomePage() {
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-indigo-400 to-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{animationDelay: '4s'}}></div>
         </div>
 
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto px-3 sm:px-4 relative z-10">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12 md:mb-16">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 md:mb-6 drop-shadow-2xl">
+            <div className="text-center mb-8 sm:mb-12 md:mb-16">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-white mb-3 sm:mb-4 md:mb-6 drop-shadow-2xl">
                 Download YottaScore App
               </h2>
-              <p className="text-lg sm:text-xl md:text-2xl text-blue-100 mb-6 md:mb-8 max-w-3xl mx-auto px-4">
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-blue-100 mb-4 sm:mb-6 md:mb-8 max-w-3xl mx-auto px-2">
                 Join 1M+ students earning money while learning! Get instant access to live exams, practice tests, and educational games.
               </p>
               
               {/* Trust Indicators */}
-              <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8 text-white/90 mb-8 md:mb-12">
-                <div className="flex items-center gap-2">
-                  <FaShieldAlt className="text-green-400 text-lg md:text-xl" />
-                  <span className="font-semibold text-sm md:text-base">100% Secure</span>
+              <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-3 md:gap-4 lg:gap-8 text-white/90 mb-6 sm:mb-8 md:mb-12">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <FaShieldAlt className="text-green-400 text-sm sm:text-base md:text-lg lg:text-xl" />
+                  <span className="font-semibold text-xs sm:text-sm md:text-base">100% Secure</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <FaUsers className="text-blue-400 text-lg md:text-xl" />
-                  <span className="font-semibold text-sm md:text-base">1M+ Students</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <FaUsers className="text-blue-400 text-sm sm:text-base md:text-lg lg:text-xl" />
+                  <span className="font-semibold text-xs sm:text-sm md:text-base">1M+ Students</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <FaStar className="text-yellow-400 text-lg md:text-xl" />
-                  <span className="font-semibold text-sm md:text-base">4.9★ Rating</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <FaStar className="text-yellow-400 text-sm sm:text-base md:text-lg lg:text-xl" />
+                  <span className="font-semibold text-xs sm:text-sm md:text-base">4.9★ Rating</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <FaMoneyBillWave className="text-green-400 text-lg md:text-xl" />
-                  <span className="font-semibold text-sm md:text-base">Instant Rewards</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <FaMoneyBillWave className="text-green-400 text-sm sm:text-base md:text-lg lg:text-xl" />
+                  <span className="font-semibold text-xs sm:text-sm md:text-base">Instant Rewards</span>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl md:rounded-3xl p-6 md:p-12 shadow-2xl border border-white/20">
-              <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
+            <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-12 shadow-2xl border border-white/20">
+              <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
                 {/* Left Side - Phone Input */}
-                <div className="space-y-6 md:space-y-8">
+                <div className="space-y-4 sm:space-y-6 md:space-y-8">
                   <div>
-                    <h3 className="text-2xl md:text-3xl font-bold text-white mb-3 md:mb-4">Get App Link</h3>
-                    <p className="text-blue-100 text-base md:text-lg mb-4 md:mb-6">Enter your mobile number to receive the download link instantly</p>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3 md:mb-4">Get App Link</h3>
+                    <p className="text-blue-100 text-sm sm:text-base md:text-lg mb-3 sm:mb-4 md:mb-6">Enter your mobile number to receive the download link instantly</p>
                   </div>
                   
-                  <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 md:gap-4">
                       <div className="flex-1">
                         <div className="flex">
-                          <span className="bg-white/20 backdrop-blur-sm text-white px-4 md:px-6 py-3 md:py-4 rounded-l-xl border border-white/30 flex items-center font-semibold text-sm md:text-lg">+91</span>
+                          <span className="bg-white/20 backdrop-blur-sm text-white px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 rounded-l-xl border border-white/30 flex items-center font-semibold text-xs sm:text-sm md:text-lg">+91</span>
                           <input
                             type="tel"
                             placeholder="Enter Mobile Number"
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value)}
-                            className="flex-1 px-4 md:px-6 py-3 md:py-4 rounded-r-xl border border-white/30 bg-white/10 backdrop-blur-sm text-white placeholder-white/70 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 transition-all duration-200 text-sm md:text-lg"
+                            className="flex-1 px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 rounded-r-xl border border-white/30 bg-white/10 backdrop-blur-sm text-white placeholder-white/70 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 transition-all duration-200 text-xs sm:text-sm md:text-lg"
                           />
                         </div>
                       </div>
-                      <button className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold text-sm md:text-lg shadow-2xl hover:shadow-yellow-500/50 hover:scale-105 transition-all duration-300 flex items-center justify-center">
-                        <FaDownload className="mr-2 md:mr-3 text-lg md:text-xl" />
-                        Send Link
+                      <button className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-xl font-bold text-xs sm:text-sm md:text-lg shadow-2xl hover:shadow-yellow-500/50 hover:scale-105 transition-all duration-300 flex items-center justify-center">
+                        <FaDownload className="mr-1 sm:mr-2 md:mr-3 text-sm sm:text-base md:text-lg lg:text-xl" />
+                        <span className="hidden sm:inline">Send Link</span>
+                        <span className="sm:hidden">Send</span>
                       </button>
                     </div>
                     
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                      <p className="text-white/80 text-sm">
-                        <FaShieldAlt className="inline mr-2 text-green-400" />
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/20">
+                      <p className="text-white/80 text-xs sm:text-sm">
+                        <FaShieldAlt className="inline mr-1 sm:mr-2 text-green-400" />
                         Your number is secure and will only be used to send the app link
                       </p>
-            </div>
-          </div>
-        </div>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Right Side - Download Options */}
-                <div className="space-y-6 md:space-y-8">
+                <div className="space-y-4 sm:space-y-6 md:space-y-8">
                   <div>
-                    <h3 className="text-2xl md:text-3xl font-bold text-white mb-3 md:mb-4">Download Options</h3>
-                    <p className="text-blue-100 text-base md:text-lg">Choose your preferred way to access YottaScore</p>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3 md:mb-4">Download Options</h3>
+                    <p className="text-blue-100 text-sm sm:text-base md:text-lg">Choose your preferred way to access YottaScore</p>
                   </div>
                   
-                  <div className="space-y-6 md:space-y-8">
+                  <div className="space-y-4 sm:space-y-6 md:space-y-8">
                     {/* App Store Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 justify-center">
                       <div className="text-center group cursor-pointer">
-                        <div className="w-28 md:w-32 h-14 md:h-16 bg-black border-2 border-white/30 rounded-xl shadow-2xl flex items-center justify-center mb-3 mx-auto group-hover:scale-105 transition-all duration-300">
+                        <div className="w-24 sm:w-28 md:w-32 h-12 sm:h-14 md:h-16 bg-black border-2 border-white/30 rounded-xl shadow-2xl flex items-center justify-center mb-2 sm:mb-3 mx-auto group-hover:scale-105 transition-all duration-300">
                           <img
                             src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg"
                             alt="Download on the App Store"
-                            className="h-8 md:h-10 w-auto"
+                            className="h-6 sm:h-8 md:h-10 w-auto"
                           />
                         </div>
                       </div>
 
                       <div className="text-center group cursor-pointer">
-                        <div className="w-28 md:w-32 h-14 md:h-16 bg-black border-2 border-white/30 rounded-xl shadow-2xl flex items-center justify-center mb-3 mx-auto group-hover:scale-105 transition-all duration-300">
+                        <div className="w-24 sm:w-28 md:w-32 h-12 sm:h-14 md:h-16 bg-black border-2 border-white/30 rounded-xl shadow-2xl flex items-center justify-center mb-2 sm:mb-3 mx-auto group-hover:scale-105 transition-all duration-300">
                           <img
                             src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
                             alt="Get it on Google Play"
-                            className="h-8 md:h-10 w-auto"
+                            className="h-6 sm:h-8 md:h-10 w-auto"
                           />
                         </div>
                       </div>
                     </div>
 
                     {/* Other Options */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                       <div className="text-center group cursor-pointer">
-                        <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl shadow-2xl flex items-center justify-center mb-3 md:mb-4 mx-auto group-hover:scale-110 transition-all duration-300">
-                          <FaQrcode className="text-2xl md:text-3xl text-white" />
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl shadow-2xl flex items-center justify-center mb-2 sm:mb-3 md:mb-4 mx-auto group-hover:scale-110 transition-all duration-300">
+                          <FaQrcode className="text-lg sm:text-2xl md:text-3xl text-white" />
                         </div>
-                        <h4 className="text-base md:text-lg font-bold text-white mb-1 md:mb-2">Scan QR Code</h4>
-                        <p className="text-blue-100 text-xs md:text-sm">Quick Download</p>
+                        <h4 className="text-sm sm:text-base md:text-lg font-bold text-white mb-1 sm:mb-2">Scan QR Code</h4>
+                        <p className="text-blue-100 text-xs sm:text-sm">Quick Download</p>
                       </div>
 
                       <div className="text-center group cursor-pointer">
-                        <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl shadow-2xl flex items-center justify-center mb-3 md:mb-4 mx-auto group-hover:scale-110 transition-all duration-300">
-                          <FaDesktop className="text-2xl md:text-3xl text-white" />
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl shadow-2xl flex items-center justify-center mb-2 sm:mb-3 md:mb-4 mx-auto group-hover:scale-110 transition-all duration-300">
+                          <FaDesktop className="text-lg sm:text-2xl md:text-3xl text-white" />
                         </div>
-                        <h4 className="text-base md:text-lg font-bold text-white mb-1 md:mb-2">Web Platform</h4>
-                        <p className="text-blue-100 text-xs md:text-sm">Browser Access</p>
+                        <h4 className="text-sm sm:text-base md:text-lg font-bold text-white mb-1 sm:mb-2">Web Platform</h4>
+                        <p className="text-blue-100 text-xs sm:text-sm">Browser Access</p>
                       </div>
                     </div>
-            </div>
-          </div>
-            </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-5xl font-bold text-gray-800 mb-4">
+      <section className="py-12 sm:py-16 md:py-20 bg-white">
+        <div className="container mx-auto px-3 sm:px-4">
+            <div className="text-center mb-8 sm:mb-12 md:mb-16">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-3 sm:mb-4">
                 Why Choose YottaScore?
-          </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              </h2>
+              <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
                 India's most trusted educational gaming platform with real money rewards
               </p>
-          </div>
+            </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <div 
-                key={index}
-                className={`${feature.bgColor} ${feature.borderColor} border-2 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer`}
-              >
-                <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-xl flex items-center justify-center mb-4`}>
-                  <feature.icon className="text-2xl text-white" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+              {features.map((feature, index) => (
+                <div 
+                  key={index}
+                  className={`${feature.bgColor} ${feature.borderColor} border-2 rounded-xl sm:rounded-2xl p-4 sm:p-6 hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer`}
+                >
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r ${feature.color} rounded-xl flex items-center justify-center mb-3 sm:mb-4`}>
+                    <feature.icon className="text-lg sm:text-xl md:text-2xl text-white" />
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 sm:mb-3">{feature.title}</h3>
+                  <p className="text-sm sm:text-base text-gray-600">{feature.description}</p>
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
         </div>
       </section>
 
       {/* Video Section */}
-      <section className="py-20 bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 relative overflow-hidden">
+      <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 relative overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-10 left-10 w-72 h-72 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
           <div className="absolute bottom-10 right-10 w-80 h-80 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{animationDelay: '2s'}}></div>
-                </div>
+        </div>
 
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto px-3 sm:px-4 relative z-10">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12 md:mb-16">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 md:mb-6 drop-shadow-2xl">
+            <div className="text-center mb-8 sm:mb-12 md:mb-16">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-white mb-3 sm:mb-4 md:mb-6 drop-shadow-2xl">
                 See YottaScore in Action
               </h2>
-              <p className="text-lg sm:text-xl md:text-2xl text-blue-100 mb-6 md:mb-8 max-w-3xl mx-auto px-4">
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-blue-100 mb-4 sm:mb-6 md:mb-8 max-w-3xl mx-auto px-2">
                 Watch how students are earning money while learning with our educational platform
               </p>
             </div>
                 
             {/* Video Container */}
-            <div className="relative bg-black rounded-3xl shadow-2xl overflow-hidden border-4 border-white/20">
+            <div className="relative bg-black rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border-2 sm:border-4 border-white/20">
               <div className="aspect-video w-full">
                 {/* Video Placeholder - Replace with actual video */}
                 <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center relative">
                   {/* Play Button */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <button className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all duration-300 group">
-                      <svg className="w-12 h-12 text-white ml-2" fill="currentColor" viewBox="0 0 24 24">
+                    <button className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all duration-300 group">
+                      <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white ml-1 sm:ml-2" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                       </svg>
                     </button>
                   </div>
                   
                   {/* Video Overlay Text */}
-                  <div className="absolute bottom-8 left-8 text-white">
-                    <h3 className="text-2xl font-bold mb-2">YottaScore Demo Video</h3>
-                    <p className="text-white/80">See how students earn money while learning</p>
+                  <div className="absolute bottom-4 sm:bottom-6 md:bottom-8 left-4 sm:left-6 md:left-8 text-white">
+                    <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2">YottaScore Demo Video</h3>
+                    <p className="text-white/80 text-sm sm:text-base">See how students earn money while learning</p>
                   </div>
                   
                   {/* Duration Badge */}
-                  <div className="absolute top-8 right-8 bg-black/50 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold">
+                  <div className="absolute top-4 sm:top-6 md:top-8 right-4 sm:right-6 md:right-8 bg-black/50 backdrop-blur-sm text-white px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-semibold">
                     2:30
                   </div>
                 </div>
-                  </div>
-                </div>
+              </div>
+            </div>
 
             {/* Video Features */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mt-12 md:mt-16">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mt-8 sm:mt-12 md:mt-16">
               <div className="text-center text-white">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
-                  <FaGraduationCap className="text-xl sm:text-2xl text-white" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4">
+                  <FaGraduationCap className="text-lg sm:text-xl md:text-2xl text-white" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-bold mb-2">Live Exams</h3>
-                <p className="text-blue-100 text-sm sm:text-base">Real-time competitive exams with instant results</p>
+                <h3 className="text-base sm:text-lg md:text-xl font-bold mb-1 sm:mb-2">Live Exams</h3>
+                <p className="text-blue-100 text-xs sm:text-sm md:text-base">Real-time competitive exams with instant results</p>
               </div>
               
               <div className="text-center text-white">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
-                  <FaMoneyBillWave className="text-xl sm:text-2xl text-white" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4">
+                  <FaMoneyBillWave className="text-lg sm:text-xl md:text-2xl text-white" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-bold mb-2">Instant Rewards</h3>
-                <p className="text-blue-100 text-sm sm:text-base">Win real money for every correct answer</p>
+                <h3 className="text-base sm:text-lg md:text-xl font-bold mb-1 sm:mb-2">Instant Rewards</h3>
+                <p className="text-blue-100 text-xs sm:text-sm md:text-base">Win real money for every correct answer</p>
               </div>
               
               <div className="text-center text-white sm:col-span-2 lg:col-span-1">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
-                  <FaUsers className="text-xl sm:text-2xl text-white" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4">
+                  <FaUsers className="text-lg sm:text-xl md:text-2xl text-white" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-bold mb-2">Social Learning</h3>
-                <p className="text-blue-100 text-sm sm:text-base">Connect with friends and learn together</p>
+                <h3 className="text-base sm:text-lg md:text-xl font-bold mb-1 sm:mb-2">Social Learning</h3>
+                <p className="text-blue-100 text-xs sm:text-sm md:text-base">Connect with friends and learn together</p>
               </div>
             </div>
           </div>
@@ -1050,13 +1091,13 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 bg-gradient-to-r from-gray-50 to-blue-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-3 md:mb-4">
+      <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-r from-gray-50 to-blue-50">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-2 sm:mb-3 md:mb-4">
               Success Stories
             </h2>
-            <p className="text-lg md:text-xl text-gray-600 px-4">
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 px-2">
               Real students earning real money
             </p>
           </div>
@@ -1069,103 +1110,103 @@ export default function HomePage() {
             >
               {Array.from({ length: Math.ceil(testimonials.length / 3) }).map((_, slideIndex) => (
                 <div key={slideIndex} className="w-full flex-shrink-0">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                     {testimonials.slice(slideIndex * 3, (slideIndex + 1) * 3).map((testimonial, index) => (
-                      <div key={index} className="bg-white rounded-2xl p-6 md:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
-                        <div className="flex items-center mb-4 md:mb-6">
+                      <div key={index} className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                        <div className="flex items-center mb-3 sm:mb-4 md:mb-6">
                           <img 
                             src={testimonial.avatar} 
                             alt={testimonial.name}
-                            className="w-12 h-12 md:w-16 md:h-16 rounded-full border-4 border-blue-200"
+                            className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full border-2 sm:border-4 border-blue-200"
                           />
-                          <div className="ml-3 md:ml-4">
-                            <h4 className="text-base md:text-lg font-bold text-gray-800">{testimonial.name}</h4>
-                            <p className="text-sm md:text-base text-gray-600">{testimonial.location}</p>
+                          <div className="ml-2 sm:ml-3 md:ml-4">
+                            <h4 className="text-sm sm:text-base md:text-lg font-bold text-gray-800">{testimonial.name}</h4>
+                            <p className="text-xs sm:text-sm md:text-base text-gray-600">{testimonial.location}</p>
                             <div className="flex items-center mt-1">
                               {[...Array(testimonial.rating)].map((_, i) => (
-                                <FaStar key={i} className="text-yellow-400 text-xs md:text-sm" />
-            ))}
-          </div>
-        </div>
+                                <FaStar key={i} className="text-yellow-400 text-xs sm:text-sm" />
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-gray-700 mb-3 md:mb-4 italic text-sm md:text-base">"{testimonial.review}"</p>
-                        <div className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-3 md:px-4 py-2 rounded-full text-center font-bold text-sm md:text-base">
+                        <p className="text-gray-700 mb-2 sm:mb-3 md:mb-4 italic text-xs sm:text-sm md:text-base">"{testimonial.review}"</p>
+                        <div className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded-full text-center font-bold text-xs sm:text-sm md:text-base">
                           {testimonial.amount}
                         </div>
                       </div>
                     ))}
-                    </div>
                   </div>
-                ))}
+                </div>
+              ))}
               </div>
           </div>
 
           {/* Navigation Dots */}
-          <div className="flex justify-center mt-6 md:mt-8 space-x-2 md:space-x-3">
+          <div className="flex justify-center mt-4 sm:mt-6 md:mt-8 space-x-2 sm:space-x-3">
             {Array.from({ length: Math.ceil(testimonials.length / 3) }).map((_, index) => (
               <button
                 key={index}
                 onClick={() => setTestimonialSlide(index)}
-                className={`w-3 h-3 md:w-4 md:h-4 rounded-full transition-all duration-300 ${
+                className={`w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-full transition-all duration-300 ${
                   testimonialSlide === index 
                     ? 'bg-blue-600 scale-125' 
                     : 'bg-gray-300 hover:bg-gray-400'
                 }`}
-                  />
-                ))}
-              </div>
-            </div>
+              />
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 md:mb-6">
+      <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+        <div className="container mx-auto px-3 sm:px-4 text-center">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 md:mb-6">
             Ready to Start Earning?
-        </h2>
-          <p className="text-lg md:text-xl text-white/90 mb-6 md:mb-8 max-w-2xl mx-auto px-4">
+          </h2>
+          <p className="text-base sm:text-lg md:text-xl text-white/90 mb-4 sm:mb-6 md:mb-8 max-w-2xl mx-auto px-2">
             Join thousands of students who are already earning money while learning. Download the app now and start your journey!
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
-            <button className="bg-white text-blue-600 px-6 md:px-8 py-3 md:py-4 rounded-full font-bold text-base md:text-lg hover:bg-gray-100 transition duration-300 shadow-lg">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 md:gap-4 justify-center">
+            <button className="bg-white text-blue-600 px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-full font-bold text-sm sm:text-base md:text-lg hover:bg-gray-100 transition duration-300 shadow-lg">
               Download for Android
             </button>
-            <button className="bg-white text-purple-600 px-6 md:px-8 py-3 md:py-4 rounded-full font-bold text-base md:text-lg hover:bg-gray-100 transition duration-300 shadow-lg">
+            <button className="bg-white text-purple-600 px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-full font-bold text-sm sm:text-base md:text-lg hover:bg-gray-100 transition duration-300 shadow-lg">
               Download for iOS
             </button>
-            </div>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+      <footer className="bg-gray-900 text-white py-8 sm:py-12">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
             <div className="sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center space-x-2 mb-3 md:mb-4">
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <FaGraduationCap className="text-white text-sm md:text-base" />
+              <div className="flex items-center space-x-2 mb-2 sm:mb-3 md:mb-4">
+                <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <FaGraduationCap className="text-white text-xs sm:text-sm md:text-base" />
                 </div>
-                <h3 className="text-lg md:text-xl font-bold">YottaScore</h3>
+                <h3 className="text-base sm:text-lg md:text-xl font-bold">YottaScore</h3>
               </div>
-              <p className="text-gray-400 mb-3 md:mb-4 text-sm md:text-base">
+              <p className="text-gray-400 mb-2 sm:mb-3 md:mb-4 text-xs sm:text-sm md:text-base">
                 India's #1 Educational Gaming Platform
               </p>
-              <div className="flex space-x-3 md:space-x-4">
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-xs md:text-sm">📘</span>
+              <div className="flex space-x-2 sm:space-x-3 md:space-x-4">
+                <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs sm:text-sm">📘</span>
                 </div>
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-green-600 rounded-full flex items-center justify-center">
-                  <span className="text-xs md:text-sm">📱</span>
+                <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs sm:text-sm">📱</span>
                 </div>
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                  <span className="text-xs md:text-sm">📺</span>
+                <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs sm:text-sm">📺</span>
                 </div>
               </div>
             </div>
             <div>
-              <h4 className="font-bold mb-3 md:mb-4 text-sm md:text-base">Features</h4>
-              <ul className="space-y-1 md:space-y-2 text-gray-400 text-sm md:text-base">
+              <h4 className="font-bold mb-2 sm:mb-3 md:mb-4 text-xs sm:text-sm md:text-base">Features</h4>
+              <ul className="space-y-1 text-gray-400 text-xs sm:text-sm md:text-base">
                 <li>Live Exams</li>
                 <li>Battle Quiz</li>
                 <li>Practice Tests</li>
@@ -1173,8 +1214,8 @@ export default function HomePage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-bold mb-3 md:mb-4 text-sm md:text-base">Games</h4>
-              <ul className="space-y-1 md:space-y-2 text-gray-400 text-sm md:text-base">
+              <h4 className="font-bold mb-2 sm:mb-3 md:mb-4 text-xs sm:text-sm md:text-base">Games</h4>
+              <ul className="space-y-1 text-gray-400 text-xs sm:text-sm md:text-base">
                 <li>Who's The Spy</li>
                 <li>Math Battle</li>
                 <li>Science Quiz</li>
@@ -1182,8 +1223,8 @@ export default function HomePage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-bold mb-3 md:mb-4 text-sm md:text-base">Support</h4>
-              <ul className="space-y-1 md:space-y-2 text-gray-400 text-sm md:text-base">
+              <h4 className="font-bold mb-2 sm:mb-3 md:mb-4 text-xs sm:text-sm md:text-base">Support</h4>
+              <ul className="space-y-1 text-gray-400 text-xs sm:text-sm md:text-base">
                 <li>Help Center</li>
                 <li>Contact Us</li>
                 <li>Privacy Policy</li>
@@ -1191,8 +1232,8 @@ export default function HomePage() {
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-6 md:mt-8 pt-6 md:pt-8 text-center text-gray-400">
-            <p className="text-sm md:text-base">&copy; 2024 YottaScore. All rights reserved.</p>
+          <div className="border-t border-gray-800 mt-4 sm:mt-6 md:mt-8 pt-4 sm:pt-6 md:pt-8 text-center text-gray-400">
+            <p className="text-xs sm:text-sm md:text-base">&copy; 2024 YottaScore. All rights reserved.</p>
           </div>
         </div>
       </footer>
