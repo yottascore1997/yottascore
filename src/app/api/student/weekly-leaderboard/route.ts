@@ -49,10 +49,9 @@ export async function GET(req: Request) {
         }
       },
       include: {
-        winners: {
-          take: 5,
-          orderBy: {
-            rank: 'asc'
+        participants: {
+          where: {
+            completedAt: { not: null }
           },
           include: {
             user: {
@@ -64,7 +63,11 @@ export async function GET(req: Request) {
                 year: true
               }
             }
-          }
+          },
+          orderBy: [
+            { score: 'desc' },
+            { completedAt: 'asc' }
+          ]
         },
         _count: {
           select: {
@@ -80,22 +83,40 @@ export async function GET(req: Request) {
     console.log('📊 Found live exams:', liveExams.length)
 
     // Format the response
-    const leaderboardData = liveExams.map(exam => ({
-      examId: exam.id,
-      examTitle: exam.title,
-      examDate: exam.endTime,
-      totalParticipants: exam._count.participants,
-      prizePool: exam.prizePool,
-      winners: exam.winners.map(winner => ({
-        rank: winner.rank,
-        userId: winner.user.id,
-        userName: winner.user.name,
-        userPhoto: winner.user.profilePhoto,
-        course: winner.user.course,
-        year: winner.user.year,
-        winnings: winner.prizeAmount
-      }))
-    }))
+    const leaderboardData = liveExams.map(exam => {
+      // Calculate winners from top participants
+      const topParticipants = exam.participants.slice(0, 5) // Top 5 winners
+      
+      // Calculate prize amounts for each rank
+      const totalPrizePool = exam.spots * exam.entryFee
+      const winningPool = totalPrizePool * 0.9
+      const calculatePrize = (rank: number) => {
+        if (rank === 1) return Math.floor(winningPool * 0.20)
+        if (rank === 2) return Math.floor(winningPool * 0.15)
+        if (rank === 3) return Math.floor(winningPool * 0.10)
+        if (rank >= 4 && rank <= 10) return Math.floor(winningPool * 0.25 / 7)
+        if (rank >= 11 && rank <= 25) return Math.floor(winningPool * 0.30 / 15)
+        return 0
+      }
+
+      return {
+        examId: exam.id,
+        examTitle: exam.title,
+        examDate: exam.endTime,
+        totalParticipants: exam._count.participants,
+        prizePool: exam.prizePool,
+        winners: topParticipants.map((participant, index) => ({
+          rank: index + 1,
+          userId: participant.user.id,
+          userName: participant.user.name,
+          userPhoto: participant.user.profilePhoto,
+          course: participant.user.course,
+          year: participant.user.year,
+          winnings: calculatePrize(index + 1),
+          score: participant.score
+        }))
+      }
+    })
 
     // Calculate current week info
     const currentWeek = `${weekStart.getFullYear()}-${String(Math.ceil((weekStart.getTime() - new Date(weekStart.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))).padStart(2, '0')}`

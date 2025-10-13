@@ -130,6 +130,10 @@ model User {
   likes           Like[]
   comments        Comment[]
   savedPosts      SavedPost[]
+  reports         PostReport[]
+  deletedMessages UserMessageDelete[]
+  blockedUsers    UserBlock[] @relation("UserBlocker")
+  blockedBy       UserBlock[] @relation("UserBlocked")
   
   // Groups
   groupMemberships GroupMember[]
@@ -198,6 +202,18 @@ model User {
   // Poll and Question Relations
   pollVotes PollVote[]
   questionAnswers QuestionAnswer[]
+  
+  // Book Listing Relations
+  bookListings      BookListing[]
+  bookProfile       UserBookProfile?
+  bookTransactionsAsBuyer BookTransaction[] @relation("BookBuyer")
+  bookTransactionsAsSeller BookTransaction[] @relation("BookSeller")
+  bookTransactionMessages BookTransactionMessage[]
+  bookLikes         BookLike[]
+  bookReviews       BookReview[]
+  bookWishlists     BookWishlist[]
+  bookCarts         BookCart[]
+  bookReports       BookReport[]
   
   // Spy Game - Commented out for now
   // spyGamePlayers SpyGamePlayer[]
@@ -286,6 +302,10 @@ model Transaction {
   amount    Float
   type      String
   status    String
+  description String?
+  razorpayOrderId String?
+  razorpayPaymentId String?
+  razorpaySignature String?
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id])
 }
@@ -447,6 +467,7 @@ model Post {
   savedBy     SavedPost[]
   pollVotes   PollVote[]
   questionAnswers QuestionAnswer[]
+  reports     PostReport[]
   
   // Tags
   taggedUsers Json?     // Array of tagged user IDs
@@ -515,6 +536,47 @@ model SavedPost {
   @@unique([userId, postId])
 }
 
+model PostReport {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  reason      String    // Report reason
+  description String?   // Additional details
+  status      ReportStatus @default(PENDING) // PENDING, REVIEWED, RESOLVED
+  reviewedBy  String?   // Admin ID who reviewed
+  reviewedAt  DateTime? // When reviewed
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, postId]) // One report per user per post
+}
+
+model UserMessageDelete {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  message   DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String
+  deletedAt DateTime  @default(now())
+
+  @@unique([userId, messageId]) // One delete record per user per message
+}
+
+model UserBlock {
+  id          String    @id @default(cuid())
+  blocker     User      @relation("UserBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockerId   String
+  blocked     User      @relation("UserBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blockedId   String
+  reason      String?   // Optional reason for blocking
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([blockerId, blockedId]) // One block record per blocker-blocked pair
+}
+
 // DirectMessage model
 model DirectMessage {
   id          String    @id @default(cuid())
@@ -547,6 +609,9 @@ model DirectMessage {
   isForwarded Boolean   @default(false)
   originalSenderId String? // ID of original sender if forwarded
   originalSender User? @relation("ForwardedMessageSender", fields: [originalSenderId], references: [id])
+  
+  // User-specific deletions
+  userDeletions UserMessageDelete[]
   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now())
@@ -1471,6 +1536,12 @@ enum PostStatus {
   FLAGGED
 }
 
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+}
+
 enum PostType {
   TEXT
   POLL
@@ -1506,3 +1577,309 @@ model QuestionAnswer {
 
   @@unique([postId, userId]) // One answer per user per question
 }
+
+// Book Listing System Models
+model BookListing {
+  id              String        @id @default(cuid())
+  title           String
+  author          String
+  isbn            String?       @unique
+  description     String?       @db.Text
+  price           Float?        // For selling
+  rentPrice       Float?        // For renting (per day/week/month)
+  listingType     BookListingType
+  condition       BookCondition
+  category        String        // Subject, Class, Exam prep, Novel, etc.
+  subcategory     String?       // More specific categorization
+  class           String?       // For academic books
+  subject         String?       // For academic books
+  examType        String?       // For exam preparation books
+  language        String        @default("English")
+  pages           Int?
+  publisher       String?
+  publishedYear   Int?
+  edition         String?
+  
+  // Location and availability
+  location        String        // City, State
+  latitude        Float?        // For distance calculations
+  longitude       Float?        // For distance calculations
+  isAvailable     Boolean       @default(true)
+  availableFrom   DateTime?     // For rental listings
+  availableUntil DateTime?      // For rental listings
+  
+  // Images
+  coverImage      String?       // Main cover image
+  additionalImages Json?        // Array of additional image URLs
+  
+  // Status and metadata
+  status          BookListingStatus @default(ACTIVE)
+  views           Int           @default(0)
+  likes           Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  seller          User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  sellerId        String
+  
+  // Engagement
+  bookLikes       BookLike[]
+  bookReviews     BookReview[]
+  bookWishlists   BookWishlist[]
+  bookCarts       BookCart[]
+  bookReports     BookReport[]
+  
+  // Transactions
+  transactions    BookTransaction[]
+  
+  @@index([sellerId, createdAt])
+  @@index([category, subcategory])
+  @@index([listingType, status])
+  @@index([location])
+  @@index([latitude, longitude])
+  @@index([isAvailable, status])
+}
+
+model BookLike {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  book      BookListing @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  bookId    String
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, bookId])
+  @@index([bookId, createdAt])
+}
+
+model BookReview {
+  id          String    @id @default(cuid())
+  rating      Int       // 1-5 stars
+  comment     String?   @db.Text
+  isVerified  Boolean   @default(false) // Verified purchase/review
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  book        BookListing @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  bookId      String
+  
+  @@unique([userId, bookId]) // One review per user per book
+  @@index([bookId, rating])
+  @@index([userId, createdAt])
+}
+
+model BookWishlist {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  book      BookListing @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  bookId    String
+  createdAt DateTime  @default(now())
+  
+  // Notification settings
+  notifyOnPriceDrop Boolean @default(true)
+  notifyOnAvailability Boolean @default(true)
+  maxPrice Float? // Notify if price drops below this
+  maxDistance Float? // Notify if book becomes available within this distance (km)
+
+  @@unique([userId, bookId])
+  @@index([userId, createdAt])
+  @@index([bookId])
+}
+
+model BookCart {
+  id        String      @id @default(cuid())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  book      BookListing @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  bookId    String
+  quantity  Int         @default(1) // For future use
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([bookId])
+}
+
+model BookReport {
+  id          String    @id @default(cuid())
+  reason      String    // Report reason
+  description String?   @db.Text
+  status      ReportStatus @default(PENDING)
+  reviewedBy  String?   // Admin ID who reviewed
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  book        BookListing @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  bookId      String
+  
+  @@unique([userId, bookId]) // One report per user per book
+  @@index([bookId, status])
+}
+
+model BookTransaction {
+  id              String              @id @default(cuid())
+  transactionType BookTransactionType
+  status          BookTransactionStatus @default(PENDING)
+  amount          Float?
+  currency        String              @default("INR")
+  paymentMethod   String?             // Cash, UPI, Bank Transfer, etc.
+  paymentId       String?             // External payment reference
+  
+  // Transaction details
+  startDate       DateTime?           // For rentals
+  endDate         DateTime?           // For rentals
+  returnDate      DateTime?           // For rentals
+  isReturned      Boolean             @default(false)
+  
+  // Location details
+  meetingLocation String?             // Where to meet for exchange
+  meetingTime     DateTime?           // When to meet
+  
+  // Communication
+  sellerNotes     String?             @db.Text
+  buyerNotes      String?             @db.Text
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  // Relations
+  book            BookListing         @relation(fields: [bookId], references: [id])
+  bookId          String
+  buyer           User                @relation("BookBuyer", fields: [buyerId], references: [id])
+  buyerId         String
+  seller          User                @relation("BookSeller", fields: [sellerId], references: [id])
+  sellerId        String
+  
+  // Messages
+  messages        BookTransactionMessage[]
+  
+  @@index([buyerId, createdAt])
+  @@index([sellerId, createdAt])
+  @@index([bookId, status])
+}
+
+model BookTransactionMessage {
+  id            String    @id @default(cuid())
+  content       String    @db.Text
+  messageType   MessageType @default(TEXT)
+  fileUrl       String?   // For file attachments
+  isRead        Boolean   @default(false)
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  transaction   BookTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  transactionId String
+  sender        User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId      String
+  
+  @@index([transactionId, createdAt])
+}
+
+// User Profile Enhancements for Book System
+model UserBookProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Verification
+  isVerified        Boolean   @default(false)
+  verificationType  UserVerificationType?
+  collegeEmail      String?   @unique
+  studentId         String?
+  collegeName       String?
+  graduationYear    Int?
+  
+  // Location
+  city              String?
+  state             String?
+  pincode           String?
+  latitude          Float?
+  longitude         Float?
+  
+  // Preferences
+  preferredLanguage String    @default("English")
+  maxDistance       Float     @default(10) // km
+  notificationSettings Json?   // Store notification preferences
+  
+  // Stats
+  totalListings     Int       @default(0)
+  totalSales        Int       @default(0)
+  totalRentals      Int       @default(0)
+  totalDonations    Int       @default(0)
+  averageRating     Float     @default(0)
+  totalReviews      Int       @default(0)
+  
+  // Badges
+  badges            Json?     // Array of earned badges
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([city, state])
+  @@index([latitude, longitude])
+}
+
+// Enums for Book System
+enum BookListingType {
+  SELL
+  RENT
+  DONATE
+}
+
+enum BookCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum BookListingStatus {
+  ACTIVE
+  SOLD
+  RENTED
+  DONATED
+  INACTIVE
+  REMOVED
+}
+
+enum BookTransactionType {
+  SALE
+  RENTAL
+  DONATION
+}
+
+enum BookTransactionStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum UserVerificationType {
+  COLLEGE_EMAIL
+  STUDENT_ID
+  COLLEGE_ID
+  AADHAR_VERIFIED
+}
+
+// Add relations to User model
+// Add these to the existing User model relations:
+// bookListings      BookListing[]
+// bookProfile       UserBookProfile?
+// bookTransactionsAsBuyer BookTransaction[] @relation("BookBuyer")
+// bookTransactionsAsSeller BookTransaction[] @relation("BookSeller")
+// bookTransactionMessages BookTransactionMessage[]

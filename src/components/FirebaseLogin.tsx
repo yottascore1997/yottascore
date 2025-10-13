@@ -24,30 +24,44 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
 
   useEffect(() => {
     // Initialize reCAPTCHA verifier
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !recaptchaVerifier) {
       try {
+        // Clear any existing reCAPTCHA container
+        const container = document.getElementById('recaptcha-container');
+        if (container) {
+          container.innerHTML = '';
+        }
+        
         const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
           callback: () => {
-            console.log('reCAPTCHA solved');
+            console.log('✅ reCAPTCHA solved');
           },
           'expired-callback': () => {
-            console.log('reCAPTCHA expired');
+            console.log('⚠️ reCAPTCHA expired');
+          },
+          'error-callback': (error) => {
+            console.error('❌ reCAPTCHA error:', error);
           }
         });
+        
         setRecaptchaVerifier(verifier);
+        console.log('✅ reCAPTCHA verifier initialized');
       } catch (error) {
-        console.error('reCAPTCHA initialization error:', error);
-        // Create a fallback verifier
-        const fallbackVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'normal',
-          callback: () => {
-            console.log('reCAPTCHA solved (fallback)');
-          }
-        });
-        setRecaptchaVerifier(fallbackVerifier);
+        console.error('❌ reCAPTCHA initialization error:', error);
       }
     }
+    
+    return () => {
+      // Cleanup on unmount
+      if (recaptchaVerifier) {
+        try {
+          recaptchaVerifier.clear();
+        } catch (e) {
+          console.log('reCAPTCHA cleanup error (ignored)');
+        }
+      }
+    };
   }, []);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -79,15 +93,41 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
     e.preventDefault();
     try {
       if (!recaptchaVerifier) {
-        onError('reCAPTCHA not initialized');
+        console.error('❌ reCAPTCHA not initialized');
+        onError('reCAPTCHA not initialized. Please refresh the page.');
         return;
       }
 
-      const confirmationResult = await signInWithPhone(phoneNumber, recaptchaVerifier);
+      console.log('📱 Validating phone number:', phoneNumber);
+      
+      // Step 1: Validate phone number and check rate limits
+      const validationResponse = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber }),
+      });
+      
+      const validationData = await validationResponse.json();
+      
+      if (!validationResponse.ok || !validationData.success) {
+        console.error('❌ Validation failed:', validationData.error);
+        onError(validationData.error || 'Phone number validation failed');
+        return;
+      }
+      
+      const formattedPhone = validationData.phoneNumber;
+      console.log('✅ Phone validated:', formattedPhone);
+      
+      // Step 2: Send OTP via Firebase
+      console.log('📱 Sending OTP via Firebase...');
+      const confirmationResult = await signInWithPhone(formattedPhone, recaptchaVerifier);
+      
+      console.log('✅ OTP sent! Verification ID:', confirmationResult.verificationId);
       setVerificationId(confirmationResult.verificationId);
       setShowOTP(true);
     } catch (error: any) {
-      onError(error.message);
+      console.error('❌ OTP send error:', error);
+      onError(`Failed to send OTP: ${error.message}`);
     }
   };
 

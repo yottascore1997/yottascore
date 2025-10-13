@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { format } from 'date-fns'
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Image, Video, Hash, Loader2, Upload, X, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Image, Video, Hash, Loader2, Upload, X, Clock, CheckCircle, XCircle, AlertCircle, Flag, Trash2 } from 'lucide-react'
 import CommentSection from '@/components/CommentSection'
 import StoryBar from '@/components/StoryBar'
 import CreateStoryModal from '@/components/CreateStoryModal'
@@ -60,6 +60,19 @@ export default function FeedPage() {
   const [showCreateStory, setShowCreateStory] = useState(false)
   const [selectedStoryGroup, setSelectedStoryGroup] = useState<any>(null)
   const [storyRefreshTrigger, setStoryRefreshTrigger] = useState(0)
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
+  const [reportReason, setReportReason] = useState('')
+  const [reportDescription, setReportDescription] = useState('')
+  const [reporting, setReporting] = useState(false)
+  const [activePostOptions, setActivePostOptions] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [showDeletePostModal, setShowDeletePostModal] = useState(false)
+  const [deletingPost, setDeletingPost] = useState(false)
+  const [showBlockModal, setShowBlockModal] = useState(false)
+  const [userToBlock, setUserToBlock] = useState<{id: string, name: string} | null>(null)
+  const [blockReason, setBlockReason] = useState('')
+  const [blocking, setBlocking] = useState(false)
   const [newPost, setNewPost] = useState({
     content: '',
     imageUrl: '',
@@ -87,7 +100,32 @@ export default function FeedPage() {
   useEffect(() => {
     fetchPosts()
     fetchPendingPosts()
+    
+    // Get current user ID
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split('.')[1]))
+        setCurrentUserId(decoded.userId)
+      } catch (error) {
+        console.error('Error decoding token:', error)
+      }
+    }
   }, [])
+
+  // Close options dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (activePostOptions) {
+        setActivePostOptions(null)
+      }
+    }
+
+    document.addEventListener('click', handleClickOutside)
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [activePostOptions])
 
   // Fetch poll results when posts change
   useEffect(() => {
@@ -117,7 +155,14 @@ export default function FeedPage() {
       }
 
       const data = await response.json()
-      setPosts(data)
+      
+      // Filter out posts from blocked users
+      const filteredPosts = data.filter((post: any) => {
+        // This will be handled by the API, but we can add additional filtering here if needed
+        return true
+      })
+      
+      setPosts(filteredPosts)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to fetch posts')
     } finally {
@@ -273,7 +318,7 @@ export default function FeedPage() {
       const result = await response.json()
       
       // Show success message
-      alert(result.message || 'Post submitted for review!')
+      alert(result.message || 'Post created successfully and is now visible!')
       
       setShowCreatePost(false)
       resetForm()
@@ -315,6 +360,134 @@ export default function FeedPage() {
       }
     } catch (error) {
       console.error('Failed to toggle like:', error)
+    }
+  }
+
+  const handleReportPost = (postId: string) => {
+    setSelectedPostId(postId)
+    setShowReportModal(true)
+  }
+
+  const submitReport = async () => {
+    if (!selectedPostId || !reportReason.trim()) return
+
+    setReporting(true)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(`/api/student/posts/${selectedPostId}/report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reason: reportReason,
+          description: reportDescription || null
+        })
+      })
+
+      if (response.ok) {
+        alert('Post reported successfully. It will be reviewed by admin.')
+        setShowReportModal(false)
+        setReportReason('')
+        setReportDescription('')
+        setSelectedPostId(null)
+      } else {
+        const error = await response.text()
+        alert(error || 'Failed to report post')
+      }
+    } catch (error) {
+      console.error('Error reporting post:', error)
+      alert('Failed to report post')
+    } finally {
+      setReporting(false)
+    }
+  }
+
+  const handlePostOptionsClick = (postId: string) => {
+    setActivePostOptions(activePostOptions === postId ? null : postId)
+  }
+
+  const handleDeletePost = (postId: string) => {
+    setSelectedPostId(postId)
+    setShowDeletePostModal(true)
+    setActivePostOptions(null)
+  }
+
+  const confirmDeletePost = async () => {
+    if (!selectedPostId) return
+
+    setDeletingPost(true)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(`/api/student/posts/${selectedPostId}/delete`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        alert('Post deleted successfully!')
+        setShowDeletePostModal(false)
+        setSelectedPostId(null)
+        fetchPosts() // Refresh posts
+      } else {
+        const error = await response.text()
+        alert(error || 'Failed to delete post')
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error)
+      alert('Failed to delete post')
+    } finally {
+      setDeletingPost(false)
+    }
+  }
+
+  const handleBlockUser = (userId: string, userName: string) => {
+    setUserToBlock({ id: userId, name: userName })
+    setShowBlockModal(true)
+    setActivePostOptions(null)
+  }
+
+  const confirmBlockUser = async () => {
+    if (!userToBlock) return
+
+    setBlocking(true)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(`/api/student/users/${userToBlock.id}/block`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reason: blockReason || null
+        })
+      })
+
+      if (response.ok) {
+        alert(`You have blocked ${userToBlock.name}`)
+        setShowBlockModal(false)
+        setUserToBlock(null)
+        setBlockReason('')
+        fetchPosts() // Refresh posts to hide blocked user's posts
+      } else {
+        const error = await response.text()
+        alert(error || 'Failed to block user')
+      }
+    } catch (error) {
+      console.error('Error blocking user:', error)
+      alert('Failed to block user')
+    } finally {
+      setBlocking(false)
     }
   }
 
@@ -605,7 +778,7 @@ export default function FeedPage() {
 
       {/* Stories */}
       <div className="max-w-2xl mx-auto px-4 py-4">
-        <StoryBar onStoryClick={setSelectedStoryGroup} refreshTrigger={storyRefreshTrigger} />
+        <StoryBar onViewStory={setSelectedStoryGroup} refreshTrigger={storyRefreshTrigger} />
       </div>
 
       {/* Posts */}
@@ -646,11 +819,54 @@ export default function FeedPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <p className="font-semibold text-gray-900">{post.author.name}</p>
-                      <span className="text-sm text-gray-500">
-                        {format(new Date(post.createdAt), 'MMM d, yyyy')}
-                      </span>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <p className="font-semibold text-gray-900">{post.author.name}</p>
+                        <span className="text-sm text-gray-500">
+                          {format(new Date(post.createdAt), 'MMM d, yyyy')}
+                        </span>
+                      </div>
+                      
+                      {/* Post Options Menu */}
+                      <div className="relative">
+                        <button
+                          onClick={() => handlePostOptionsClick(post.id)}
+                          className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                        >
+                          <MoreHorizontal className="h-5 w-5 text-gray-500" />
+                        </button>
+                        
+                        {/* Options Dropdown */}
+                        {activePostOptions === post.id && (
+                          <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+                            {post.author.id === currentUserId && (
+                              <button
+                                onClick={() => handleDeletePost(post.id)}
+                                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span>Delete Post</span>
+                              </button>
+                            )}
+                            {post.author.id !== currentUserId && (
+                              <button
+                                onClick={() => handleBlockUser(post.author.id, post.author.name)}
+                                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                              >
+                                <X className="h-4 w-4" />
+                                <span>Block User</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleReportPost(post.id)}
+                              className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                            >
+                              <Flag className="h-4 w-4" />
+                              <span>Report</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
                     <p className="text-gray-900 mb-3">{post.content}</p>
@@ -839,6 +1055,14 @@ export default function FeedPage() {
                       <button className="flex items-center space-x-1 text-gray-500 hover:text-yellow-500 transition-colors">
                         <Bookmark className="h-5 w-5" />
                         <span className="text-sm">Save</span>
+                      </button>
+                      
+                      <button 
+                        onClick={() => handleReportPost(post.id)}
+                        className="flex items-center space-x-1 text-gray-500 hover:text-red-500 transition-colors"
+                      >
+                        <Flag className="h-5 w-5" />
+                        <span className="text-sm">Report</span>
                       </button>
                     </div>
 
@@ -1225,6 +1449,151 @@ export default function FeedPage() {
           storyGroup={selectedStoryGroup}
           onClose={() => setSelectedStoryGroup(null)}
         />
+      )}
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4">Report Post</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for reporting
+                </label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Select a reason</option>
+                  <option value="spam">Spam</option>
+                  <option value="inappropriate">Inappropriate content</option>
+                  <option value="harassment">Harassment</option>
+                  <option value="violence">Violence or threats</option>
+                  <option value="hate_speech">Hate speech</option>
+                  <option value="fake_news">Fake news</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Additional details (optional)
+                </label>
+                <textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Please provide more details about why you're reporting this post..."
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent h-20"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                onClick={() => {
+                  setShowReportModal(false)
+                  setReportReason('')
+                  setReportDescription('')
+                  setSelectedPostId(null)
+                }}
+                variant="outline"
+                disabled={reporting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={submitReport}
+                disabled={!reportReason.trim() || reporting}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {reporting ? 'Reporting...' : 'Report Post'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Post Modal */}
+      {showDeletePostModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4">Delete Post</h3>
+            
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this post? This action cannot be undone.
+            </p>
+            
+            <div className="flex justify-end space-x-3">
+              <Button
+                onClick={() => {
+                  setShowDeletePostModal(false)
+                  setSelectedPostId(null)
+                }}
+                variant="outline"
+                disabled={deletingPost}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDeletePost}
+                disabled={deletingPost}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deletingPost ? 'Deleting...' : 'Delete Post'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block User Modal */}
+      {showBlockModal && userToBlock && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4">Block User</h3>
+            
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to block <strong>{userToBlock.name}</strong>? 
+              You won't see their posts and they won't be able to message you.
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason for blocking (optional)
+              </label>
+              <textarea
+                value={blockReason}
+                onChange={(e) => setBlockReason(e.target.value)}
+                placeholder="Why are you blocking this user?"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent h-20"
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <Button
+                onClick={() => {
+                  setShowBlockModal(false)
+                  setUserToBlock(null)
+                  setBlockReason('')
+                }}
+                variant="outline"
+                disabled={blocking}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmBlockUser}
+                disabled={blocking}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {blocking ? 'Blocking...' : 'Block User'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

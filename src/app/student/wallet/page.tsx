@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import RazorpayPayment from '@/components/RazorpayPayment';
 
 interface Transaction {
   id: string;
@@ -33,6 +34,8 @@ const WalletPage: React.FC = () => {
   const [isDepositing, setIsDepositing] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isAddingDummyBalance, setIsAddingDummyBalance] = useState(false);
+  const [showRazorpayPayment, setShowRazorpayPayment] = useState(false);
+  const [razorpayAmount, setRazorpayAmount] = useState<number | ''>('');
 
   const router = useRouter();
 
@@ -210,6 +213,37 @@ const WalletPage: React.FC = () => {
     }
   };
 
+  const handleRazorpaySuccess = (paymentData: any) => {
+    setShowRazorpayPayment(false);
+    setRazorpayAmount('');
+    fetchWalletData();
+  };
+
+  const handleRazorpayError = (error: any) => {
+    console.error('Razorpay payment error:', error);
+  };
+
+  const handleRazorpayClose = () => {
+    setShowRazorpayPayment(false);
+    setRazorpayAmount('');
+  };
+
+  const handleRazorpayDeposit = () => {
+    if (typeof razorpayAmount !== 'number' || razorpayAmount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    if (razorpayAmount < 1) {
+      toast.error('Minimum amount is ₹1');
+      return;
+    }
+    if (razorpayAmount > 100000) {
+      toast.error('Maximum amount is ₹1,00,000');
+      return;
+    }
+    setShowRazorpayPayment(true);
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading wallet...</div>;
   }
@@ -217,6 +251,20 @@ const WalletPage: React.FC = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Wallet</h1>
+      
+      {/* Razorpay Payment Modal */}
+      {showRazorpayPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <RazorpayPayment
+              amount={razorpayAmount as number}
+              onSuccess={handleRazorpaySuccess}
+              onError={handleRazorpayError}
+              onClose={handleRazorpayClose}
+            />
+          </div>
+        </div>
+      )}
       
       {/* KYC Status */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -262,33 +310,69 @@ const WalletPage: React.FC = () => {
       {/* Deposit Section */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Deposit</h2>
+        
+        {/* Razorpay Payment Section */}
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h3 className="text-lg font-semibold mb-3 text-blue-800">💳 Add Money via Razorpay</h3>
+          <div className="flex gap-4">
+            <input
+              type="number"
+              placeholder="Enter amount (₹1 - ₹1,00,000)"
+              value={razorpayAmount}
+              onChange={(e) => {
+                const value = e.target.value;
+                setRazorpayAmount(value === '' ? '' : parseFloat(value));
+              }}
+              className="flex-grow p-2 border rounded-md"
+              min="1"
+              max="100000"
+            />
+            <button
+              onClick={handleRazorpayDeposit}
+              disabled={typeof razorpayAmount !== 'number' || razorpayAmount <= 0}
+              className={`bg-blue-600 text-white py-2 px-4 rounded-md font-semibold ${typeof razorpayAmount !== 'number' || razorpayAmount <= 0 ? 'bg-gray-400 cursor-not-allowed' : 'hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'}`}
+            >
+              Pay with Razorpay
+            </button>
+          </div>
+          <p className="text-sm text-blue-600 mt-2">
+            Secure payment gateway • Instant wallet credit • Multiple payment options
+          </p>
+        </div>
+
+        {/* Dummy Balance Section */}
         <div className="mb-4">
           <button
             onClick={handleAddDummyBalance}
             disabled={isAddingDummyBalance}
             className={`bg-yellow-500 text-white py-2 px-4 rounded-md font-semibold text-sm w-full ${isAddingDummyBalance ? 'bg-gray-400 cursor-not-allowed' : 'hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2'}`}
           >
-            {isAddingDummyBalance ? 'Adding...' : 'Add Dummy Balance (₹1000)'}
+            {isAddingDummyBalance ? 'Adding...' : 'Add Dummy Balance (₹1000) - For Testing'}
           </button>
         </div>
-        <div className="flex gap-4">
-          <input
-            type="number"
-            placeholder="Enter amount"
-            value={depositAmount}
-            onChange={(e) => {
-              const value = e.target.value;
-              setDepositAmount(value === '' ? '' : parseFloat(value));
-            }}
-            className="flex-grow p-2 border rounded-md"
-          />
-          <button
-            onClick={handleDeposit}
-            disabled={typeof depositAmount !== 'number' || depositAmount <= 0 || isDepositing}
-            className={`bg-green-600 text-white py-2 px-4 rounded-md font-semibold ${typeof depositAmount !== 'number' || depositAmount <= 0 || isDepositing ? 'bg-gray-400 cursor-not-allowed' : 'hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2'}`}
-          >
-            + Add Cash
-          </button>
+
+        {/* Legacy Deposit Section */}
+        <div className="border-t pt-4">
+          <h3 className="text-sm font-medium text-gray-600 mb-2">Legacy Deposit (Direct)</h3>
+          <div className="flex gap-4">
+            <input
+              type="number"
+              placeholder="Enter amount"
+              value={depositAmount}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDepositAmount(value === '' ? '' : parseFloat(value));
+              }}
+              className="flex-grow p-2 border rounded-md"
+            />
+            <button
+              onClick={handleDeposit}
+              disabled={typeof depositAmount !== 'number' || depositAmount <= 0 || isDepositing}
+              className={`bg-green-600 text-white py-2 px-4 rounded-md font-semibold ${typeof depositAmount !== 'number' || depositAmount <= 0 || isDepositing ? 'bg-gray-400 cursor-not-allowed' : 'hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2'}`}
+            >
+              + Add Cash
+            </button>
+          </div>
         </div>
       </div>
       
@@ -333,6 +417,10 @@ const WalletPage: React.FC = () => {
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="flex items-center justify-between py-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50" onClick={() => router.push('/student/wallet/transactions')}>
           <span className="text-gray-800">My Transactions</span>
+          <span>&gt;</span>
+        </div>
+        <div className="flex items-center justify-between py-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50" onClick={() => router.push('/student/wallet/payment-history')}>
+          <span className="text-gray-800">Payment History</span>
           <span>&gt;</span>
         </div>
         <div className="flex items-center justify-between py-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50" onClick={() => router.push('/student/wallet/kyc')}>

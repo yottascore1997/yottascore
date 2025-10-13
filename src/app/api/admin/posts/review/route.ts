@@ -20,10 +20,10 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Forbidden', { status: 403 })
     }
 
-    // Fetch pending posts for review
+    // Fetch flagged posts for review (reported posts)
     const pendingPosts = await prisma.post.findMany({
       where: {
-        status: 'PENDING'
+        status: 'FLAGGED'
       },
       include: {
         author: {
@@ -34,6 +34,18 @@ export async function GET(req: NextRequest) {
             course: true,
             year: true
           }
+        },
+        reports: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                profilePhoto: true
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
         }
       },
       orderBy: { createdAt: 'asc' } // Oldest first for fair review
@@ -75,7 +87,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Rejection reason is required', { status: 400 })
     }
 
-    // Update post status
+    // Update post status and mark reports as reviewed
     const updatedPost = await prisma.post.update({
       where: { id: postId },
       data: {
@@ -94,6 +106,16 @@ export async function POST(req: NextRequest) {
             year: true
           }
         }
+      }
+    })
+
+    // Mark all reports for this post as reviewed
+    await prisma.postReport.updateMany({
+      where: { postId: postId },
+      data: {
+        status: 'REVIEWED',
+        reviewedBy: decoded.userId,
+        reviewedAt: new Date()
       }
     })
 

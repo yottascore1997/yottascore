@@ -20,11 +20,20 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Forbidden', { status: 403 })
     }
 
-    // Fetch all approved public posts (no filtering by user or following)
+    // Fetch all approved public posts (exclude current user's posts)
     const posts = await prisma.post.findMany({
       where: {
         status: 'APPROVED', // Only approved posts
-        isPrivate: false // Public posts only
+        isPrivate: false, // Public posts only
+        authorId: { not: decoded.userId }, // Exclude current user's posts
+        // Exclude posts from blocked users
+        author: {
+          blockedBy: {
+            none: {
+              blockerId: decoded.userId
+            }
+          }
+        }
       },
       include: {
         author: {
@@ -158,7 +167,7 @@ export async function POST(req: NextRequest) {
       authorId: decoded.userId
     }) // Debug log
 
-    // Create post with PENDING status
+    // Create post with APPROVED status (instantly visible)
     const post = await prisma.post.create({
       data: {
         content,
@@ -173,7 +182,7 @@ export async function POST(req: NextRequest) {
         allowMultipleVotes,
         questionType: questionType || null,
         questionOptions: questionOptions || null,
-        status: 'PENDING', // All new posts start as pending
+        status: 'APPROVED', // Posts are instantly visible
         authorId: decoded.userId
       },
       include: {
@@ -191,13 +200,13 @@ export async function POST(req: NextRequest) {
 
     console.log('Post created successfully:', post.id) // Debug log
 
-    // Return success message with review status
+    // Return success message
     return NextResponse.json({
       success: true,
-      message: 'Post submitted for review. It will be visible once approved.',
+      message: 'Post created successfully and is now visible!',
       post: {
         ...post,
-        status: 'PENDING'
+        status: 'APPROVED'
       }
     })
   } catch (error) {

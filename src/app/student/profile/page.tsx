@@ -28,6 +28,40 @@ interface UserProfile {
   isMutualFollower?: boolean
 }
 
+interface Post {
+  id: string
+  content: string
+  imageUrl?: string
+  videoUrl?: string
+  hashtags: string[]
+  taggedUsers: string[]
+  isPrivate: boolean
+  postType: string
+  pollOptions?: string[]
+  pollEndTime?: string
+  allowMultipleVotes: boolean
+  questionType?: string
+  questionOptions?: string[]
+  status: string
+  createdAt: string
+  author: {
+    id: string
+    name: string
+    profilePhoto?: string
+    course?: string
+    year?: string
+  }
+  _count: {
+    likes: number
+    comments: number
+    pollVotes: number
+    questionAnswers: number
+  }
+  pollVotes: { optionIndex: number }[]
+  questionAnswers: { answer: string }[]
+  isLiked: boolean
+}
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -50,11 +84,66 @@ export default function ProfilePage() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [showErrorMessage, setShowErrorMessage] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const [userPosts, setUserPosts] = useState<Post[]>([])
+  const [postsLoading, setPostsLoading] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     fetchProfile()
+    fetchCurrentUserId()
   }, [])
+
+  useEffect(() => {
+    if (profile) {
+      fetchUserPosts(profile.id)
+    }
+  }, [profile])
+
+  const fetchCurrentUserId = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/student/profile', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const user = await response.json()
+        setCurrentUserId(user.id)
+      }
+    } catch (error) {
+      console.error('Error fetching current user ID:', error)
+    }
+  }
+
+  const fetchUserPosts = async (userId: string) => {
+    try {
+      setPostsLoading(true)
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(`/api/student/posts/user/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const posts = await response.json()
+        setUserPosts(posts)
+      } else {
+        console.error('Failed to fetch user posts')
+      }
+    } catch (error) {
+      console.error('Error fetching user posts:', error)
+    } finally {
+      setPostsLoading(false)
+    }
+  }
 
   const fetchProfile = async () => {
     try {
@@ -942,20 +1031,135 @@ Current Relationship:
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
-            <div className="text-center py-16">
-              <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <FileText className="w-10 h-10 text-blue-500" />
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              {isOwnProfile ? 'My Posts' : `${profile?.name}'s Posts`}
+            </h3>
+            
+            {postsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="text-gray-600 mt-4">Loading posts...</p>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">No posts yet</h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                When you share posts, they'll appear here for your followers to see.
-              </p>
-              <Button 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl px-8 py-3 shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                Create Your First Post
-              </Button>
-            </div>
+            ) : userPosts.length > 0 ? (
+              <div className="space-y-6">
+                {userPosts.map((post) => (
+                  <div key={post.id} className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                    {/* Post Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                          {post.author.profilePhoto ? (
+                            <img 
+                              src={post.author.profilePhoto} 
+                              alt={post.author.name}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-white font-bold text-sm">
+                              {post.author.name.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{post.author.name}</h4>
+                          <p className="text-sm text-gray-500">
+                            {post.author.course} • {post.author.year}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+
+                    {/* Post Content */}
+                    <div className="mb-4">
+                      <p className="text-gray-800 leading-relaxed">{post.content}</p>
+                      
+                      {/* Hashtags */}
+                      {post.hashtags && post.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {post.hashtags.map((tag, index) => (
+                            <span 
+                              key={index}
+                              className="text-blue-600 text-sm font-medium"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Post Image/Video */}
+                    {post.imageUrl && (
+                      <div className="mb-4">
+                        <img 
+                          src={post.imageUrl} 
+                          alt="Post content"
+                          className="w-full max-h-96 object-cover rounded-xl"
+                        />
+                      </div>
+                    )}
+
+                    {post.videoUrl && (
+                      <div className="mb-4">
+                        <video 
+                          src={post.videoUrl} 
+                          controls
+                          className="w-full max-h-96 rounded-xl"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      </div>
+                    )}
+
+                    {/* Post Stats */}
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <Heart className={`w-5 h-5 ${post.isLiked ? 'text-red-500 fill-current' : 'text-gray-400'}`} />
+                          <span className="text-sm text-gray-600">{post._count.likes}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <MessageCircle className="w-5 h-5 text-gray-400" />
+                          <span className="text-sm text-gray-600">{post._count.comments}</span>
+                        </div>
+                      </div>
+                      
+                      {isOwnProfile && (
+                        <div className="text-sm text-gray-500">
+                          {post.isPrivate ? 'Private' : 'Public'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FileText className="w-10 h-10 text-blue-500" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  {isOwnProfile ? 'No posts yet' : 'No posts to show'}
+                </h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  {isOwnProfile 
+                    ? "When you share posts, they'll appear here for your followers to see."
+                    : "This user hasn't shared any posts yet."
+                  }
+                </p>
+                {isOwnProfile && (
+                  <Button 
+                    onClick={() => router.push('/student/feed')}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl px-8 py-3 shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    Create Your First Post
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

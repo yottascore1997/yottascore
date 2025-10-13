@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile } from 'fs/promises';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,63 +15,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type
-    const allowedTypes = [
-      'image/jpeg',
-      'image/jpg', 
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'application/pdf',
-      'text/plain',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: 'File type not allowed. Please upload images (JPEG, PNG, GIF, WebP), PDF, or text files.' },
-        { status: 400 }
-      );
-    }
-
     // Validate file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
+    if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
         { error: 'File size too large. Maximum size is 5MB.' },
         { status: 400 }
       );
     }
 
+    // Validate file type
+    const allowedTypes = [
+      // Images
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      // Documents
+      'application/pdf',
+      // Excel
+      'application/vnd.ms-excel', // .xls
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.oasis.opendocument.spreadsheet' // .ods
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Invalid file type. Allowed types: Images (JPEG, PNG, GIF, WebP), PDF, and Excel files.' },
+        { status: 400 }
+      );
+    }
+
+    // Get file extension
+    const ext = file.type.split('/')[1];
+    
+    // Generate unique filename
+    const filename = `${uuidv4()}.${ext}`;
+    
+    // Create uploads directory if it doesn't exist
+    const uploadDir = join(process.cwd(), 'public', 'uploads');
+    
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
+    // Write file to disk
+    const filepath = join(uploadDir, filename);
+    await writeFile(filepath, buffer);
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const fileExtension = file.name.split('.').pop();
-    const fileName = `${timestamp}-${randomString}.${fileExtension}`;
-    const filePath = join(uploadsDir, fileName);
-
-    // Write file
-    await writeFile(filePath, buffer);
-
-    // Return file URL
-    const fileUrl = `/uploads/${fileName}`;
-
-    return NextResponse.json({
+    // Return the URL
+    const url = `/uploads/${filename}`;
+    
+    return NextResponse.json({ 
       success: true,
-      fileUrl,
-      fileName: file.name,
-      fileSize: file.size,
-      mimeType: file.type
+      url,
+      filename,
+      size: file.size,
+      type: file.type
     });
 
   } catch (error) {
@@ -81,4 +76,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

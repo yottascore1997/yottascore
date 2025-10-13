@@ -118,7 +118,15 @@ export async function GET(
     console.log('🔍 Fetching messages with where clause:', whereClause);
     
     const messages = await prisma.directMessage.findMany({
-      where: whereClause,
+      where: {
+        ...whereClause,
+        // Exclude messages deleted by current user
+        userDeletions: {
+          none: {
+            userId: decoded.userId
+          }
+        }
+      },
       include: {
         sender: {
           select: {

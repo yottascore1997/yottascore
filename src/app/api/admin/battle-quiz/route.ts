@@ -109,8 +109,13 @@ export async function POST(req: NextRequest) {
       isPrivate = false,
       maxPlayers = 2
     } = await req.json();
-    if (!title || !entryAmount || !categoryId) {
-      return NextResponse.json({ message: 'Title, entry amount, and category are required.' }, { status: 400 });
+    if (!title || !categoryId) {
+      return NextResponse.json({ message: 'Title and category are required.' }, { status: 400 });
+    }
+
+    // Allow free quizzes (entryAmount = 0)
+    if (entryAmount === undefined || entryAmount === null) {
+      return NextResponse.json({ message: 'Entry amount is required.' }, { status: 400 });
     }
 
     // Generate room code for private quizzes
@@ -151,7 +156,7 @@ export async function POST(req: NextRequest) {
       data: {
         title,
         description,
-        entryAmount: parseFloat(entryAmount),
+        entryAmount: parseFloat(entryAmount), // Can be 0 for free quizzes
         categoryId,
         questionCount,
         timePerQuestion,

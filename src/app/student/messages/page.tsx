@@ -576,11 +576,39 @@ function MessagesPageContent() {
     const file = e.target.files?.[0];
     if (!file || !selectedUser) return;
 
+    // Validate file type
+    const allowedTypes = [
+      // Images
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      // Documents
+      'application/pdf',
+      // Excel
+      'application/vnd.ms-excel', // .xls
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.oasis.opendocument.spreadsheet' // .ods
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Invalid file type. Allowed types: Images (JPEG, PNG, GIF, WebP), PDF, and Excel files.');
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size too large. Maximum size is 5MB.');
+      return;
+    }
+
     setIsUploading(true);
 
     try {
       const formData = new FormData();
       formData.append('file', file);
+
+      console.log('📤 Uploading file:', {
+        name: file.name,
+        type: file.type,
+        size: `${(file.size / (1024 * 1024)).toFixed(2)}MB`
+      });
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -588,16 +616,24 @@ function MessagesPageContent() {
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
       }
 
       const result = await response.json();
+      console.log('📥 Upload result:', result);
+      
       if (result.success && result.url) {
         // Create optimistic file message for immediate display
         const optimisticMessage: Message = {
           id: `temp-file-${Date.now()}`,
           content: file.name,
-          messageType: file.type.startsWith('image/') ? 'IMAGE' : 'FILE',
+          messageType: file.type.startsWith('image/') ? 'IMAGE' 
+            : file.type === 'application/pdf' ? 'PDF'
+            : (file.type === 'application/vnd.ms-excel' || 
+               file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+               file.type === 'application/vnd.oasis.opendocument.spreadsheet') ? 'EXCEL'
+            : 'FILE',
           fileUrl: result.url,
           isRead: false,
           createdAt: new Date().toISOString(),
@@ -669,14 +705,22 @@ function MessagesPageContent() {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
     
-    if (diffInHours < 1) {
-      return `${Math.floor(diffInHours * 60)}m`
-    } else if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)}h`
+    if (diffInMinutes < 1) {
+      return 'Just now'
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`
+    } else if (diffInMinutes < 24 * 60) {
+      const hours = Math.floor(diffInMinutes / 60)
+      return `${hours}h ago`
     } else {
-      return date.toLocaleDateString()
+      // For messages older than 24 hours, show time
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
     }
   }
 
@@ -761,17 +805,56 @@ function MessagesPageContent() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
           {messages.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>No messages yet</p>
               <p className="text-sm">Start a conversation by sending a message!</p>
             </div>
           ) : (
-            messages.map((message, index) => {
-              const isOwn = message.sender.id !== selectedUser.id
-              
-              return (
+            // Group messages by date
+            Object.entries(
+              messages.reduce<{ [key: string]: Message[] }>((groups, message) => {
+                const date = new Date(message.createdAt);
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+
+                let dateKey = '';
+                
+                if (date.toDateString() === today.toDateString()) {
+                  dateKey = 'Today';
+                } else if (date.toDateString() === yesterday.toDateString()) {
+                  dateKey = 'Yesterday';
+                } else {
+                  // For older messages, group by date
+                  dateKey = date.toLocaleDateString('en-US', { 
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  });
+                }
+
+                if (!groups[dateKey]) {
+                  groups[dateKey] = [];
+                }
+                groups[dateKey].push(message);
+                return groups;
+              }, {})
+            ).map(([dateKey, groupMessages]) => (
+              <div key={dateKey} className="space-y-4">
+                {/* Date Header */}
+                <div className="flex items-center justify-center">
+                  <div className="bg-gray-100 rounded-full px-4 py-1">
+                    <span className="text-sm text-gray-500">{dateKey}</span>
+                  </div>
+                </div>
+
+                {/* Messages for this date */}
+                {groupMessages.map((message, index) => {
+                  const isOwn = message.sender.id !== selectedUser.id;
+                  return (
                 <div
                   key={message.id || index}
                   className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
@@ -781,24 +864,60 @@ function MessagesPageContent() {
                       ? 'bg-blue-500 text-white' 
                       : 'bg-gray-200 text-gray-900'
                   }`}>
-                    {message.fileUrl && message.messageType === 'IMAGE' ? (
-                      <img 
-                        src={message.fileUrl} 
-                        alt="Image" 
-                        className="max-w-full h-auto rounded"
-                      />
-                    ) : message.fileUrl ? (
-                      <div className="flex items-center space-x-2">
-                        <Paperclip className="h-4 w-4" />
-                        <a 
-                          href={message.fileUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="underline"
-                        >
-                          {message.content}
-                        </a>
-                      </div>
+                    {message.fileUrl ? (
+                      message.messageType === 'IMAGE' ? (
+                        // Image preview
+                        <img 
+                          src={message.fileUrl} 
+                          alt="Image" 
+                          className="max-w-full h-auto rounded"
+                        />
+                      ) : message.messageType === 'PDF' ? (
+                        // PDF file link with icon
+                        <div className="flex items-center space-x-2">
+                          <svg className="h-4 w-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 4v12h12V4H4zm11 11H5V5h10v10z"/>
+                            <path d="M7 7h6v2H7zM7 11h6v2H7z"/>
+                          </svg>
+                          <a 
+                            href={message.fileUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="underline"
+                          >
+                            {message.content} (PDF)
+                          </a>
+                        </div>
+                      ) : message.messageType === 'EXCEL' ? (
+                        // Excel file link with icon
+                        <div className="flex items-center space-x-2">
+                          <svg className="h-4 w-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 4v12h12V4H4zm11 11H5V5h10v10z"/>
+                            <path d="M7 8h6v1H7zM7 10h6v1H7zM7 12h6v1H7z"/>
+                          </svg>
+                          <a 
+                            href={message.fileUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="underline"
+                          >
+                            {message.content} (Excel)
+                          </a>
+                        </div>
+                      ) : (
+                        // Default file link
+                        <div className="flex items-center space-x-2">
+                          <Paperclip className="h-4 w-4" />
+                          <a 
+                            href={message.fileUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="underline"
+                          >
+                            {message.content}
+                          </a>
+                        </div>
+                      )
                     ) : (
                       <p>{message.content}</p>
                     )}
@@ -826,7 +945,9 @@ function MessagesPageContent() {
                   </div>
                 </div>
               )
-            })
+                })}
+              </div>
+            ))
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -840,7 +961,7 @@ function MessagesPageContent() {
               onChange={handleFileChange}
               className="hidden"
               disabled={isUploading}
-              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+              accept="image/*,.pdf,.xls,.xlsx,.ods"
             />
             
             <Button
@@ -910,7 +1031,7 @@ function MessagesPageContent() {
            <Button variant="ghost" size="icon" onClick={() => router.push('/student/search')}>
              <Plus className="h-6 w-6 text-blue-500" />
            </Button>
-                       {selectedUser && (
+                       {selectedUser ? (
               <>
                 <Button 
                   variant="outline" 
@@ -918,7 +1039,7 @@ function MessagesPageContent() {
                   onClick={async () => {
                     try {
                       const token = localStorage.getItem('token')
-                      const response = await fetch(`/api/debug/follow-status?otherUserId=${selectedUser.id}`, {
+                      const response = await fetch(`/api/debug/follow-status?otherUserId=${(selectedUser as User)?.id}`, {
                         headers: { Authorization: `Bearer ${token}` }
                       })
                       if (response.ok) {
@@ -940,8 +1061,8 @@ function MessagesPageContent() {
                   onClick={async () => {
                     try {
                       const token = localStorage.getItem('token')
-                      console.log('🔍 Testing API directly for user:', selectedUser.id);
-                      const response = await fetch(`/api/student/messages/${selectedUser.id}`, {
+                      console.log('🔍 Testing API directly for user:', (selectedUser as User)?.id);
+                      const response = await fetch(`/api/student/messages/${(selectedUser as User)?.id}`, {
                         headers: { Authorization: `Bearer ${token}` }
                       })
                       console.log('📡 Direct API Response status:', response.status);
@@ -963,7 +1084,7 @@ function MessagesPageContent() {
                   Test API
                 </Button>
               </>
-            )}
+            ) : null}
          </div>
       </div>
 

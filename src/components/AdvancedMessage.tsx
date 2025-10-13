@@ -47,6 +47,82 @@ export default function AdvancedMessage({
   onDelete,
   isReplyingTo
 }: AdvancedMessageProps) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDeleteClick = (messageId: string) => {
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteForMe = async () => {
+    if (!message.id) return
+    setDeleting(true)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const payload = { messageId: message.id, deleteType: 'for_me' }
+      console.log('Message object:', message)
+      console.log('Message ID type:', typeof message.id, 'Value:', message.id)
+      console.log('Sending payload:', payload)
+      console.log('Payload JSON:', JSON.stringify(payload))
+      
+      const response = await fetch(`/api/student/messages/delete-post`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (response.ok) {
+        setShowDeleteModal(false)
+        onDelete(message.id)
+      } else {
+        alert('Failed to delete message')
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error)
+      alert('Failed to delete message')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleDeleteForEveryone = async () => {
+    if (!message.id) return
+    setDeleting(true)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const payload = { messageId: message.id, deleteType: 'for_everyone' }
+      console.log('Sending payload:', payload) // Debug log
+      
+      const response = await fetch(`/api/student/messages/delete-post`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (response.ok) {
+        setShowDeleteModal(false)
+        onDelete(message.id)
+      } else {
+        alert('Failed to delete message')
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error)
+      alert('Failed to delete message')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   // Safety check - if message is invalid, render nothing
   if (!message || !message.sender || !currentUser) {
     return (
@@ -309,7 +385,7 @@ export default function AdvancedMessage({
       {/* Main Message */}
       <div className={`relative ${isOwnMessage ? 'bg-blue-500 text-white' : 'bg-gray-100'} rounded-lg p-3`}>
         {/* Message Options */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-2 right-2 opacity-100 transition-opacity">
           <Button
             size="sm"
             variant="ghost"
@@ -355,27 +431,25 @@ export default function AdvancedMessage({
                 Pin
               </Button>
               {isOwnMessage && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditing(true)}
-                    className="w-full justify-start text-sm"
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => message.id && onDelete(message.id)}
-                    className="w-full justify-start text-sm text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </Button>
-                </>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="w-full justify-start text-sm"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
               )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDeleteClick(message.id)}
+                className="w-full justify-start text-sm text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
             </div>
           </div>
         )}
@@ -470,6 +544,48 @@ export default function AdvancedMessage({
           <Forward className="w-4 h-4" />
         </Button>
       </div>
+
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4">Delete Message</h3>
+            
+            <div className="space-y-3">
+              <Button
+                onClick={handleDeleteForMe}
+                disabled={deleting}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete for Me
+                <span className="text-xs text-gray-500 ml-2">(Only you won't see this message)</span>
+              </Button>
+              
+              <Button
+                onClick={handleDeleteForEveryone}
+                disabled={deleting}
+                className="w-full justify-start bg-red-600 hover:bg-red-700"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete for Everyone
+                <span className="text-xs text-gray-300 ml-2">(Everyone will see "This message was deleted")</span>
+              </Button>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                onClick={() => setShowDeleteModal(false)}
+                variant="outline"
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

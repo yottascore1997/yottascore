@@ -9,6 +9,8 @@ import MessageNotification from '@/components/MessageNotification';
 
 const studentLinks = [
   { name: 'Dashboard', href: '/student/dashboard', icon: Home },
+  { name: 'Books Marketplace', href: '/books', icon: BookOpen },
+  { name: 'My Book Listings', href: '/books/my-listings', icon: BookOpen },
   { name: 'Live Exams', href: '/student/live-exams', icon: BookOpen },
   { name: 'Practice Exams', href: '/student/practice-exams', icon: Trophy },
   { name: 'Battle Quiz', href: '/student/battle-quiz', icon: Zap },

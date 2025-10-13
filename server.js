@@ -203,7 +203,8 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (user.wallet < quiz.entryAmount) {
+    // Only check wallet balance for paid quizzes (entryAmount > 0)
+    if (quiz.entryAmount > 0 && user.wallet < quiz.entryAmount) {
       console.log('❌ Insufficient balance:');
       console.log('   - Required:', quiz.entryAmount);
       console.log('   - Available:', user.wallet);
@@ -281,38 +282,47 @@ io.on('connection', (socket) => {
       console.log('   - Player 1 socket:', player1Data.socket.id, '- In room:', player1Data.socket.rooms.has(roomId));
       console.log('   - Player 2 socket:', player2Data.socket.id, '- In room:', player2Data.socket.rooms.has(roomId));
 
-      // Deduct entry fees from both players (only once per match)
-      try {
-        await prisma.user.update({
-          where: { id: player1Data.user.id },
-          data: { wallet: { decrement: quiz.entryAmount } }
-        });
-        await prisma.user.update({
-          where: { id: player2Data.user.id },
-          data: { wallet: { decrement: quiz.entryAmount } }
-        });
+      // Deduct entry fees from both players (only for paid quizzes)
+      if (quiz.entryAmount > 0) {
+        try {
+          await prisma.user.update({
+            where: { id: player1Data.user.id },
+            data: { wallet: { decrement: quiz.entryAmount } }
+          });
+          await prisma.user.update({
+            where: { id: player2Data.user.id },
+            data: { wallet: { decrement: quiz.entryAmount } }
+          });
 
-        console.log('💰 Entry fees deducted from both players');
-        console.log('   - Player 1 deducted:', quiz.entryAmount);
-        console.log('   - Player 2 deducted:', quiz.entryAmount);
+          console.log('💰 Entry fees deducted from both players');
+          console.log('   - Player 1 deducted:', quiz.entryAmount);
+          console.log('   - Player 2 deducted:', quiz.entryAmount);
+        } catch (error) {
+          console.error('❌ Error deducting entry fees:', error);
+        }
+      } else {
+        console.log('🆓 Free quiz - no entry fees deducted');
+      }
 
-        // Create transaction records
-        await prisma.transaction.createMany({
-          data: [
-            {
-              userId: player1Data.user.id,
-              amount: -quiz.entryAmount,
-              type: 'BATTLE_QUIZ_ENTRY',
-              status: 'COMPLETED'
-            },
-            {
-              userId: player2Data.user.id,
-              amount: -quiz.entryAmount,
-              type: 'BATTLE_QUIZ_ENTRY',
-              status: 'COMPLETED'
-            }
-          ]
-        });
+        // Create transaction records (only for paid quizzes)
+        if (quiz.entryAmount > 0) {
+          await prisma.transaction.createMany({
+            data: [
+              {
+                userId: player1Data.user.id,
+                amount: -quiz.entryAmount,
+                type: 'BATTLE_QUIZ_ENTRY',
+                status: 'COMPLETED'
+              },
+              {
+                userId: player2Data.user.id,
+                amount: -quiz.entryAmount,
+                type: 'BATTLE_QUIZ_ENTRY',
+                status: 'COMPLETED'
+              }
+            ]
+          });
+        }
 
         console.log('📝 Transaction records created for entry fees');
       } catch (error) {

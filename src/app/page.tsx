@@ -15,6 +15,7 @@ export default function HomePage() {
   const [testimonialSlide, setTestimonialSlide] = useState(0);
   const [phoneSlide, setPhoneSlide] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [youtubeSlide, setYoutubeSlide] = useState(0);
 
   // Hero slides
   const heroSlides = [
@@ -218,6 +219,14 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Auto-rotate YouTube Shorts
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setYoutubeSlide((prev) => (prev + 1) % 5); // 5 YouTube shorts
+    }, 3500); // Every 3.5 seconds
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-purple-50">
       {/* Mobile-First Header */}
@@ -236,6 +245,12 @@ export default function HomePage() {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-4">
+              <Link 
+                href="/books" 
+                className="text-gray-700 hover:text-blue-600 font-medium transition duration-300"
+              >
+                Books
+              </Link>
               <Link 
                 href="/blogs" 
                 className="text-gray-700 hover:text-blue-600 font-medium transition duration-300"
@@ -269,6 +284,13 @@ export default function HomePage() {
           {isMobileMenuOpen && (
             <div className="md:hidden mt-4 py-4 border-t border-gray-200 bg-white/95 backdrop-blur-xl">
               <div className="flex flex-col space-y-3">
+                <Link 
+                  href="/books" 
+                  className="text-gray-700 hover:text-blue-600 font-medium transition duration-300 py-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Books
+                </Link>
                 <Link 
                   href="/blogs" 
                   className="text-gray-700 hover:text-blue-600 font-medium transition duration-300 py-2"
@@ -1013,79 +1035,253 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Video Section */}
-      <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 relative overflow-hidden">
+
+      {/* Client Ki Jubani - YouTube Shorts Section */}
+      <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 relative overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-          <div className="absolute bottom-10 right-10 w-80 h-80 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{animationDelay: '2s'}}></div>
+          <div className="absolute top-10 left-10 w-96 h-96 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full mix-blend-overlay filter blur-3xl opacity-30 animate-pulse"></div>
+          <div className="absolute bottom-10 right-10 w-80 h-80 bg-gradient-to-r from-pink-400 to-rose-400 rounded-full mix-blend-overlay filter blur-3xl opacity-30 animate-pulse" style={{animationDelay: '2s'}}></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-gradient-to-r from-purple-400 to-violet-400 rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-pulse" style={{animationDelay: '4s'}}></div>
         </div>
 
         <div className="container mx-auto px-3 sm:px-4 relative z-10">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-8 sm:mb-12 md:mb-16">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-white mb-3 sm:mb-4 md:mb-6 drop-shadow-2xl">
-                See YottaScore in Action
-              </h2>
-              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-blue-100 mb-4 sm:mb-6 md:mb-8 max-w-3xl mx-auto px-2">
-                Watch how students are earning money while learning with our educational platform
-              </p>
-            </div>
-                
-            {/* Video Container */}
-            <div className="relative bg-black rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border-2 sm:border-4 border-white/20">
-              <div className="aspect-video w-full">
-                {/* Video Placeholder - Replace with actual video */}
-                <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center relative">
-                  {/* Play Button */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <button className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all duration-300 group">
-                      <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white ml-1 sm:ml-2" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                    </button>
+
+          {/* YouTube Shorts Grid with Slider */}
+          <div className="relative">
+            {/* Main Slider Container */}
+            <div className="overflow-hidden rounded-2xl sm:rounded-3xl">
+              <div 
+                className="flex transition-transform duration-700 ease-in-out pb-6"
+                style={{ transform: `translateX(-${youtubeSlide * 25}%)` }}
+              >
+                {/* YouTube Short 1 */}
+                <div className="flex-shrink-0 w-1/2 md:w-1/4 px-2">
+                  <div className="relative bg-black rounded-xl overflow-hidden shadow-xl border-2 border-white/20 transform group-hover:scale-105 transition-all duration-300 max-w-xs mx-auto">
+                    {/* 9:16 Aspect Ratio for Shorts */}
+                    <div className="aspect-[9/16] relative max-h-[500px]">
+                      {/* Thumbnail/Video Container */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600">
+                        <iframe 
+                          className="w-full h-full"
+                          src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                          title="Student Success Story 1"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                      
+                      {/* Play Overlay */}
+                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-600 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all duration-300">
+                          <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Student Info Overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center border-2 border-white shadow-lg">
+                            <span className="text-white font-bold text-sm sm:text-base">AK</span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold text-sm sm:text-base">Amit Kumar</h4>
+                            <p className="text-white/80 text-xs">Delhi • ₹25,000 Won</p>
+                          </div>
+                        </div>
+                        <p className="text-white text-xs sm:text-sm">"मैंने सिर्फ 1 महीने में ₹25,000 जीते!"</p>
+                      </div>
+
+                      {/* YouTube Shorts Badge */}
+                      <div className="absolute top-4 right-4 bg-red-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 shadow-lg">
+                        <span>📹</span>
+                        <span>Shorts</span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  {/* Video Overlay Text */}
-                  <div className="absolute bottom-4 sm:bottom-6 md:bottom-8 left-4 sm:left-6 md:left-8 text-white">
-                    <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2">YottaScore Demo Video</h3>
-                    <p className="text-white/80 text-sm sm:text-base">See how students earn money while learning</p>
+                </div>
+
+                {/* YouTube Short 2 */}
+                <div className="flex-shrink-0 w-1/2 md:w-1/4 px-2">
+                  <div className="relative bg-black rounded-xl overflow-hidden shadow-xl border-2 border-white/20 transform group-hover:scale-105 transition-all duration-300 max-w-xs mx-auto">
+                    <div className="aspect-[9/16] relative max-h-[500px]">
+                      <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-teal-600">
+                        <iframe 
+                          className="w-full h-full"
+                          src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                          title="Student Success Story 2"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                      
+                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-600 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all duration-300">
+                          <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center border-2 border-white shadow-lg">
+                            <span className="text-white font-bold text-sm sm:text-base">PS</span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold text-sm sm:text-base">Priya Sharma</h4>
+                            <p className="text-white/80 text-xs">Mumbai • ₹18,500 Won</p>
+                          </div>
+                        </div>
+                        <p className="text-white text-xs sm:text-sm">"मेरी पढ़ाई और कमाई साथ-साथ!"</p>
+                      </div>
+
+                      <div className="absolute top-4 right-4 bg-red-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 shadow-lg">
+                        <span>📹</span>
+                        <span>Shorts</span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  {/* Duration Badge */}
-                  <div className="absolute top-4 sm:top-6 md:top-8 right-4 sm:right-6 md:right-8 bg-black/50 backdrop-blur-sm text-white px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-semibold">
-                    2:30
+                </div>
+
+                {/* YouTube Short 3 */}
+                <div className="flex-shrink-0 w-1/2 md:w-1/4 px-2">
+                  <div className="relative bg-black rounded-xl overflow-hidden shadow-xl border-2 border-white/20 transform group-hover:scale-105 transition-all duration-300 max-w-xs mx-auto">
+                    <div className="aspect-[9/16] relative max-h-[500px]">
+                      <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-red-600">
+                        <iframe 
+                          className="w-full h-full"
+                          src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                          title="Student Success Story 3"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                      
+                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-600 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all duration-300">
+                          <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-orange-400 to-red-500 flex items-center justify-center border-2 border-white shadow-lg">
+                            <span className="text-white font-bold text-sm sm:text-base">RK</span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold text-sm sm:text-base">Rahul Kumar</h4>
+                            <p className="text-white/80 text-xs">Bangalore • ₹32,000 Won</p>
+                          </div>
+                        </div>
+                        <p className="text-white text-xs sm:text-sm">"हर दिन ₹500-1000 की कमाई!"</p>
+                      </div>
+
+                      <div className="absolute top-4 right-4 bg-red-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 shadow-lg">
+                        <span>📹</span>
+                        <span>Shorts</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* YouTube Short 4 */}
+                <div className="flex-shrink-0 w-1/2 md:w-1/4 px-2">
+                  <div className="relative bg-black rounded-xl overflow-hidden shadow-xl border-2 border-white/20 transform group-hover:scale-105 transition-all duration-300 max-w-xs mx-auto">
+                    <div className="aspect-[9/16] relative max-h-[500px]">
+                      <div className="absolute inset-0 bg-gradient-to-br from-pink-500 to-purple-600">
+                        <iframe 
+                          className="w-full h-full"
+                          src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                          title="Student Success Story 4"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                      
+                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-600 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all duration-300">
+                          <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center border-2 border-white shadow-lg">
+                            <span className="text-white font-bold text-sm sm:text-base">SP</span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold text-sm sm:text-base">Sneha Patel</h4>
+                            <p className="text-white/80 text-xs">Ahmedabad • ₹21,000 Won</p>
+                          </div>
+                        </div>
+                        <p className="text-white text-xs sm:text-sm">"College के साथ कमाई भी!"</p>
+                      </div>
+
+                      <div className="absolute top-4 right-4 bg-red-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 shadow-lg">
+                        <span>📹</span>
+                        <span>Shorts</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* YouTube Short 5 */}
+                <div className="flex-shrink-0 w-1/2 md:w-1/4 px-2">
+                  <div className="relative bg-black rounded-xl overflow-hidden shadow-xl border-2 border-white/20 transform group-hover:scale-105 transition-all duration-300 max-w-xs mx-auto">
+                    <div className="aspect-[9/16] relative max-h-[500px]">
+                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600">
+                        <iframe 
+                          className="w-full h-full"
+                          src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                          title="Student Success Story 5"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                      
+                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-600 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all duration-300">
+                          <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 flex items-center justify-center border-2 border-white shadow-lg">
+                            <span className="text-white font-bold text-sm sm:text-base">VJ</span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold text-sm sm:text-base">Vikram Joshi</h4>
+                            <p className="text-white/80 text-xs">Pune • ₹28,000 Won</p>
+                          </div>
+                        </div>
+                        <p className="text-white text-xs sm:text-sm">"Exam preparation + Earning = Perfect!"</p>
+                      </div>
+
+                      <div className="absolute top-4 right-4 bg-red-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 shadow-lg">
+                        <span>📹</span>
+                        <span>Shorts</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Video Features */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mt-8 sm:mt-12 md:mt-16">
-              <div className="text-center text-white">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4">
-                  <FaGraduationCap className="text-lg sm:text-xl md:text-2xl text-white" />
-                </div>
-                <h3 className="text-base sm:text-lg md:text-xl font-bold mb-1 sm:mb-2">Live Exams</h3>
-                <p className="text-blue-100 text-xs sm:text-sm md:text-base">Real-time competitive exams with instant results</p>
-              </div>
-              
-              <div className="text-center text-white">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4">
-                  <FaMoneyBillWave className="text-lg sm:text-xl md:text-2xl text-white" />
-                </div>
-                <h3 className="text-base sm:text-lg md:text-xl font-bold mb-1 sm:mb-2">Instant Rewards</h3>
-                <p className="text-blue-100 text-xs sm:text-sm md:text-base">Win real money for every correct answer</p>
-              </div>
-              
-              <div className="text-center text-white sm:col-span-2 lg:col-span-1">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4">
-                  <FaUsers className="text-lg sm:text-xl md:text-2xl text-white" />
-                </div>
-                <h3 className="text-base sm:text-lg md:text-xl font-bold mb-1 sm:mb-2">Social Learning</h3>
-                <p className="text-blue-100 text-xs sm:text-sm md:text-base">Connect with friends and learn together</p>
-              </div>
-            </div>
           </div>
         </div>
       </section>

@@ -31,7 +31,7 @@ interface BattleAmount {
   maxPlayers: number;
 }
 
-const DEFAULT_AMOUNTS = [5, 10, 25, 35, 50, 75, 100];
+const DEFAULT_AMOUNTS = [0, 5, 10, 25, 35, 50, 75, 100];
 
 export default function BattleQuizAmountsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -210,8 +210,14 @@ export default function BattleQuizAmountsPage() {
                             }`}
                           >
                             <div className="flex items-center justify-center">
-                              <IndianRupee className="w-3 h-3 mr-1" />
-                              {amount}
+                              {amount === 0 ? (
+                                <span className="text-sm font-medium">Free</span>
+                              ) : (
+                                <>
+                                  <IndianRupee className="w-3 h-3 mr-1" />
+                                  {amount}
+                                </>
+                              )}
                             </div>
                           </button>
                         ))}

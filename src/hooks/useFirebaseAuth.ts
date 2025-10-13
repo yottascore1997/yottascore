@@ -39,9 +39,14 @@ export const useFirebaseAuth = () => {
   const signInWithPhone = async (phoneNumber: string, appVerifier: RecaptchaVerifier) => {
     try {
       setError(null);
+      console.log('📱 Attempting to send OTP to:', phoneNumber);
+      
       const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      
+      console.log('✅ OTP sent successfully! Verification ID:', result.verificationId);
       return result;
     } catch (error: any) {
+      console.error('❌ Phone sign-in error:', error);
       setError(error.message);
       throw error;
     }
