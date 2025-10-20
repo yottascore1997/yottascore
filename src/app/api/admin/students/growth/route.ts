@@ -14,9 +14,9 @@ export async function GET(req: NextRequest) {
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
-    let decoded;
+    let decoded: { userId: string; role: string };
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
     } catch (error) {
       return new NextResponse('Unauthorized - Invalid token', { status: 401 });
     }
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     startDate.setDate(startDate.getDate() - 30);
 
     // Generate array of dates
-    const dates = [];
+    const dates: Date[] = [];
     const currentDate = new Date(startDate);
     
     while (currentDate <= endDate) {
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch student registration data for each date
     const growthData = await Promise.all(
-      dates.map(async (date) => {
+      dates.map(async (date: Date) => {
         const dayStart = new Date(date);
         dayStart.setHours(0, 0, 0, 0);
         

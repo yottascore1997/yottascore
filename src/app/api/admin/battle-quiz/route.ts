@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate room code for private quizzes
-    let roomCode = null;
+    let roomCode: string | null = null;
     if (isPrivate) {
       roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     }

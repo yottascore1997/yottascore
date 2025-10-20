@@ -67,8 +67,9 @@ export async function POST(req: Request) {
     }
 
     // Create notification records
+    type UserType = typeof users[number];
     const notifications = await prisma.pushNotification.createMany({
-      data: users.map(user => ({
+      data: users.map((user: UserType) => ({
         userId: user.id,
         title,
         message,
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
       title,
       message,
       notificationType: type || 'GENERAL',
-      targetUserIds: users.map(u => u.id),
+      targetUserIds: users.map((u: UserType) => u.id),
       sentBy: decoded.userId,
       timestamp: new Date().toISOString()
     }
@@ -96,7 +97,7 @@ export async function POST(req: Request) {
       message: `Notification sent to ${users.length} users`,
       notificationData,
       usersCount: users.length,
-      targetUsers: users.map(u => ({
+      targetUsers: users.map((u: UserType) => ({
         id: u.id,
         name: u.name,
         email: u.email,

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { verifyToken } from '@/lib/auth';
 
 const createReviewSchema = z.object({
   rating: z.number().min(1).max(5),
@@ -15,8 +14,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const token = request.headers.get('authorization')?.split(' ')[1];
+    const decoded = token ? await verifyToken(token) : null;
+    if (!decoded?.userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -43,7 +43,7 @@ export async function POST(
     const existingReview = await prisma.bookReview.findUnique({
       where: {
         userId_bookId: {
-          userId: session.user.id,
+          userId: decoded.userId,
           bookId: params.id,
         },
       },
@@ -59,7 +59,7 @@ export async function POST(
     // Create the review
     const review = await prisma.bookReview.create({
       data: {
-        userId: session.user.id,
+        userId: decoded.userId,
         bookId: params.id,
         rating: validatedData.rating,
         comment: validatedData.comment,

@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: { examId: stri
     const winningPool = totalPrizePool * 0.9;
 
     // Prize distribution logic
-    const breakdown = [];
+    const breakdown: Array<{ rank: number; prize: number }> = [];
     // 1st: 20%
     breakdown.push({ rank: 1, prize: Math.floor(winningPool * 0.20) });
     // 2nd: 15%

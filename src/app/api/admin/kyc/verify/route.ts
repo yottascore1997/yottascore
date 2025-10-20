@@ -68,7 +68,8 @@ export async function POST(request: NextRequest) {
         where: { userId: kycDocument.userId }
       });
 
-      const allVerified = allDocuments.every(doc => doc.isVerified);
+      type DocumentType = typeof allDocuments[number];
+      const allVerified = allDocuments.every((doc: DocumentType) => doc.isVerified);
 
       if (allVerified) {
         // Update user KYC status to VERIFIED
@@ -233,7 +234,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     console.log('KYC requests found:', kycRequests.length);
-    kycRequests.forEach(req => {
+    type KycRequestType = typeof kycRequests[number];
+    kycRequests.forEach((req: KycRequestType) => {
       console.log('User KYC status:', { 
         name: req.name, 
         status: req.kycStatus, 

@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { FaTrophy, FaClock, FaCheckCircle, FaTimesCircle, FaQuestionCircle, FaRupeeSign, FaMedal, FaStar, FaChartLine, FaAward } from 'react-icons/fa'
 import { GiTrophyCup, GiLaurelCrown, GiTargetArrows } from 'react-icons/gi'
-import { MdEmojiEvents, MdSpeed, MdAccuracy } from 'react-icons/md'
+import { MdEmojiEvents, MdSpeed, MdCheckCircle } from 'react-icons/md'
 
 interface ExamResult {
   score: number
@@ -245,7 +245,7 @@ export default function LiveExamResultPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20">
             <div className="flex items-center mb-4">
-              <MdAccuracy className="text-3xl text-green-500 mr-3" />
+              <MdCheckCircle className="text-3xl text-green-500 mr-3" />
               <h3 className="text-xl font-bold text-gray-900">Accuracy</h3>
             </div>
             <div className="text-3xl font-bold text-green-600 mb-2">{result.accuracy}%</div>

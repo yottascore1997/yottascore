@@ -107,7 +107,7 @@ export async function GET(req: Request) {
     const totalParticipants = await prisma.liveExamParticipant.count();
 
     // Generate sample revenue data (last 6 months)
-    const revenueData = [];
+    const revenueData: Array<{ month: string; revenue: number; participants: number }> = [];
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
@@ -128,7 +128,7 @@ export async function GET(req: Request) {
     ];
 
     // Generate sample user growth data
-    const userGrowth = [];
+    const userGrowth: Array<{ month: string; newUsers: number; activeUsers: number }> = [];
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);

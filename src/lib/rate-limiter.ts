@@ -122,12 +122,12 @@ export function cleanupExpiredEntries() {
   const now = Date.now();
   let cleaned = 0;
   
-  for (const [key, entry] of otpRequestStore.entries()) {
+  Array.from(otpRequestStore.entries()).forEach(([key, entry]) => {
     if (now > entry.resetTime) {
       otpRequestStore.delete(key);
       cleaned++;
     }
-  }
+  });
   
   if (cleaned > 0) {
     console.log(`🧹 Cleaned ${cleaned} expired rate limit entries`);

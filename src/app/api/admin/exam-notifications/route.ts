@@ -82,7 +82,7 @@ export async function POST(req: Request) {
     }
 
     // Handle logo upload
-    let logoUrl = null;
+    let logoUrl: string | null = null;
     if (logoFile && logoFile.size > 0) {
       try {
         // Create a unique filename

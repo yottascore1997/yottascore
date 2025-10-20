@@ -41,6 +41,7 @@ export interface BookListing {
       isVerified: boolean;
       city?: string;
       state?: string;
+      totalListings?: number;
       averageRating: number;
       totalReviews: number;
     };

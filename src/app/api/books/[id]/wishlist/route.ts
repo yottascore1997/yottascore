@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { verifyToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -17,8 +16,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const token = request.headers.get('authorization')?.split(' ')[1];
+    const decoded = token ? await verifyToken(token) : null;
+    if (!decoded?.userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -45,7 +45,7 @@ export async function POST(
     const existingWishlist = await prisma.bookWishlist.findUnique({
       where: {
         userId_bookId: {
-          userId: session.user.id,
+          userId: decoded.userId,
           bookId: params.id,
         },
       },
@@ -61,7 +61,7 @@ export async function POST(
     // Add to wishlist
     const wishlistItem = await prisma.bookWishlist.create({
       data: {
-        userId: session.user.id,
+        userId: decoded.userId,
         bookId: params.id,
         notifyOnPriceDrop: validatedData.notifyOnPriceDrop,
         notifyOnAvailability: validatedData.notifyOnAvailability,
@@ -96,8 +96,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const token = request.headers.get('authorization')?.split(' ')[1];
+    const decoded = token ? await verifyToken(token) : null;
+    if (!decoded?.userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -108,7 +109,7 @@ export async function DELETE(
     const existingWishlist = await prisma.bookWishlist.findUnique({
       where: {
         userId_bookId: {
-          userId: session.user.id,
+          userId: decoded.userId,
           bookId: params.id,
         },
       },
@@ -125,7 +126,7 @@ export async function DELETE(
     await prisma.bookWishlist.delete({
       where: {
         userId_bookId: {
-          userId: session.user.id,
+          userId: decoded.userId,
           bookId: params.id,
         },
       },
@@ -150,8 +151,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const token = request.headers.get('authorization')?.split(' ')[1];
+    const decoded = token ? await verifyToken(token) : null;
+    if (!decoded?.userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -161,7 +163,7 @@ export async function GET(
     const wishlistItem = await prisma.bookWishlist.findUnique({
       where: {
         userId_bookId: {
-          userId: session.user.id,
+          userId: decoded.userId,
           bookId: params.id,
         },
       },

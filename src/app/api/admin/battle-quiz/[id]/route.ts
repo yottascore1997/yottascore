@@ -4,6 +4,9 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+// Mark this route as dynamic
+export const dynamic = 'force-dynamic';
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Check authentication

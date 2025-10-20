@@ -16,6 +16,7 @@ interface BattleRoom {
   currentQuestion?: number;
   questions?: BattleQuestion[];
   timer?: NodeJS.Timeout;
+  categoryId?: string;
 }
 
 interface BattlePlayer {

@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       // Calculate winnings as per your logic
       const totalPrizePool = exam.spots * exam.entryFee;
       const winningPool = totalPrizePool * 0.9;
-      const prizes = [];
+      const prizes: number[] = [];
       prizes[1] = Math.floor(winningPool * 0.20);
       prizes[2] = Math.floor(winningPool * 0.15);
       prizes[3] = Math.floor(winningPool * 0.10);

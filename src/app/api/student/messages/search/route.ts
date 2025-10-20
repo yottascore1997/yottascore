@@ -40,14 +40,20 @@ export async function GET(req: Request) {
 
     // Build where clause
     const whereClause: any = {
-      OR: [
-        { senderId: decoded.userId },
-        { receiverId: decoded.userId }
-      ],
-      isDeleted: false,
-      OR: [
-        { content: { contains: query.trim() } },
-        { fileName: { contains: query.trim() } }
+      AND: [
+        {
+          OR: [
+            { senderId: decoded.userId },
+            { receiverId: decoded.userId }
+          ]
+        },
+        { isDeleted: false },
+        {
+          OR: [
+            { content: { contains: query.trim() } },
+            { fileName: { contains: query.trim() } }
+          ]
+        }
       ]
     }
 

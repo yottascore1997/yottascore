@@ -14,9 +14,9 @@ const getHandler = async (req: Request) => {
     }
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
-    let decoded;
+    let decoded: { userId: string; role: string };
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
     } catch (error) {
       return NextResponse.json({ message: 'Unauthorized - Invalid token' }, { status: 401 });
     }
@@ -67,9 +67,9 @@ const postHandler = async (req: Request) => {
     }
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
-    let decoded;
+    let decoded: { userId: string; role: string };
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
     } catch (error) {
       return NextResponse.json({ message: 'Unauthorized - Invalid token' }, { status: 401 });
     }

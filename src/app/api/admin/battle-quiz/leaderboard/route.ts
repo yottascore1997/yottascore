@@ -4,6 +4,9 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+// Mark this route as dynamic
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get("authorization")?.replace("Bearer ", "");
@@ -27,7 +30,7 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "rank";
 
     // Build the query based on filter
-    let limit = undefined;
+    let limit: number | undefined = undefined;
     if (filter === "top10") limit = 10;
     else if (filter === "top50") limit = 50;
     else if (filter === "top100") limit = 100;

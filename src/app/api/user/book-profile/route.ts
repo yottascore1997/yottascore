@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { verifyToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -24,8 +23,9 @@ const updateBookProfileSchema = z.object({
 // GET /api/user/book-profile - Get user's book profile
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const token = request.headers.get('authorization')?.split(' ')[1];
+    const decoded = token ? await verifyToken(token) : null;
+    if (!decoded?.userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     const profile = await prisma.userBookProfile.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: decoded.userId },
       include: {
         user: {
           select: {
@@ -71,8 +71,9 @@ export async function GET(request: NextRequest) {
 // POST /api/user/book-profile - Create or update user's book profile
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const token = request.headers.get('authorization')?.split(' ')[1];
+    const decoded = token ? await verifyToken(token) : null;
+    if (!decoded?.userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -84,14 +85,14 @@ export async function POST(request: NextRequest) {
 
     // Check if profile already exists
     const existingProfile = await prisma.userBookProfile.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: decoded.userId },
     });
 
     let profile;
     if (existingProfile) {
       // Update existing profile
       profile = await prisma.userBookProfile.update({
-        where: { userId: session.user.id },
+        where: { userId: decoded.userId },
         data: validatedData,
         include: {
           user: {
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
       // Create new profile
       profile = await prisma.userBookProfile.create({
         data: {
-          userId: session.user.id,
+          userId: decoded.userId,
           ...validatedData,
         },
         include: {

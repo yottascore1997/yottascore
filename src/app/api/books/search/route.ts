@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     // Price range filters
     if (minPrice !== undefined || maxPrice !== undefined) {
-      const priceConditions = [];
+      const priceConditions: any[] = [];
       
       if (listingType === 'SELL' || !listingType) {
         priceConditions.push({

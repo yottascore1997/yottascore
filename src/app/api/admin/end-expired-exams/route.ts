@@ -34,7 +34,7 @@ async function checkAndEndExpiredExams() {
     
     console.log(`   - Found ${expiredExams.length} expired exams to end`);
     
-    const endedExams = [];
+    const endedExams: Array<{ id: string; title: string; endTime: Date | null }> = [];
     
     for (const exam of expiredExams) {
       console.log(`   - Ending exam: ${exam.title} (ID: ${exam.id})`);
@@ -132,13 +132,14 @@ export const GET = withCORS(async (req: Request) => {
     });
     
     // Categorize exams
-    const expired = liveExams.filter(exam => exam.endTime && new Date(exam.endTime) < now);
-    const expiringSoon = liveExams.filter(exam => 
+    type ExamType = typeof liveExams[number];
+    const expired = liveExams.filter((exam: ExamType) => exam.endTime && new Date(exam.endTime) < now);
+    const expiringSoon = liveExams.filter((exam: ExamType) => 
       exam.endTime && 
       new Date(exam.endTime) >= now && 
       new Date(exam.endTime) <= soon
     );
-    const active = liveExams.filter(exam => 
+    const active = liveExams.filter((exam: ExamType) => 
       exam.endTime && new Date(exam.endTime) > soon
     );
     
