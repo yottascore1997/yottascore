@@ -166,6 +166,11 @@ export default function AdminStudentsPage() {
       let aValue = a[sortBy as keyof Student];
       let bValue = b[sortBy as keyof Student];
 
+      // Handle undefined values - push them to the end
+      if (aValue === undefined && bValue === undefined) return 0;
+      if (aValue === undefined) return 1;
+      if (bValue === undefined) return -1;
+
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
