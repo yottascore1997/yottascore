@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     data: {
       text,
       options,
-      correct,
+      correctAnswer: correct,
       examId: examId || undefined,
     },
   });
