@@ -3,6 +3,9 @@ import { verifyToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendSupportNotification, createTicketReplyNotification, createTicketStatusUpdateNotification } from '@/lib/notifications';
 
+// Mark as dynamic route
+export const dynamic = 'force-dynamic';
+
 // GET - Fetch specific support ticket for admin
 export async function GET(
   request: NextRequest,
