@@ -68,14 +68,14 @@ export async function POST(
     }
 
     // Check if question exists
-    if (room.battleQuestions.length === 0) {
+    if (room.questions.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Question not found' },
         { status: 404 }
       );
     }
 
-    const battleQuestion = room.battleQuestions[0];
+    const battleQuestion = room.questions[0];
     const question = battleQuestion.question;
 
     // Check if answer is valid
