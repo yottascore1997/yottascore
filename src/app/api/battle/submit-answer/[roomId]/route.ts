@@ -52,7 +52,7 @@ export async function POST(
       );
     }
 
-    if (room.status !== 'active') {
+    if (room.status !== 'PLAYING') {
       return NextResponse.json(
         { success: false, error: 'Battle not active' },
         { status: 400 }

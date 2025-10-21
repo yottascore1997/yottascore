@@ -69,7 +69,7 @@ export async function POST(
     if (allPlayersReady && newReadyStatus && room.players.length === 2) {
       await prisma.battleRoom.update({
         where: { id: roomId },
-        data: { status: 'starting' }
+        data: { status: 'PLAYING' }
       });
     }
 
