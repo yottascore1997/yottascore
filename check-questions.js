@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 async function checkQuestions() {
   try {
-    console.log('🔍 Checking all categories and their questions...\n');
+
     
     // Get all categories
     const categories = await prisma.questionCategory.findMany({
