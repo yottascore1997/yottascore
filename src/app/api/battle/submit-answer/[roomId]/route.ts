@@ -36,7 +36,7 @@ export async function POST(
         players: {
           where: { userId: decoded.userId }
         },
-        battleQuestions: {
+        questions: {
           where: { questionIndex },
           include: {
             question: true
