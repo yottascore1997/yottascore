@@ -60,13 +60,6 @@ export async function GET(req: NextRequest) {
             email: true,
           },
         },
-        assignedTo: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
         replies: {
           include: {
             user: {
