@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // Get all available battle rooms
     const rooms = await prisma.battleRoom.findMany({
       where: {
-        status: 'waiting',
+        status: 'WAITING',
         players: {
           some: {}
         }
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         name,
         categoryId: categoryId || null,
         maxPlayers: 2,
-        status: 'waiting',
+        status: 'WAITING',
         createdById: decoded.userId
       },
       include: {

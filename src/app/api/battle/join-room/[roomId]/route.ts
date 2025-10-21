@@ -61,7 +61,7 @@ export async function POST(
     }
 
     // Check if battle already started
-    if (room.status !== 'waiting') {
+    if (room.status !== 'WAITING') {
       return NextResponse.json(
         { success: false, error: 'Battle already in progress' },
         { status: 400 }
