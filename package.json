@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "socket": "node socket-server.js"
+    "socket": "node socket-server.js",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.83.1",
