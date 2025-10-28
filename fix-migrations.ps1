@@ -107,10 +107,10 @@ foreach ($file in $migrationFiles) {
     # Also fix ON clause references
     foreach ($lowercase in $tableMappings.Keys) {
         $uppercase = $tableMappings[$lowercase]
-        $lowercaseNoBackticks = $lowercase -replace '`', ''
-        $uppercaseNoBackticks = $uppercase -replace '`', ''
-        $pattern = "ON `$lowercaseNoBackticks`"
-        $replacement = "ON `$uppercaseNoBackticks`"
+        $lowercaseNoBackticks = $lowercase -replace '``', ''
+        $uppercaseNoBackticks = $uppercase -replace '``', ''
+        $pattern = "ON ``$lowercaseNoBackticks``"
+        $replacement = "ON ``$uppercaseNoBackticks``"
         if ($content -match [regex]::Escape($pattern)) {
             $content = $content -replace [regex]::Escape($pattern), $replacement
             $modified = $true
