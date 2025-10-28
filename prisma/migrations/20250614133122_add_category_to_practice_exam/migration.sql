@@ -6,5 +6,5 @@
 
 */
 -- AlterTable
-ALTER TABLE `practiceexam` ADD COLUMN `category` VARCHAR(191) NOT NULL,
+ALTER TABLE `PracticeExam` ADD COLUMN `category` VARCHAR(191) NOT NULL,
     ADD COLUMN `subcategory` VARCHAR(191) NOT NULL;

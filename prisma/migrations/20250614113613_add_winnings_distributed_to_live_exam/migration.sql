@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `liveexam` ADD COLUMN `winningsDistributed` BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE `LiveExam` ADD COLUMN `winningsDistributed` BOOLEAN NOT NULL DEFAULT false;

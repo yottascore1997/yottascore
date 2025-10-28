@@ -14,13 +14,13 @@
 
 */
 -- DropForeignKey
-ALTER TABLE `liveexam` DROP FOREIGN KEY `LiveExam_userId_fkey`;
+ALTER TABLE `LiveExam` DROP FOREIGN KEY `LiveExam_userId_fkey`;
 
 -- DropIndex
-DROP INDEX `LiveExam_userId_fkey` ON `liveexam`;
+DROP INDEX `LiveExam_userId_fkey` ON `LiveExam`;
 
 -- AlterTable
-ALTER TABLE `liveexam` DROP COLUMN `endTime`,
+ALTER TABLE `LiveExam` DROP COLUMN `endTime`,
     DROP COLUMN `passingMarks`,
     DROP COLUMN `standard`,
     DROP COLUMN `subject`,

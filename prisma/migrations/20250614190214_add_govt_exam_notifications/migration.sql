@@ -11,7 +11,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `govtexamnotification` DROP COLUMN `endDate`,
+ALTER TABLE `GovtExamNotification` DROP COLUMN `endDate`,
     DROP COLUMN `isOfficial`,
     DROP COLUMN `logoUrl`,
     DROP COLUMN `officialLink`,

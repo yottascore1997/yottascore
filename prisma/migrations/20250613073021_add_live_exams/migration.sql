@@ -22,28 +22,28 @@
 
 */
 -- DropForeignKey
-ALTER TABLE `_studentexams` DROP FOREIGN KEY `_StudentExams_A_fkey`;
+ALTER TABLE `_StudentExams` DROP FOREIGN KEY `_StudentExams_A_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `_studentexams` DROP FOREIGN KEY `_StudentExams_B_fkey`;
+ALTER TABLE `_StudentExams` DROP FOREIGN KEY `_StudentExams_B_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `battlequizquestion` DROP FOREIGN KEY `BattleQuizQuestion_quizId_fkey`;
+ALTER TABLE `BattleQuizQuestion` DROP FOREIGN KEY `BattleQuizQuestion_quizId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `exam` DROP FOREIGN KEY `Exam_createdById_fkey`;
+ALTER TABLE `Exam` DROP FOREIGN KEY `Exam_createdById_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `transaction` DROP FOREIGN KEY `Transaction_userId_fkey`;
+ALTER TABLE `Transaction` DROP FOREIGN KEY `Transaction_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `wallet` DROP FOREIGN KEY `Wallet_userId_fkey`;
+ALTER TABLE `Wallet` DROP FOREIGN KEY `Wallet_userId_fkey`;
 
 -- DropIndex
-DROP INDEX `Transaction_userId_fkey` ON `transaction`;
+DROP INDEX `Transaction_userId_fkey` ON `Transaction`;
 
 -- AlterTable
-ALTER TABLE `question` DROP PRIMARY KEY,
+ALTER TABLE `Question` DROP PRIMARY KEY,
     DROP COLUMN `correctAnswer`,
     DROP COLUMN `createdAt`,
     DROP COLUMN `marks`,
@@ -57,13 +57,13 @@ ALTER TABLE `question` DROP PRIMARY KEY,
     ADD PRIMARY KEY (`id`);
 
 -- AlterTable
-ALTER TABLE `transaction` DROP PRIMARY KEY,
+ALTER TABLE `Transaction` DROP PRIMARY KEY,
     MODIFY `id` VARCHAR(191) NOT NULL,
     MODIFY `userId` VARCHAR(191) NOT NULL,
     ADD PRIMARY KEY (`id`);
 
 -- AlterTable
-ALTER TABLE `user` DROP PRIMARY KEY,
+ALTER TABLE `User` DROP PRIMARY KEY,
     DROP COLUMN `className`,
     DROP COLUMN `password`,
     DROP COLUMN `phoneNumber`,
@@ -80,19 +80,19 @@ ALTER TABLE `user` DROP PRIMARY KEY,
     ADD PRIMARY KEY (`id`);
 
 -- DropTable
-DROP TABLE `_studentexams`;
+DROP TABLE `_StudentExams`;
 
 -- DropTable
-DROP TABLE `battlequiz`;
+DROP TABLE `BattleQuiz`;
 
 -- DropTable
-DROP TABLE `battlequizquestion`;
+DROP TABLE `BattleQuizQuestion`;
 
 -- DropTable
-DROP TABLE `exam`;
+DROP TABLE `Exam`;
 
 -- DropTable
-DROP TABLE `wallet`;
+DROP TABLE `Wallet`;
 
 -- CreateTable
 CREATE TABLE `Account` (

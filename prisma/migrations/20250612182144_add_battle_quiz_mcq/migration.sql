@@ -1,11 +1,11 @@
 /*
   Warnings:
 
-  - You are about to drop the column `questions` on the `battlequiz` table. All the data in the column will be lost.
+  - You are about to drop the column `questions` on the `BattleQuiz` table. All the data in the column will be lost.
 
 */
 -- AlterTable
-ALTER TABLE `battlequiz` DROP COLUMN `questions`;
+ALTER TABLE `BattleQuiz` DROP COLUMN `questions`;
 
 -- CreateTable
 CREATE TABLE `BattleQuizQuestion` (

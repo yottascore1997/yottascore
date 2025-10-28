@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `user` ADD COLUMN `bio` TEXT NULL,
+ALTER TABLE `User` ADD COLUMN `bio` TEXT NULL,
     ADD COLUMN `course` VARCHAR(191) NULL,
     ADD COLUMN `isPrivate` BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN `profilePhoto` VARCHAR(191) NULL,
