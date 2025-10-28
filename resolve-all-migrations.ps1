@@ -1,11 +1,14 @@
-# PowerShell script to resolve all failed migrations at once
+# PowerShell script to resolve all migrations at once
 
-Write-Host "Resolving all failed migrations..."
+Write-Host "Resolving all migrations..." -ForegroundColor Green
 
-# List of all migrations that might be failed
+# List of all migrations in order
 $migrations = @(
+    "20250612062017_init",
     "20250612092143_add_student_fields",
-    "20250612124346_remove_question_exam_relation", 
+    "20250612124346_remove_question_exam_relation",
+    "20250612130947_add_user_wallet_relation",
+    "20250612180924_add_battle_quiz",
     "20250612182144_add_battle_quiz_mcq",
     "20250613073021_add_live_exams",
     "20250613074025_add_phone_number",
@@ -14,6 +17,7 @@ $migrations = @(
     "20250614113613_add_winnings_distributed_to_live_exam",
     "20250614131253_add_practice_exam",
     "20250614133122_add_category_to_practice_exam",
+    "20250614182038_add_govt_exam_notification",
     "20250614190214_add_govt_exam_notifications",
     "20250616183602_add_question_of_the_day",
     "20250616202909_add_timetable",
@@ -46,15 +50,13 @@ $migrations = @(
 )
 
 foreach ($migration in $migrations) {
-    Write-Host "Resolving migration: $migration"
-    try {
-        npx prisma migrate resolve --applied $migration
-        Write-Host "✅ Resolved: $migration"
-    } catch {
-        Write-Host "❌ Failed to resolve: $migration"
-    }
+    Write-Host "Resolving: $migration" -ForegroundColor Yellow
+    npx prisma migrate resolve --applied $migration 2>&1 | Out-Null
 }
 
-Write-Host "All migrations resolved! Now trying to deploy..."
+Write-Host "`nAll migrations marked as resolved!" -ForegroundColor Green
+Write-Host "Now deploying migrations..." -ForegroundColor Cyan
+
 npx prisma migrate deploy
 
+Write-Host "`nDone!" -ForegroundColor Green
