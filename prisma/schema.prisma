@@ -7,83 +7,428 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Question {
-  id            Int      @id @default(autoincrement())
-  question      String
-  options       Json
-  correctAnswer Int
-  marks         Int
-  examId        Int
+model Account {
+  id                String  @id
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId], map: "Account_userId_fkey")
+}
+
+model GovtExamNotification {
+  id            String   @id
+  title         String
+  description   String   @db.Text
+  applyLastDate DateTime
+  year          Int
+  month         Int
   createdAt     DateTime @default(now())
   updatedAt     DateTime
-  exam          Exam     @relation(fields: [examId], references: [id])
+  applyLink     String
+}
+
+model GroupEvent {
+  id              String               @id
+  title           String
+  description     String?              @db.Text
+  startTime       DateTime
+  endTime         DateTime
+  location        String?
+  eventType       GroupEvent_eventType @default(STUDY_SESSION)
+  maxParticipants Int?
+  isRecurring     Boolean              @default(false)
+  recurrence      Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime
+  groupId         String
+  creatorId       String
+
+  @@index([groupId, startTime])
+}
+
+model GroupEventParticipant {
+  id       String                       @id
+  userId   String
+  eventId  String
+  status   GroupEventParticipant_status @default(ATTENDING)
+  joinedAt DateTime                     @default(now())
+
+  @@unique([userId, eventId])
+}
+
+model GroupMessage {
+  id          String                   @id
+  content     String                   @db.Text
+  messageType GroupMessage_messageType @default(TEXT)
+  fileUrl     String?
+  createdAt   DateTime                 @default(now())
+  senderId    String
+  groupId     String
+
+  @@index([groupId, createdAt])
+}
+
+model GroupPoll {
+  id         String    @id
+  question   String    @db.Text
+  options    Json
+  isMultiple Boolean   @default(false)
+  isActive   Boolean   @default(true)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime
+  groupId    String
+  creatorId  String
+
+  @@index([groupId, createdAt])
+}
+
+model GroupPollVote {
+  id              String   @id
+  userId          String
+  pollId          String
+  selectedOptions Json
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, pollId])
+}
+
+model GroupPost {
+  id        String   @id
+  content   String   @db.Text
+  imageUrl  String?
+  videoUrl  String?
+  fileUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  authorId  String
+  groupId   String
+  User      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId], map: "GroupPost_authorId_fkey")
+  @@index([groupId, createdAt])
+}
+
+model GroupPostComment {
+  id        String   @id
+  content   String   @db.Text
+  userId    String
+  postId    String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@index([postId, createdAt])
+}
+
+model GroupPostLike {
+  id        String   @id
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+model GroupQuiz {
+  id          String   @id
+  title       String
+  description String?  @db.Text
+  questions   Json
+  timeLimit   Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  groupId     String
+  creatorId   String
+
+  @@index([groupId, createdAt])
+}
+
+model GroupQuizAttempt {
+  id          String   @id
+  userId      String
+  quizId      String
+  answers     Json
+  score       Int
+  timeTaken   Int
+  completedAt DateTime @default(now())
+
+  @@unique([userId, quizId])
+}
+
+model LiveExam {
+  id                  String                @id
+  title               String
+  description         String?
+  duration            Int
+  startTime           DateTime
+  spotsLeft           Int
+  entryFee            Float
+  prizePool           Float
+  isLive              Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  createdById         String
+  spots               Int
+  totalCollection     Float
+  endTime             DateTime?
+  winningsDistributed Boolean               @default(false)
+  User                User                  @relation(fields: [createdById], references: [id])
+  LiveExamParticipant LiveExamParticipant[]
+  LiveExamWinner      LiveExamWinner[]
+  Question            Question[]
+
+  @@index([createdById], map: "LiveExam_createdById_fkey")
+}
+
+model LiveExamParticipant {
+  id          String    @id
+  examId      String
+  userId      String
+  score       Int?
+  answers     Json?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  paid        Boolean   @default(false)
+  paymentId   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  LiveExam    LiveExam  @relation(fields: [examId], references: [id])
+  User        User      @relation(fields: [userId], references: [id])
+
+  @@unique([examId, userId])
+  @@index([userId], map: "LiveExamParticipant_userId_fkey")
+}
+
+model LiveExamWinner {
+  id          String   @id
+  examId      String
+  userId      String
+  rank        Int
+  prizeAmount Float
+  paid        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  LiveExam    LiveExam @relation(fields: [examId], references: [id])
+  User        User     @relation(fields: [userId], references: [id])
+
+  @@unique([examId, rank])
+  @@index([userId], map: "LiveExamWinner_userId_fkey")
+}
+
+model PracticeExam {
+  id                      String                    @id
+  title                   String
+  description             String?
+  duration                Int
+  spots                   Int
+  spotsLeft               Int
+  startTime               DateTime
+  endTime                 DateTime?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime
+  createdById             String
+  category                String
+  subcategory             String
+  User                    User                      @relation(fields: [createdById], references: [id])
+  PracticeExamParticipant PracticeExamParticipant[]
+  PracticeExamQuestion    PracticeExamQuestion[]
+
+  @@index([createdById], map: "PracticeExam_createdById_fkey")
+}
+
+model PracticeExamParticipant {
+  id           String       @id
+  examId       String
+  userId       String
+  score        Int?
+  answers      Json?
+  startedAt    DateTime     @default(now())
+  completedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime
+  PracticeExam PracticeExam @relation(fields: [examId], references: [id])
+  User         User         @relation(fields: [userId], references: [id])
+
+  @@unique([examId, userId])
+  @@index([userId], map: "PracticeExamParticipant_userId_fkey")
+}
+
+model PracticeExamQuestion {
+  id           String        @id
+  text         String?       @db.Text
+  options      Json?
+  correct      Int?
+  examId       String?
+  PracticeExam PracticeExam? @relation(fields: [examId], references: [id])
+
+  @@index([examId], map: "PracticeExamQuestion_examId_fkey")
+}
+
+model Question {
+  id       String    @id
+  options  Json?
+  correct  Int?
+  examId   String?
+  text     String?   @db.Text
+  LiveExam LiveExam? @relation(fields: [examId], references: [id])
 
   @@index([examId], map: "Question_examId_fkey")
 }
 
+model QuestionOfTheDay {
+  id                      String                    @id
+  question                String                    @db.Text
+  options                 Json
+  correct                 Int
+  timeLimit               Int                       @default(10)
+  isActive                Boolean                   @default(true)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime
+  createdById             String
+  User                    User                      @relation(fields: [createdById], references: [id])
+  QuestionOfTheDayAttempt QuestionOfTheDayAttempt[]
+
+  @@index([createdById], map: "QuestionOfTheDay_createdById_fkey")
+}
+
+model QuestionOfTheDayAttempt {
+  id               String           @id
+  questionId       String
+  userId           String
+  selected         Int
+  isCorrect        Boolean
+  timeTaken        Int
+  createdAt        DateTime         @default(now())
+  QuestionOfTheDay QuestionOfTheDay @relation(fields: [questionId], references: [id])
+  User             User             @relation(fields: [userId], references: [id])
+
+  @@unique([questionId, userId])
+  @@index([userId], map: "QuestionOfTheDayAttempt_userId_fkey")
+}
+
+model Session {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "Session_userId_fkey")
+}
+
+model Timetable {
+  id            String          @id
+  name          String
+  description   String?
+  isWeekly      Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  userId        String
+  User          User            @relation(fields: [userId], references: [id])
+  TimetableSlot TimetableSlot[]
+
+  @@index([userId], map: "Timetable_userId_fkey")
+}
+
+model TimetableSlot {
+  id           String    @id
+  day          Int
+  startTime    DateTime
+  endTime      DateTime
+  subject      String
+  topic        String?
+  notes        String?   @db.Text
+  isCompleted  Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime
+  timetableId  String
+  userId       String
+  reminder     Boolean   @default(true)
+  reminderSent Boolean   @default(false)
+  Timetable    Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  User         User      @relation(fields: [userId], references: [id])
+
+  @@index([timetableId], map: "TimetableSlot_timetableId_fkey")
+  @@index([userId, day, startTime])
+}
+
 model Transaction {
-  id        Int      @id @default(autoincrement())
-  userId    Int
+  id        String   @id
+  userId    String
   amount    Float
   type      String
   status    String
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "Transaction_userId_fkey")
 }
 
-model BattleQuiz {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  entryAmount Float
-  status      String   @default("active")
-  questions   Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Exam {
-  id                          Int        @id @default(autoincrement())
-  title                       String
-  description                 String?
-  duration                    Int
-  startTime                   DateTime
-  endTime                     DateTime
-  createdAt                   DateTime   @default(now())
-  updatedAt                   DateTime
-  createdById                 Int
-  User_Exam_createdByIdToUser User       @relation("Exam_createdByIdToUser", fields: [createdById], references: [id])
-  questions                   Question[]
-  User_StudentExams           User[]     @relation("StudentExams")
-
-  @@index([createdById], map: "Exam_createdById_fkey")
-}
-
 model User {
-  id                          Int           @id @default(autoincrement())
-  email                       String        @unique
-  name                        String
-  password                    String
-  phoneNumber                 String
-  role                        User_role     @default(STUDENT)
-  createdAt                   DateTime      @default(now())
-  updatedAt                   DateTime
-  Exam_Exam_createdByIdToUser Exam[]        @relation("Exam_createdByIdToUser")
-  transactions                Transaction[]
-  Wallet                      Wallet?
-  Exam_StudentExams           Exam[]        @relation("StudentExams")
+  id                      String                    @id
+  email                   String?                   @unique
+  name                    String?
+  role                    User_role                 @default(USER)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime
+  emailVerified           DateTime?
+  hashedPassword          String?
+  image                   String?
+  wallet                  Float                     @default(0)
+  phoneNumber             String?
+  Account                 Account[]
+  GroupPost               GroupPost[]
+  LiveExam                LiveExam[]
+  LiveExamParticipant     LiveExamParticipant[]
+  LiveExamWinner          LiveExamWinner[]
+  PracticeExam            PracticeExam[]
+  PracticeExamParticipant PracticeExamParticipant[]
+  QuestionOfTheDay        QuestionOfTheDay[]
+  QuestionOfTheDayAttempt QuestionOfTheDayAttempt[]
+  Session                 Session[]
+  Timetable               Timetable[]
+  TimetableSlot           TimetableSlot[]
+  Transaction             Transaction[]
 }
 
-model Wallet {
-  id      Int   @id @default(autoincrement())
-  userId  Int   @unique
-  balance Float @default(0)
-  User    User  @relation(fields: [userId], references: [id])
+enum GroupMessage_messageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
+enum GroupEventParticipant_status {
+  ATTENDING
+  MAYBE
+  DECLINED
+  NOT_RESPONDED
 }
 
 enum User_role {
   ADMIN
   STUDENT
+  USER
+}
+
+enum GroupEvent_eventType {
+  STUDY_SESSION
+  QUIZ
+  DISCUSSION
+  PRESENTATION
+  EXAM_PREP
+  SOCIAL
 }

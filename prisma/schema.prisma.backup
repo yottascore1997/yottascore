@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Question {
+  id            Int      @id @default(autoincrement())
+  question      String
+  options       Json
+  correctAnswer Int
+  marks         Int
+  examId        Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  exam          Exam     @relation(fields: [examId], references: [id])
+
+  @@index([examId], map: "Question_examId_fkey")
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  amount    Float
+  type      String
+  status    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "Transaction_userId_fkey")
+}
+
+model BattleQuiz {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  entryAmount Float
+  status      String   @default("active")
+  questions   Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Exam {
+  id                          Int        @id @default(autoincrement())
+  title                       String
+  description                 String?
+  duration                    Int
+  startTime                   DateTime
+  endTime                     DateTime
+  createdAt                   DateTime   @default(now())
+  updatedAt                   DateTime
+  createdById                 Int
+  User_Exam_createdByIdToUser User       @relation("Exam_createdByIdToUser", fields: [createdById], references: [id])
+  questions                   Question[]
+  User_StudentExams           User[]     @relation("StudentExams")
+
+  @@index([createdById], map: "Exam_createdById_fkey")
+}
+
+model User {
+  id                          String        @id @default(cuid())
+  email                       String?       @unique
+  name                        String?
+  hashedPassword              String?
+  phoneNumber                 String?
+  role                        User_role     @default(USER)
+  createdAt                   DateTime      @default(now())
+  updatedAt                   DateTime      @updatedAt
+  emailVerified               DateTime?
+  image                       String?
+  wallet                      Float         @default(0)
+  Exam_Exam_createdByIdToUser Exam[]        @relation("Exam_createdByIdToUser")
+  transactions                Transaction[]
+  Wallet                      Wallet?
+  Exam_StudentExams           Exam[]        @relation("StudentExams")
+  
+  @@map("User")
+}
+
+model Wallet {
+  id      Int   @id @default(autoincrement())
+  userId  Int   @unique
+  balance Float @default(0)
+  User    User  @relation(fields: [userId], references: [id])
+}
+
+enum User_role {
+  ADMIN
+  STUDENT
+  USER
+}
