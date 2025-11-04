@@ -30,6 +30,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@map("Account")
 }
 
 model Session {
@@ -38,6 +39,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("Session")
 }
 
 model Blog {
@@ -54,6 +57,8 @@ model Blog {
   tags        String   // Comma-separated tags
   views       Int      @default(0)
   likes       Int      @default(0)
+  
+  @@map("Blog")
 }
 
 model User {
@@ -245,6 +250,8 @@ model LiveExam {
   questions   Question[]
   participants LiveExamParticipant[]
   winners     LiveExamWinner[]
+  
+  @@map("LiveExam")
 }
 
 model LiveExamParticipant {
@@ -263,6 +270,7 @@ model LiveExamParticipant {
   updatedAt   DateTime  @updatedAt
 
   @@unique([examId, userId])
+  @@map("LiveExamParticipant")
 }
 
 model LiveExamWinner {
@@ -278,6 +286,7 @@ model LiveExamWinner {
   updatedAt   DateTime  @updatedAt
 
   @@unique([examId, rank])
+  @@map("LiveExamWinner")
 }
 
 model Question {
@@ -294,6 +303,8 @@ model Question {
   // Battle relations
   battleQuestions BattleQuestion[]
   battleAnswers BattleAnswer[]
+  
+  @@map("Question")
 }
 
 model Transaction {
@@ -308,6 +319,8 @@ model Transaction {
   razorpaySignature String?
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id])
+  
+  @@map("Transaction")
 }
 
 model PracticeExam {
@@ -329,6 +342,8 @@ model PracticeExam {
   participants PracticeExamParticipant[]
   category    String
   subcategory String
+  
+  @@map("PracticeExam")
 }
 
 model PracticeExamParticipant {
@@ -345,6 +360,7 @@ model PracticeExamParticipant {
   updatedAt   DateTime  @updatedAt
 
   @@unique([examId, userId])
+  @@map("PracticeExamParticipant")
 }
 
 model PracticeExamQuestion {
@@ -355,6 +371,8 @@ model PracticeExamQuestion {
   marks       Int       @default(1) // Marks for this question
   exam        PracticeExam? @relation(fields: [examId], references: [id])
   examId      String?
+  
+  @@map("PracticeExamQuestion")
 }
 
 model GovtExamNotification {
@@ -368,6 +386,8 @@ model GovtExamNotification {
   logoUrl       String?  // URL for exam logo/image
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  
+  @@map("GovtExamNotification")
 }
 
 model QuestionOfTheDay {
@@ -382,6 +402,8 @@ model QuestionOfTheDay {
   createdBy   User      @relation(fields: [createdById], references: [id])
   createdById String
   attempts    QuestionOfTheDayAttempt[]
+  
+  @@map("QuestionOfTheDay")
 }
 
 model QuestionOfTheDayAttempt {
@@ -396,6 +418,7 @@ model QuestionOfTheDayAttempt {
   createdAt   DateTime  @default(now())
 
   @@unique([questionId, userId])
+  @@map("QuestionOfTheDayAttempt")
 }
 
 model Timetable {
@@ -408,6 +431,8 @@ model Timetable {
   user        User      @relation(fields: [userId], references: [id])
   userId      String
   slots       TimetableSlot[]
+  
+  @@map("Timetable")
 }
 
 model TimetableSlot {
@@ -429,6 +454,7 @@ model TimetableSlot {
   reminderSent Boolean  @default(false)
 
   @@index([userId, day, startTime])
+  @@map("TimetableSlot")
 }
 
 model Post {
@@ -474,6 +500,7 @@ model Post {
   
   @@index([authorId, createdAt])
   @@index([status, createdAt]) // For efficient review queue queries
+  @@map("Post")
 }
 
 model Follow {
@@ -485,6 +512,7 @@ model Follow {
   createdAt   DateTime  @default(now())
 
   @@unique([followerId, followingId])
+  @@map("Follow")
 }
 
 model FollowRequest {
@@ -498,6 +526,7 @@ model FollowRequest {
   updatedAt   DateTime  @updatedAt
 
   @@unique([senderId, receiverId])
+  @@map("FollowRequest")
 }
 
 model Like {
@@ -509,6 +538,7 @@ model Like {
   createdAt   DateTime  @default(now())
 
   @@unique([userId, postId])
+  @@map("Like")
 }
 
 model Comment {
@@ -523,6 +553,7 @@ model Comment {
   updatedAt   DateTime  @updatedAt
 
   @@index([postId, createdAt])
+  @@map("Comment")
 }
 
 model SavedPost {
@@ -534,6 +565,7 @@ model SavedPost {
   createdAt   DateTime  @default(now())
 
   @@unique([userId, postId])
+  @@map("SavedPost")
 }
 
 model PostReport {
@@ -551,6 +583,7 @@ model PostReport {
   updatedAt   DateTime  @updatedAt
 
   @@unique([userId, postId]) // One report per user per post
+  @@map("PostReport")
 }
 
 model UserMessageDelete {
@@ -562,6 +595,7 @@ model UserMessageDelete {
   deletedAt DateTime  @default(now())
 
   @@unique([userId, messageId]) // One delete record per user per message
+  @@map("UserMessageDelete")
 }
 
 model UserBlock {
@@ -575,6 +609,7 @@ model UserBlock {
   updatedAt   DateTime  @updatedAt
 
   @@unique([blockerId, blockedId]) // One block record per blocker-blocked pair
+  @@map("UserBlock")
 }
 
 // DirectMessage model
@@ -626,6 +661,7 @@ model DirectMessage {
   @@index([receiverId, senderId, createdAt])
   @@index([replyToId])
   @@index([isPinned])
+  @@map("DirectMessage")
 }
 
 // Message Reactions Model
@@ -643,6 +679,7 @@ model MessageReaction {
   @@unique([messageId, userId, reactionType])
   @@index([messageId])
   @@index([userId])
+  @@map("MessageReaction")
 }
 
 // MessageRequest model
@@ -663,6 +700,7 @@ model MessageRequest {
   
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, senderId, createdAt])
+  @@map("MessageRequest")
 }
 
 model Group {
