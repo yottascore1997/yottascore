@@ -217,6 +217,8 @@ model User {
   
   // Spy Game - Commented out for now
   // spyGamePlayers SpyGamePlayer[]
+  
+  @@map("users")
 }
 
 model LiveExam {

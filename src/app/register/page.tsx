@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FaArrowLeft, FaEye, FaEyeSlash, FaGoogle, FaFacebook, FaApple, FaGift } from 'react-icons/fa';
 import { MdSchool } from 'react-icons/md';
@@ -14,11 +14,43 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    username: '',
     password: '',
     confirmPassword: '',
     referralCode: '',
     agreeToTerms: false
   });
+  const [usernameStatus, setUsernameStatus] = useState<{state: 'idle'|'checking'|'available'|'unavailable'|'invalid', message?: string}>({ state: 'idle' });
+
+  // Username availability check
+  useEffect(() => {
+    const username = formData.username.trim().toLowerCase()
+    if (!username) { 
+      setUsernameStatus({ state: 'idle' }); 
+      return 
+    }
+
+    const usernameRegex = /^[a-z0-9_\.]{3,20}$/
+    if (!usernameRegex.test(username)) {
+      setUsernameStatus({ state: 'invalid', message: 'Use 3-20 chars: a-z, 0-9, _ or .' })
+      return
+    }
+    
+    setUsernameStatus({ state: 'checking' })
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`)
+        const data = await res.json()
+        setUsernameStatus({ 
+          state: data.available ? 'available' : 'unavailable', 
+          message: data.available ? 'Username available' : 'Username not available' 
+        })
+      } catch (e) {
+        setUsernameStatus({ state: 'invalid', message: 'Could not verify username' })
+      }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [formData.username])
 
   const handleSendOtp = () => {
     if (phoneNumber.length === 10) {
@@ -39,7 +71,25 @@ export default function RegisterPage() {
     }));
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
+    // Validate username
+    if (!formData.username || formData.username.length < 3) {
+      alert('Please enter a valid username (minimum 3 characters)');
+      return;
+    }
+    if (usernameStatus.state === 'unavailable') {
+      alert('This username is already taken. Please choose another one.');
+      return;
+    }
+    if (usernameStatus.state === 'invalid') {
+      alert('Please enter a valid username (3-20 characters: a-z, 0-9, _ or .)');
+      return;
+    }
+    if (usernameStatus.state === 'checking') {
+      alert('Please wait while we check username availability');
+      return;
+    }
+    
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match');
       return;
@@ -48,8 +98,35 @@ export default function RegisterPage() {
       alert('Please agree to terms and conditions');
       return;
     }
-    // Handle registration
-    console.log('Registering user:', { phoneNumber, ...formData });
+    
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          username: formData.username,
+          password: formData.password,
+          phoneNumber: phoneNumber,
+          referralCode: formData.referralCode || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Registration successful! Please login.');
+        window.location.href = '/login';
+      } else {
+        alert(data.message || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert('An error occurred during registration. Please try again.');
+    }
   };
 
   return (
@@ -192,6 +269,35 @@ export default function RegisterPage() {
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     className="w-full px-4 py-4 rounded-xl bg-gray-100 text-gray-800 placeholder-gray-500 border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-semibold mb-3">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Choose a unique username"
+                    value={formData.username}
+                    onChange={(e) => handleInputChange('username', e.target.value.toLowerCase())}
+                    className={`w-full px-4 py-4 rounded-xl text-gray-800 placeholder-gray-500 border focus:outline-none focus:ring-2 ${
+                      usernameStatus.state === 'unavailable' || usernameStatus.state === 'invalid' 
+                        ? 'bg-red-50 border-red-400 focus:border-red-500 focus:ring-red-500/50' 
+                        : usernameStatus.state === 'available'
+                        ? 'bg-green-50 border-green-400 focus:border-green-500 focus:ring-green-500/50'
+                        : 'bg-gray-100 border-gray-300 focus:border-blue-500 focus:ring-blue-500/50'
+                    }`}
+                  />
+                  <p className="text-gray-500 text-xs mt-2">You can login using your username or email.</p>
+                  {usernameStatus.state !== 'idle' && (
+                    <p className={`text-xs mt-1 font-medium ${
+                      usernameStatus.state === 'available' ? 'text-green-600' 
+                      : usernameStatus.state === 'checking' ? 'text-gray-500' 
+                      : 'text-red-600'
+                    }`}>
+                      {usernameStatus.state === 'checking' ? 'Checking availability...' : usernameStatus.message}
+                    </p>
+                  )}
                 </div>
 
                 <div>

@@ -1423,7 +1423,7 @@ export default function HomePage() {
               </span>
             </h2>
             <p className="text-2xl text-white/90 mb-12 leading-relaxed">
-              Join 1 Million+ Students Who Are Already Learning & Earning! 
+              Trusted by Crores of Students Who Are Already Learning & Earning! 
               <br />
               <span className="text-yellow-300 font-bold text-3xl">🎁 Get ₹50 Sign-Up Bonus + ₹100 First Exam Bonus!</span>
             </p>
