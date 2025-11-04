@@ -83,9 +83,15 @@ const handler = async (req: Request) => {
       console.log('Referral code validated:', { referralCode, referrerId });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10)
-    const hashedPassword = await bcrypt.hash(password, salt)
+    // Hash password (bcrypt.hash automatically generates salt)
+    const hashedPassword = await bcrypt.hash(password, 10)
+    
+    // Debug logging
+    console.log('[REGISTER] Password hashing:', {
+      passwordLength: password.length,
+      hashedPasswordLength: hashedPassword.length,
+      hashedPasswordPrefix: hashedPassword.substring(0, 20) + '...'
+    })
 
     // Create new user with referral info
     const user = await prisma.user.create({
@@ -100,7 +106,19 @@ const handler = async (req: Request) => {
       },
     })
 
-    console.log('User created successfully:', { id: user.id, email: user.email })
+    // Verify password was stored correctly
+    const verifyUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true, email: true, hashedPassword: true }
+    })
+    
+    console.log('[REGISTER] User created successfully:', { 
+      id: user.id, 
+      email: user.email,
+      username: user.username,
+      hashedPasswordStored: !!verifyUser?.hashedPassword,
+      hashedPasswordLength: verifyUser?.hashedPassword?.length
+    })
 
     // If referral code was used, process the referral
     if (referralCode && referrerId) {

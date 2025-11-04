@@ -40,15 +40,29 @@ export async function validateUser(identifier: string, password: string) {
       : { username: identifier.toLowerCase() },
   })
 
-  if (!user || !user.hashedPassword) {
+  if (!user) {
+    console.log('[AUTH] User not found:', identifier)
     return null
   }
+
+  if (!user.hashedPassword) {
+    console.log('[AUTH] User has no password hash:', user.id)
+    return null
+  }
+
+  // Log for debugging (remove in production)
+  console.log('[AUTH] Comparing password for user:', user.email || user.username)
+  console.log('[AUTH] Hashed password exists:', !!user.hashedPassword)
+  console.log('[AUTH] Hashed password length:', user.hashedPassword?.length)
 
   const isValid = await comparePasswords(password, user.hashedPassword)
+  
   if (!isValid) {
+    console.log('[AUTH] Password comparison failed for user:', user.email || user.username)
     return null
   }
 
+  console.log('[AUTH] Password validated successfully for user:', user.email || user.username)
   return user
 }
 

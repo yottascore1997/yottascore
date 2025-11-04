@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `practiceexam` ADD COLUMN `instructions` TEXT NULL;
+ALTER TABLE `PracticeExam` ADD COLUMN `instructions` TEXT NULL;
