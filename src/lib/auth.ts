@@ -34,6 +34,8 @@ export async function validateUser(identifier: string, password: string) {
   // Determine if identifier looks like an email
   const isEmail = /.+@.+\..+/.test(identifier)
 
+  console.log('[AUTH] Looking up user:', { identifier, isEmail })
+
   const user = await prisma.user.findFirst({
     where: isEmail
       ? { email: identifier }
@@ -45,24 +47,38 @@ export async function validateUser(identifier: string, password: string) {
     return null
   }
 
+  console.log('[AUTH] User found:', {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+    hasPassword: !!user.hashedPassword
+  })
+
   if (!user.hashedPassword) {
     console.log('[AUTH] User has no password hash:', user.id)
     return null
   }
 
-  // Log for debugging (remove in production)
+  // Log for debugging
   console.log('[AUTH] Comparing password for user:', user.email || user.username)
   console.log('[AUTH] Hashed password exists:', !!user.hashedPassword)
   console.log('[AUTH] Hashed password length:', user.hashedPassword?.length)
+  console.log('[AUTH] Input password length:', password.length)
 
   const isValid = await comparePasswords(password, user.hashedPassword)
   
   if (!isValid) {
     console.log('[AUTH] Password comparison failed for user:', user.email || user.username)
+    console.log('[AUTH] User role in database:', user.role)
     return null
   }
 
-  console.log('[AUTH] Password validated successfully for user:', user.email || user.username)
+  console.log('[AUTH] Password validated successfully for user:', {
+    email: user.email || user.username,
+    role: user.role
+  })
+  
   return user
 }
 

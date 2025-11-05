@@ -21,14 +21,28 @@ const handler = async (req: Request) => {
     }
 
     const { identifier, password } = validatedFields.data
+    
+    console.log('[LOGIN] Attempting login:', { 
+      identifier, 
+      passwordLength: password.length 
+    })
+    
     const user = await validateUser(identifier, password)
 
     if (!user) {
+      console.log('[LOGIN] Login failed - invalid credentials for:', identifier)
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       )
     }
+
+    console.log('[LOGIN] Login successful:', {
+      userId: user.id,
+      email: user.email,
+      username: user.username,
+      role: user.role
+    })
 
     const token = await signToken({
       userId: user.id,

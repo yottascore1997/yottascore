@@ -83,14 +83,35 @@ const handler = async (req: Request) => {
       console.log('Referral code validated:', { referralCode, referrerId });
     }
 
+    // Validate password strength
+    if (password.length < 6) {
+      return NextResponse.json(
+        { message: 'Password must be at least 6 characters long' },
+        { status: 400 }
+      )
+    }
+
     // Hash password (bcrypt.hash automatically generates salt)
     const hashedPassword = await bcrypt.hash(password, 10)
     
+    // Validate hash was created correctly (bcrypt hashes are always 60 characters)
+    if (!hashedPassword || hashedPassword.length !== 60) {
+      console.error('[REGISTER] Invalid password hash generated:', {
+        hashLength: hashedPassword?.length,
+        hashPrefix: hashedPassword?.substring(0, 20)
+      })
+      return NextResponse.json(
+        { message: 'Password hashing failed. Please try again.' },
+        { status: 500 }
+      )
+    }
+    
     // Debug logging
-    console.log('[REGISTER] Password hashing:', {
+    console.log('[REGISTER] Password hashing successful:', {
       passwordLength: password.length,
       hashedPasswordLength: hashedPassword.length,
-      hashedPasswordPrefix: hashedPassword.substring(0, 20) + '...'
+      hashedPasswordPrefix: hashedPassword.substring(0, 20) + '...',
+      isValidHash: hashedPassword.length === 60
     })
 
     // Create new user with referral info
@@ -112,12 +133,39 @@ const handler = async (req: Request) => {
       select: { id: true, email: true, hashedPassword: true }
     })
     
-    console.log('[REGISTER] User created successfully:', { 
+    // Verify stored password hash is valid
+    if (!verifyUser?.hashedPassword || verifyUser.hashedPassword.length !== 60) {
+      console.error('[REGISTER] Password hash validation failed after storage:', {
+        userId: user.id,
+        storedHashLength: verifyUser?.hashedPassword?.length,
+        expectedLength: 60
+      })
+      // Delete the user if password wasn't stored correctly
+      await prisma.user.delete({ where: { id: user.id } })
+      return NextResponse.json(
+        { message: 'Password storage failed. Please try again.' },
+        { status: 500 }
+      )
+    }
+    
+    // Test password verification to ensure it works
+    const testVerification = await bcrypt.compare(password, verifyUser.hashedPassword)
+    if (!testVerification) {
+      console.error('[REGISTER] Password verification test failed after storage')
+      await prisma.user.delete({ where: { id: user.id } })
+      return NextResponse.json(
+        { message: 'Password verification failed. Please try again.' },
+        { status: 500 }
+      )
+    }
+    
+    console.log('[REGISTER] User created and verified successfully:', { 
       id: user.id, 
       email: user.email,
       username: user.username,
       hashedPasswordStored: !!verifyUser?.hashedPassword,
-      hashedPasswordLength: verifyUser?.hashedPassword?.length
+      hashedPasswordLength: verifyUser?.hashedPassword?.length,
+      passwordVerified: testVerification
     })
 
     // If referral code was used, process the referral
