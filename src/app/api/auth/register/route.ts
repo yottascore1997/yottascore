@@ -11,7 +11,7 @@ const handler = async (req: Request) => {
     const body = await req.json()
     console.log('Registration request body:', body)
 
-    const { email, name, password, phoneNumber, referralCode, username } = body
+    const { email, name, password, phoneNumber, referralCode, username, role: requestedRole } = body
 
     // Validate required fields
     if (!email || !name || !password || !phoneNumber || !username) {
@@ -31,6 +31,20 @@ const handler = async (req: Request) => {
         { message: 'Invalid username. Use 3-20 chars: a-z, 0-9, underscore or dot' },
         { status: 400 }
       )
+    }
+
+    // Normalise and validate role (default to STUDENT)
+    const allowedRoles = ['STUDENT', 'ADMIN'] as const
+    type AllowedRole = (typeof allowedRoles)[number]
+    let selectedRole: AllowedRole = 'STUDENT'
+
+    if (typeof requestedRole === 'string') {
+      const candidate = requestedRole.toUpperCase()
+      if (allowedRoles.includes(candidate as AllowedRole)) {
+        selectedRole = candidate as AllowedRole
+      } else {
+        console.warn('[REGISTER] Invalid role requested, defaulting to STUDENT:', { requestedRole })
+      }
     }
 
     // Check if user already exists (email)
@@ -122,7 +136,7 @@ const handler = async (req: Request) => {
         hashedPassword,
         phoneNumber,
         username: normalizedUsername,
-        role: 'STUDENT', // Default role is student
+        role: selectedRole,
         referredBy: referralCode || null,
       },
     })
