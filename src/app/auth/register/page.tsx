@@ -17,6 +17,7 @@ function RegisterForm() {
     password: '',
     phoneNumber: '',
     referralCode: '',
+    role: 'STUDENT',
   })
   const [error, setError] = useState('')
   const [usernameStatus, setUsernameStatus] = useState<{state: 'idle'|'checking'|'available'|'unavailable'|'invalid', message?: string}>({ state: 'idle' })
@@ -191,6 +192,35 @@ function RegisterForm() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
+            </div>
+            <div>
+              <span className="block text-sm font-medium text-gray-700 mb-1">Select Role</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { value: 'STUDENT', title: 'Student', description: 'Practice exams, analytics, and rewards.' },
+                  { value: 'ADMIN', title: 'Admin', description: 'Manage exams, learners, and content.' },
+                ].map((option) => {
+                  const isSelected = formData.role === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, role: option.value })}
+                      className={`rounded-lg border p-3 text-left transition-all ${
+                        isSelected
+                          ? 'border-purple-500 bg-purple-50 shadow-md shadow-purple-200'
+                          : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50'
+                      }`}
+                    >
+                      <p className={`text-sm font-semibold ${isSelected ? 'text-purple-700' : 'text-gray-700'}`}>
+                        {option.title}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">{option.description}</p>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">Select the access level you need for this account.</p>
             </div>
             <div>
               <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-1">
