@@ -18,6 +18,7 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     referralCode: '',
+    role: 'STUDENT',
     agreeToTerms: false
   });
   const [usernameStatus, setUsernameStatus] = useState<{state: 'idle'|'checking'|'available'|'unavailable'|'invalid', message?: string}>({ state: 'idle' });
@@ -111,6 +112,7 @@ export default function RegisterPage() {
           username: formData.username,
           password: formData.password,
           phoneNumber: phoneNumber,
+          role: formData.role,
           referralCode: formData.referralCode || undefined,
         }),
       });
@@ -298,6 +300,40 @@ export default function RegisterPage() {
                       {usernameStatus.state === 'checking' ? 'Checking availability...' : usernameStatus.message}
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-semibold mb-3">
+                    Select Role
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      { value: 'STUDENT', title: 'Student', description: 'Access learning modules, mock tests, analytics and rewards.' },
+                      { value: 'ADMIN', title: 'Admin', description: 'Manage exams, students, content and platform operations.' },
+                    ].map((option) => {
+                      const isSelected = formData.role === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => handleInputChange('role', option.value)}
+                          className={`group rounded-2xl border p-4 text-left transition-all duration-300 ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/10'
+                              : 'border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50'
+                          }`}
+                        >
+                          <p className={`text-sm font-semibold ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
+                            {option.title}
+                          </p>
+                          <p className="mt-2 text-xs text-gray-500">{option.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-gray-500 text-xs mt-2">
+                    Choose the role that fits you best. Admin access unlocks management tools.
+                  </p>
                 </div>
 
                 <div>
