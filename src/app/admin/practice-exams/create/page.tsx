@@ -85,39 +85,113 @@ export default function CreatePracticeExamPage() {
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
         const importedQuestions: Question[] = [];
+        const errors: string[] = [];
         
         // Skip header row and process data
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i] as any[];
-          if (row && row.length >= 6) {
-            const question: Question = {
-              text: row[0] || "",
-              options: [
-                row[1] || "",
-                row[2] || "",
-                row[3] || "",
-                row[4] || ""
-              ],
-              correct: row[5] ? Number(row[5]) - 1 : null, // Excel uses 1-based indexing
-              marks: row[6] ? Number(row[6]) : 1 // Marks from 7th column, default to 1
-            };
-            importedQuestions.push(question);
+          if (!row || row.length < 6) {
+            errors.push(`Row ${i + 1}: Insufficient columns. Expected at least 6 columns.`);
+            continue;
           }
+
+          const questionText = (row[0] || "").toString().trim();
+          const option1 = (row[1] || "").toString().trim();
+          const option2 = (row[2] || "").toString().trim();
+          const option3 = (row[3] || "").toString().trim();
+          const option4 = (row[4] || "").toString().trim();
+          const correctAnswerInput = row[5];
+          const marks = row[6] ? Number(row[6]) : 1;
+
+          // Validate required fields
+          if (!questionText) {
+            errors.push(`Row ${i + 1}: Question text is required`);
+            continue;
+          }
+
+          // Prepare options array (always 4 elements, empty strings for missing options)
+          const allOptions = [option1, option2, option3, option4];
+          
+          // Validate we have at least 2 non-empty options
+          const validOptionsCount = allOptions.filter(opt => opt && opt.length > 0).length;
+          if (validOptionsCount < 2) {
+            errors.push(`Row ${i + 1}: At least 2 options are required`);
+            continue;
+          }
+
+          // Validate correct answer (Excel uses 1-based indexing, we convert to 0-based)
+          let correctAnswer: number | null = null;
+          if (correctAnswerInput !== undefined && correctAnswerInput !== null && correctAnswerInput !== '') {
+            const correctIndex = Number(correctAnswerInput);
+            if (isNaN(correctIndex)) {
+              errors.push(`Row ${i + 1}: Correct answer must be a number`);
+              continue;
+            }
+            const zeroBasedIndex = correctIndex - 1; // Convert 1-based to 0-based
+            if (zeroBasedIndex < 0 || zeroBasedIndex > 3) {
+              errors.push(`Row ${i + 1}: Correct answer must be between 1 and 4`);
+              continue;
+            }
+            // Validate that the selected option is not empty
+            if (!allOptions[zeroBasedIndex] || allOptions[zeroBasedIndex].length === 0) {
+              errors.push(`Row ${i + 1}: The selected correct answer option (${correctIndex}) is empty`);
+              continue;
+            }
+            correctAnswer = zeroBasedIndex;
+          }
+
+          // Validate marks
+          const validMarks = marks > 0 ? marks : 1;
+
+          const question: Question = {
+            text: questionText,
+            options: allOptions, // Always 4 elements (with empty strings if needed)
+            correct: correctAnswer,
+            marks: validMarks
+          };
+          importedQuestions.push(question);
         }
 
         if (importedQuestions.length > 0) {
-          setQuestions(importedQuestions);
-          setSuccess(`Successfully imported ${importedQuestions.length} questions from Excel!`);
-          setTimeout(() => setSuccess(null), 3000);
+          // Ask user if they want to append or replace
+          const shouldAppend = questions.length > 0 && 
+            window.confirm(`You have ${questions.length} existing question(s). Do you want to add these ${importedQuestions.length} imported questions to them? (Click OK to append, Cancel to replace)`);
+          
+          if (shouldAppend) {
+            setQuestions([...questions, ...importedQuestions]);
+            setSuccess(`Successfully added ${importedQuestions.length} questions! Total: ${questions.length + importedQuestions.length}`);
+          } else {
+            setQuestions(importedQuestions);
+            setSuccess(`Successfully imported ${importedQuestions.length} questions from Excel!`);
+          }
+          
+          if (errors.length > 0) {
+            const errorMsg = `Imported ${importedQuestions.length} questions, but ${errors.length} row(s) had errors:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... and ${errors.length - 5} more errors` : ''}`;
+            console.warn('Import errors:', errors);
+            setError(errorMsg);
+            setTimeout(() => setError(null), 8000);
+          } else {
+            setTimeout(() => setSuccess(null), 3000);
+          }
         } else {
-          setError("No valid questions found in Excel file");
-          setTimeout(() => setError(null), 3000);
+          const errorMsg = errors.length > 0 
+            ? `No valid questions found. Errors:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... and ${errors.length - 5} more errors` : ''}`
+            : "No valid questions found in Excel file. Please check the format.";
+          setError(errorMsg);
+          setTimeout(() => setError(null), 8000);
         }
       } catch (err) {
-        setError("Error reading Excel file. Please check the format.");
-        setTimeout(() => setError(null), 3000);
+        console.error('Excel import error:', err);
+        setError(`Error reading Excel file: ${err instanceof Error ? err.message : 'Please check the format and try again.'}`);
+        setTimeout(() => setError(null), 5000);
       }
     };
+    
+    reader.onerror = () => {
+      setError("Failed to read the file. Please try again.");
+      setTimeout(() => setError(null), 3000);
+    };
+    
     reader.readAsArrayBuffer(file);
   };
 

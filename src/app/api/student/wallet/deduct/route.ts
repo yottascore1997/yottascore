@@ -45,26 +45,33 @@ export const POST = withCORS(async (req: Request) => {
     }
 
     // Use a transaction to ensure data consistency
-    const result = await prisma.$transaction(async (tx) => {
-      // Deduct amount from wallet
-      const updatedUser = await tx.user.update({
-        where: { id: decoded.userId },
-        data: { wallet: { decrement: amount } },
-        select: { wallet: true }
-      });
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // Deduct amount from wallet
+        const updatedUser = await tx.user.update({
+          where: { id: decoded.userId },
+          data: { wallet: { decrement: amount } },
+          select: { wallet: true }
+        });
 
-      // Create transaction record
-      const transaction = await tx.transaction.create({
-        data: {
-          userId: decoded.userId,
-          amount: -amount, // Negative amount for deduction
-          type: 'DEDUCTION',
-          status: 'SUCCESS'
-        }
-      });
+        // Create transaction record with metadata
+        const transaction = await tx.transaction.create({
+          data: {
+            userId: decoded.userId,
+            amount: -amount, // Negative amount for deduction
+            type: 'DEDUCTION',
+            status: 'SUCCESS',
+            description: examId ? `${description || 'Wallet deduction'} (Exam: ${examId})` : description || null
+          }
+        });
 
-      return { updatedUser, transaction };
-    });
+        return { updatedUser, transaction };
+      },
+      {
+        timeout: 15000, // allow up to 15 seconds for the transaction block
+        maxWait: 5000,  // wait up to 5 seconds to obtain a transaction slot
+      }
+    );
 
     return NextResponse.json({
       message: 'Deduction successful',
@@ -77,6 +84,13 @@ export const POST = withCORS(async (req: Request) => {
 
   } catch (error) {
     console.error('Error in wallet deduction:', error);
+
+    if (error instanceof Error && 'code' in error && error.code === 'P2028') {
+      return NextResponse.json({
+        message: 'Wallet deduction timed out. Please try again in a moment.'
+      }, { status: 503 });
+    }
+
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 }); 

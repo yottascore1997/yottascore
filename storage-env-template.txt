@@ -1,0 +1,6 @@
+Supabase storage configuration (copy to .env):
+NEXT_PUBLIC_SUPABASE_URL=https://ymkogplvbovyarlmmsop.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlta29ncGx2Ym92eWFybG1tc29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2MjkwNjEsImV4cCI6MjA3ODIwNTA2MX0.w54uYvQVfYL09KZVpK_bb7MsliQ_TWvXtu9jZ6bqr3I
+SUPABASE_URL=https://ymkogplvbovyarlmmsop.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<Get from Dashboard → Settings → API → Project API Keys (service_role)>
+SUPABASE_STORAGE_BUCKET=yottascore-assets

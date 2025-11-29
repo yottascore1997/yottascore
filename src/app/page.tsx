@@ -241,11 +241,17 @@ export default function HomePage() {
     { number: '4.9★', label: 'User Rating', icon: FaStar, color: 'from-purple-500 to-pink-500' }
   ];
 
-  const upcomingExams = [
-    { title: 'Mathematics Master Challenge', time: '2:30 PM', prize: '₹5,000', students: 1243, difficulty: 'Medium' },
-    { title: 'Physics Rapid Fire', time: '3:00 PM', prize: '₹3,500', students: 856, difficulty: 'Hard' },
-    { title: 'Chemistry Quiz Battle', time: '4:15 PM', prize: '₹4,000', students: 967, difficulty: 'Easy' },
-  ];
+const upcomingExams = [
+  { title: 'Mathematics Master Challenge', time: 'Today • 14:30 IST', prize: '₹5,000', students: 1243, difficulty: 'Medium' },
+  { title: 'Physics Rapid Fire', time: 'Today • 17:00 IST', prize: '₹3,500', students: 856, difficulty: 'Hard' },
+  { title: 'Chemistry Quiz Battle', time: 'Today • 19:15 IST', prize: '₹4,000', students: 967, difficulty: 'Easy' },
+  { title: 'NEET Biology Full Mock', time: 'Today • 21:00 IST', prize: '₹6,000', students: 1_105, difficulty: 'Medium' },
+  { title: 'SSC CGL Quant Drill', time: 'Tomorrow • 07:30 IST', prize: '₹3,000', students: 742, difficulty: 'Medium' },
+  { title: 'Bank PO Reasoning Sprint', time: 'Tomorrow • 09:00 IST', prize: '₹2,500', students: 689, difficulty: 'Hard' },
+  { title: 'UPSC GS Paper 1 Marathon', time: 'Tomorrow • 11:30 IST', prize: '₹7,500', students: 918, difficulty: 'Hard' },
+  { title: 'GATE CSE Systems Mock', time: 'Tomorrow • 14:00 IST', prize: '₹5,500', students: 654, difficulty: 'Medium' },
+  { title: 'Railway NTPC Speed Test', time: 'Tomorrow • 16:30 IST', prize: '₹3,200', students: 811, difficulty: 'Easy' }
+];
 
   const achievements = [
     { icon: '🏆', title: 'Top Performer', desc: 'Score 95%+ in 5 exams' },
@@ -700,255 +706,84 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Live Winners Leaderboard Section - Mobile Optimized */}
-      <section className="py-16 sm:py-20 bg-gradient-to-br from-slate-900 via-gray-900 to-black relative overflow-hidden">
-        {/* Animated Background - Mobile Optimized */}
-        <div className="absolute inset-0">
-          <div className="absolute top-10 left-10 w-48 h-48 sm:w-96 sm:h-96 bg-yellow-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-pulse"></div>
-          <div className="absolute bottom-10 right-10 w-48 h-48 sm:w-96 sm:h-96 bg-green-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-pulse" style={{animationDelay: '2s'}}></div>
-          {/* Floating Money Icons - Mobile Optimized */}
-          <div className="absolute top-20 left-1/4 text-3xl sm:text-6xl opacity-5 animate-float">💰</div>
-          <div className="absolute bottom-20 right-1/4 text-2xl sm:text-5xl opacity-5 animate-float" style={{animationDelay: '1s'}}>🏆</div>
-          <div className="absolute top-1/2 right-1/3 text-2xl sm:text-4xl opacity-5 animate-float" style={{animationDelay: '2s'}}>💎</div>
-        </div>
-
-        <div className="container mx-auto px-3 sm:px-4 relative z-10">
-          <div className="max-w-6xl mx-auto">
-            {/* Header - Mobile Optimized */}
-            <div className="text-center mb-12 sm:mb-16">
-              <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full font-black text-xs sm:text-sm mb-4 sm:mb-6 shadow-2xl">
-                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full mr-1 sm:mr-2 animate-ping"></div>
-                <span className="hidden sm:inline">LIVE WINNERS - UPDATED 2 MINS AGO</span>
-                <span className="sm:hidden">LIVE WINNERS - 2 MINS AGO</span>
-              </div>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 sm:mb-6">
-                🏆 Today's Top Winners
-              </h2>
-              <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto">
-                Real students winning real money right now! You could be next! 💸
-              </p>
-            </div>
-
-            {/* Leaderboard Container - Mobile Optimized */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-2xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-white/10 shadow-2xl">
-              {/* Leaderboard Header - Mobile Optimized */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-white/10 gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <FaTrophy className="text-white text-xl sm:text-2xl" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg sm:text-xl lg:text-2xl font-black text-white">Live Leaderboard</h3>
-                    <p className="text-xs sm:text-sm text-gray-400">Mathematics Master Challenge</p>
-                  </div>
-                </div>
-                <div className="text-left sm:text-right">
-                  <div className="text-xs sm:text-sm text-gray-400">Total Prize Pool</div>
-                  <div className="text-2xl sm:text-3xl font-black text-green-400">₹50,000</div>
-                </div>
-              </div>
-
-              {/* Winner Entries - Mobile Optimized */}
-              <div className="space-y-3 sm:space-y-4">
-                {[
-                  { rank: 1, name: 'Arjun Sharma', score: '98/100', time: '8:45', won: '₹15,000', city: 'Delhi', avatar: 'AS', color: 'from-yellow-400 to-orange-500', rankBg: 'bg-gradient-to-br from-yellow-400 to-orange-500', medal: '🥇' },
-                  { rank: 2, name: 'Priya Patel', score: '96/100', time: '9:12', won: '₹10,000', city: 'Mumbai', avatar: 'PP', color: 'from-gray-300 to-gray-400', rankBg: 'bg-gradient-to-br from-gray-300 to-gray-400', medal: '🥈' },
-                  { rank: 3, name: 'Rahul Kumar', score: '94/100', time: '8:58', won: '₹7,500', city: 'Bangalore', avatar: 'RK', color: 'from-orange-400 to-amber-600', rankBg: 'bg-gradient-to-br from-orange-400 to-amber-600', medal: '🥉' },
-                  { rank: 4, name: 'Sneha Singh', score: '92/100', time: '9:34', won: '₹5,000', city: 'Pune', avatar: 'SS', color: 'from-blue-400 to-cyan-500', rankBg: 'bg-gradient-to-br from-blue-500 to-cyan-600', medal: '4️⃣' },
-                  { rank: 5, name: 'Vikram Reddy', score: '90/100', time: '9:05', won: '₹3,500', city: 'Hyderabad', avatar: 'VR', color: 'from-purple-400 to-pink-500', rankBg: 'bg-gradient-to-br from-purple-500 to-pink-600', medal: '5️⃣' },
-                ].map((winner, index) => (
-                  <div 
-                    key={index}
-                    className={`group relative bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border ${
-                      index === 0 ? 'border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.3)]' :
-                      index === 1 ? 'border-gray-400/50 shadow-[0_0_20px_rgba(156,163,175,0.2)]' :
-                      index === 2 ? 'border-orange-500/50 shadow-[0_0_20px_rgba(251,146,60,0.2)]' :
-                      'border-white/10'
-                    } hover:border-blue-500/50 transition-all duration-300 hover:scale-[1.01] sm:hover:scale-[1.02]`}
-                  >
-                    <div className="flex items-center gap-3 sm:gap-6">
-                      {/* Rank Badge - Mobile Optimized */}
-                      <div className="relative">
-                        <div className={`w-12 h-12 sm:w-16 sm:h-16 ${winner.rankBg} rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl ${
-                          index < 3 ? 'animate-pulse' : ''
-                        }`}>
-                          <span className="text-white font-black text-xl sm:text-3xl">{winner.medal}</span>
-                        </div>
-                        {index === 0 && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center animate-bounce">
-                            <FaFire className="text-white text-xs" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* User Info - Mobile Optimized */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                          {/* Avatar */}
-                          <div className={`w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br ${winner.color} rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg`}>
-                            <span className="text-white font-black text-sm sm:text-lg">{winner.avatar}</span>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="text-sm sm:text-lg lg:text-xl font-black text-white flex items-center gap-1 sm:gap-2 truncate">
-                              {winner.name}
-                              {index < 3 && <FaCheckCircle className="text-green-400 text-xs sm:text-sm flex-shrink-0" />}
-                            </h4>
-                            <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400">
-                              <span className="flex items-center gap-1">
-                                📍 {winner.city}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <FaClock className="text-blue-400" />
-                                {winner.time} min
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Score - Mobile Optimized */}
-                      <div className="text-center px-2 sm:px-6">
-                        <div className="text-xs sm:text-sm text-gray-400 mb-1">Score</div>
-                        <div className="text-lg sm:text-2xl lg:text-3xl font-black text-white">{winner.score}</div>
-                      </div>
-
-                      {/* Winnings - Mobile Optimized */}
-                      <div className="relative">
-                        <div className={`absolute inset-0 bg-gradient-to-br ${winner.color} blur-xl opacity-50`}></div>
-                        <div className={`relative bg-gradient-to-br ${winner.color} rounded-xl sm:rounded-2xl px-4 py-3 sm:px-8 sm:py-5 text-center shadow-2xl ${
-                          index === 0 ? 'animate-pulse' : ''
-                        }`}>
-                          <div className="text-white/90 text-xs font-bold mb-1">WON</div>
-                          <div className="text-white font-black text-lg sm:text-2xl lg:text-3xl">{winner.won}</div>
-                          {index === 0 && (
-                            <div className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 bg-red-500 text-white text-xs font-bold px-1 py-0.5 sm:px-2 sm:py-1 rounded-full animate-bounce">
-                              NEW!
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Confetti for Top 3 - Mobile Optimized */}
-                    {index < 3 && (
-                      <div className="absolute top-1 left-1 sm:top-2 sm:left-2 text-lg sm:text-2xl opacity-50 animate-bounce" style={{animationDelay: `${index * 0.2}s`}}>
-                        🎉
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* View Full Leaderboard CTA */}
-              <div className="mt-8 pt-6 border-t border-white/10 text-center">
-                <Link 
-                  href="/student/live-exams"
-                  className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-bold text-lg hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:scale-105 transition-all duration-300 group"
-                >
-                  <FaTrophy className="mr-2 text-xl" />
-                  View Full Leaderboard & Join Next Exam
-                  <FaArrowRight className="ml-2 group-hover:translate-x-2 transition-transform" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Quick Stats Below Leaderboard */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12">
-              {[
-                { label: 'Winners Today', value: '2,847', icon: FaTrophy, color: 'from-yellow-400 to-orange-500' },
-                { label: 'Money Won Today', value: '₹12.5L', icon: FaMoneyBillWave, color: 'from-green-400 to-emerald-500' },
-                { label: 'Exams Completed', value: '156', icon: FaCheckCircle, color: 'from-blue-400 to-cyan-500' },
-                { label: 'Active Now', value: activeStudents.toLocaleString(), icon: FaUsers, color: 'from-purple-400 to-pink-500' },
-              ].map((stat, index) => (
-                <div key={index} className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 text-center hover:bg-white/10 transition-all duration-300">
-                  <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg`}>
-                    <stat.icon className="text-white text-xl" />
-                  </div>
-                  <div className="text-3xl font-black text-white mb-1">{stat.value}</div>
-                  <div className="text-sm text-gray-400 font-semibold">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Upcoming Exams Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-5xl font-black text-gray-800 mb-4">
-                <FaFire className="inline text-orange-500 mr-3" />
-                Upcoming Live Exams
+      <section className="bg-slate-50 py-20">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="w-full">
+            <div className="mb-12 text-center">
+              <h2 className="text-3xl font-semibold tracking-tight text-slate-800 sm:text-4xl">
+                <FaFire className="mr-2 inline h-6 w-6 text-amber-500 sm:mr-3 sm:h-7 sm:w-7" />
+                Upcoming live exams
               </h2>
-              <p className="text-xl text-gray-600">
-                Join now and compete for real money prizes!
+              <p className="mt-3 text-sm text-slate-600 sm:text-base">
+                Reserve a slot that matches your schedule. Every exam includes proctoring, instant analytics, and clear payouts.
               </p>
             </div>
 
-            <div className="space-y-4">
-              {upcomingExams.map((exam, index) => (
-                <div 
-                  key={index}
-                  className="group bg-gradient-to-r from-white to-blue-50 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-blue-100 hover:border-blue-500"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                          <FaBook className="text-white text-xl" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
-                            {exam.title}
-                          </h3>
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                            <span className="flex items-center gap-1">
-                              <FaClock className="text-blue-500" />
-                              {exam.time}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <FaUsers className="text-green-500" />
-                              {exam.students} joined
-                            </span>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              exam.difficulty === 'Easy' ? 'bg-green-100 text-green-600' :
-                              exam.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-600' :
-                              'bg-red-100 text-red-600'
-                            }`}>
-                              {exam.difficulty}
-                            </span>
-                          </div>
-                        </div>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {upcomingExams.map((exam, index) => (
+              <div
+                key={index}
+                className="group h-full rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="flex h-full flex-col gap-6">
+                  <div className="flex items-start gap-4">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 text-white">
+                      <FaBook className="text-lg" />
+                    </span>
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold text-slate-800 transition-colors group-hover:text-blue-600 sm:text-xl">
+                        {exam.title}
+                      </h3>
+                      <p className="flex items-center gap-2 text-sm text-slate-600">
+                        <FaClock className="text-blue-500" />
+                        {exam.time}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                          <FaUsers className="text-blue-500" />
+                          {exam.students.toLocaleString()} joined
+                        </span>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 ${
+                            exam.difficulty === 'Easy'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : exam.difficulty === 'Medium'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-rose-100 text-rose-700'
+                          }`}
+                        >
+                          {exam.difficulty}
+                        </span>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <div className="text-sm text-gray-600 mb-1">Prize Pool</div>
-                        <div className="text-2xl font-black text-green-600">{exam.prize}</div>
-                      </div>
-                      <Link
-                        href="/student/live-exams"
-                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all duration-300 flex items-center gap-2"
-                      >
-                        Join Now
-                        <FaArrowRight />
-                      </Link>
                     </div>
                   </div>
+
+                  <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Prize pool</p>
+                      <p className="text-2xl font-semibold text-emerald-600">{exam.prize}</p>
+                    </div>
+                    <Link
+                      href="/student/live-exams"
+                      className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5 hover:from-indigo-600 hover:to-blue-700"
+                    >
+                      Book a slot
+                      <FaArrowRight className="text-xs" />
+                    </Link>
+                  </div>
                 </div>
-              ))}
+              </div>
+            ))}
             </div>
 
-            <div className="text-center mt-8">
-              <Link 
+            <div className="mt-10 text-center">
+              <Link
                 href="/student/live-exams"
-                className="inline-flex items-center text-blue-600 font-bold text-lg hover:text-blue-700 transition-colors group"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-900 hover:text-slate-900"
               >
-                View All Live Exams
-                <FaArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                View full live exam calendar
+                <FaArrowRight className="text-xs" />
               </Link>
             </div>
           </div>

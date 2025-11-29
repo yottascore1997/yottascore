@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
+import * as XLSX from 'xlsx';
 import { 
   Clock, 
   Users, 
@@ -265,37 +266,89 @@ export default function CreateLiveExam() {
     }
   };
 
-  const parseExcelFile = async (file: File) => {
+  const parseExcelFile = (file: File) => {
     setImportLoading(true);
     setImportError(null);
 
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-      const response = await fetch('/api/admin/question-bank/bulk-import', {
-        method: 'POST',
-        body: formData
-      });
+        const importedQuestions: Question[] = [];
+        
+        // Skip header row and process data
+        // Expected format: Question, Type (MCQ/TRUE_FALSE), Option1, Option2, Option3, Option4, CorrectAnswer (0-3)
+        for (let i = 1; i < jsonData.length; i++) {
+          const row = jsonData[i] as any[];
+          if (row && row.length >= 6) {
+            const questionText = row[0]?.toString().trim() || '';
+            const questionType = (row[1]?.toString().trim().toUpperCase() === 'TRUE_FALSE') ? 'TRUE_FALSE' : 'MCQ';
+            const option1 = row[2]?.toString().trim() || '';
+            const option2 = row[3]?.toString().trim() || '';
+            const option3 = row[4]?.toString().trim() || '';
+            const option4 = row[5]?.toString().trim() || '';
+            const correctAnswer = row[6] !== undefined ? parseInt(row[6].toString()) : 0;
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to parse Excel file');
+            // Validate required fields
+            if (!questionText) {
+              continue; // Skip empty questions
+            }
+
+            // For MCQ, ensure we have at least 2 options
+            if (questionType === 'MCQ' && (!option1 || !option2)) {
+              continue; // Skip invalid MCQ questions
+            }
+
+            // For TRUE_FALSE, set standard options
+            const options = questionType === 'TRUE_FALSE' 
+              ? ['True', 'False']
+              : [option1, option2, option3, option4].filter(opt => opt); // Filter out empty options
+
+            if (options.length < 2) {
+              continue; // Skip questions with less than 2 options
+            }
+
+            // Validate correct answer index
+            const validCorrectAnswer = Math.max(0, Math.min(correctAnswer, options.length - 1));
+
+            const question: Question = {
+              question: questionText,
+              type: questionType as "MCQ" | "TRUE_FALSE",
+              options: options,
+              correctAnswer: validCorrectAnswer
+            };
+
+            importedQuestions.push(question);
+          }
+        }
+
+        if (importedQuestions.length > 0) {
+          setImportedQuestions(importedQuestions);
+          setImportError(null);
+        } else {
+          setImportError('No valid questions found in the Excel file. Please check the format.');
+          setImportedQuestions([]);
+        }
+      } catch (error) {
+        console.error('Error parsing Excel file:', error);
+        setImportError('Error reading Excel file. Please check the format and try again.');
+        setImportedQuestions([]);
+      } finally {
+        setImportLoading(false);
       }
+    };
 
-      const data = await response.json();
-      
-      if (data.questions && data.questions.length > 0) {
-        setImportedQuestions(data.questions);
-      } else {
-        setImportError('No valid questions found in the Excel file');
-      }
-    } catch (error) {
-      console.error('Error parsing Excel file:', error);
-      setImportError(error instanceof Error ? error.message : 'Failed to parse Excel file');
-    } finally {
+    reader.onerror = () => {
+      setImportError('Failed to read the file. Please try again.');
       setImportLoading(false);
-    }
+    };
+
+    reader.readAsArrayBuffer(file);
   };
 
   const addImportedQuestions = () => {
@@ -312,16 +365,32 @@ export default function CreateLiveExam() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = 'question,type,option1,option2,option3,option4,correctAnswer\nSample MCQ Question,MCQ,Option A,Option B,Option C,Option D,0\nSample True/False Question,TRUE_FALSE,True,False,,,0';
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'question_template.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    // Create Excel template with sample data
+    const templateData = [
+      ['Question', 'Type', 'Option1', 'Option2', 'Option3', 'Option4', 'CorrectAnswer'],
+      ['What is 2 + 2?', 'MCQ', '3', '4', '5', '6', '1'],
+      ['The capital of India is New Delhi.', 'TRUE_FALSE', 'True', 'False', '', '', '0'],
+      ['Which is the largest planet?', 'MCQ', 'Earth', 'Mars', 'Jupiter', 'Saturn', '2'],
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(templateData);
+    
+    // Set column widths
+    worksheet['!cols'] = [
+      { wch: 50 }, // Question
+      { wch: 12 }, // Type
+      { wch: 20 }, // Option1
+      { wch: 20 }, // Option2
+      { wch: 20 }, // Option3
+      { wch: 20 }, // Option4
+      { wch: 15 }, // CorrectAnswer
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Questions');
+
+    // Convert to Excel file and download
+    XLSX.writeFile(workbook, 'live_exam_question_template.xlsx');
   };
 
   // Image upload handler
@@ -361,12 +430,23 @@ export default function CreateLiveExam() {
           fileName: file.name,
           fileSize: file.size
         });
+        
+        if (!data.url || data.url.includes('localhost') || data.url.includes('yourdomain.com')) {
+          console.error('⚠️ Invalid URL returned:', data.url);
+          throw new Error('Received invalid upload URL. Please check server configuration.');
+        }
+        
         setFormData(prev => ({ ...prev, imageUrl: data.url }));
         setImagePreview(data.url);
         setImageFile(file);
         console.log('✅ FormData updated with imageUrl:', data.url);
       } else {
-        throw new Error('Failed to upload image');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Upload error response:', {
+          status: response.status,
+          error: errorData
+        });
+        throw new Error(errorData.error || `Upload failed: ${response.status}`);
       }
     } catch (error) {
       console.error('Error uploading image:', error);

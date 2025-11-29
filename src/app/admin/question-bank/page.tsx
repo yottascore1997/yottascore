@@ -67,6 +67,31 @@ export default function QuestionBankPage() {
   const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState<any>(null);
   
+  // Auto-generate state
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateForm, setGenerateForm] = useState({
+    topic: "",
+    categoryId: "",
+    difficulty: "MEDIUM" as 'EASY' | 'MEDIUM' | 'HARD',
+    count: 5,
+    provider: "template" as 'openai' | 'gemini' | 'template'
+  });
+  const [generating, setGenerating] = useState(false);
+  const [generateResults, setGenerateResults] = useState<any>(null);
+  const [generationProgress, setGenerationProgress] = useState<{current: number, total: number} | null>(null);
+  
+  // Excel generation state
+  const [showExcelModal, setShowExcelModal] = useState(false);
+  const [excelForm, setExcelForm] = useState({
+    topic: "",
+    categoryId: "",
+    difficulty: "MEDIUM" as 'EASY' | 'MEDIUM' | 'HARD',
+    count: 1000,
+    saveToDatabase: false
+  });
+  const [generatingExcel, setGeneratingExcel] = useState(false);
+  const [excelProgress, setExcelProgress] = useState<{current: number, total: number} | null>(null);
+  
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -232,6 +257,188 @@ export default function QuestionBankPage() {
     }));
   };
 
+  const handleExcelGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGeneratingExcel(true);
+    setError("");
+    setSuccess("");
+    setExcelProgress(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError("Not authenticated");
+        return;
+      }
+
+      if (!excelForm.topic.trim()) {
+        setError("Please enter a topic");
+        return;
+      }
+
+      // Show progress (estimate based on count)
+      setExcelProgress({ current: 0, total: excelForm.count });
+      
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setExcelProgress(prev => {
+          if (!prev) return null;
+          // Estimate: 50 questions per batch, ~2 seconds per batch
+          const estimatedComplete = Math.min(
+            prev.current + Math.floor(prev.total / 20),
+            prev.total * 0.95
+          );
+          return { ...prev, current: estimatedComplete };
+        });
+      }, 2000);
+
+      const res = await fetch("/api/admin/question-bank/generate-excel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          topic: excelForm.topic.trim(),
+          categoryId: excelForm.categoryId,
+          difficulty: excelForm.difficulty,
+          count: excelForm.count,
+          saveToDatabase: excelForm.saveToDatabase
+        }),
+      });
+
+      clearInterval(progressInterval);
+      setExcelProgress(null);
+
+      if (res.ok && res.headers.get('content-type')?.includes('spreadsheet')) {
+        // Download Excel file
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        
+        // Get filename from Content-Disposition header
+        const contentDisposition = res.headers.get('content-disposition');
+        let filename = 'questions.xlsx';
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+          if (filenameMatch) {
+            filename = filenameMatch[1];
+          }
+        }
+        
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        setSuccess(`✅ Excel file downloaded successfully! ${excelForm.count} questions generated with Gemini AI.`);
+        setExcelForm(prev => ({ ...prev, topic: "" }));
+        
+        if (excelForm.saveToDatabase) {
+          fetchQuestions(excelForm.categoryId);
+        }
+        
+        // Close modal after 3 seconds
+        setTimeout(() => {
+          setShowExcelModal(false);
+        }, 3000);
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to generate Excel' }));
+        setError(errorData.message || errorData.error || "Failed to generate Excel file");
+      }
+    } catch (err: any) {
+      setExcelProgress(null);
+      setError(err.message || "Failed to generate Excel file");
+    } finally {
+      setGeneratingExcel(false);
+    }
+  };
+
+  const handleAutoGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGenerating(true);
+    setError("");
+    setSuccess("");
+    setGenerateResults(null);
+    setGenerationProgress(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError("Not authenticated");
+        return;
+      }
+
+      if (!generateForm.topic.trim()) {
+        setError("Please enter a topic");
+        return;
+      }
+
+      // For large batches, show progress simulation
+      if (generateForm.count >= 100) {
+        setGenerationProgress({ current: 0, total: generateForm.count });
+        // Simulate progress (actual progress will come from server)
+        const progressInterval = setInterval(() => {
+          setGenerationProgress(prev => {
+            if (!prev) return null;
+            const newCurrent = Math.min(prev.current + 10, prev.total * 0.95);
+            return { ...prev, current: newCurrent };
+          });
+        }, 500);
+        
+        // Clear interval after request completes
+        setTimeout(() => clearInterval(progressInterval), 60000);
+      }
+
+      // Use bulk endpoint for 100+ questions
+      const endpoint = generateForm.count >= 100 
+        ? "/api/admin/question-bank/bulk-generate"
+        : "/api/admin/question-bank/generate";
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          topic: generateForm.topic.trim(),
+          categoryId: generateForm.categoryId,
+          difficulty: generateForm.difficulty,
+          count: generateForm.count,
+          provider: generateForm.count >= 100 ? 'template' : generateForm.provider
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setGenerationProgress(null);
+        setSuccess(`✅ ${data.message}`);
+        setGenerateResults(data);
+        setGenerateForm(prev => ({ ...prev, topic: "" }));
+        // Refresh questions list
+        fetchQuestions(generateForm.categoryId);
+        // Close modal after 3-5 seconds (longer for large batches)
+        const closeDelay = generateForm.count >= 100 ? 5000 : 3000;
+        setTimeout(() => {
+          setShowGenerateModal(false);
+          setGenerateResults(null);
+        }, closeDelay);
+      } else {
+        setGenerationProgress(null);
+        setError(data.message || data.error || "Failed to generate questions");
+      }
+    } catch (err: any) {
+      setGenerationProgress(null);
+      setError(err.message || "Failed to generate questions");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const downloadTemplate = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -380,6 +587,59 @@ export default function QuestionBankPage() {
             onClick={() => setShowQuestionModal(true)}
           >
             Add Question
+          </button>
+          <button
+            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded hover:from-purple-700 hover:to-pink-700 transition-colors flex items-center gap-2"
+            onClick={() => {
+              if (categories.length > 0) {
+                setGenerateForm(prev => ({ 
+                  ...prev, 
+                  categoryId: prev.categoryId || categories[0].id 
+                }));
+                setShowGenerateModal(true);
+              } else {
+                setError("Please create a category first");
+              }
+            }}
+          >
+            <span>✨</span>
+            Auto Generate Questions
+          </button>
+          <button
+            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded hover:from-green-700 hover:to-emerald-700 transition-colors flex items-center gap-2 font-semibold"
+            onClick={() => {
+              if (categories.length > 0) {
+                setGenerateForm(prev => ({ 
+                  ...prev, 
+                  categoryId: prev.categoryId || categories[0].id,
+                  count: 1000
+                }));
+                setShowGenerateModal(true);
+              } else {
+                setError("Please create a category first");
+              }
+            }}
+          >
+            <span>🚀</span>
+            Generate 1000 Questions (Bulk)
+          </button>
+          <button
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded hover:from-indigo-700 hover:to-purple-700 transition-colors flex items-center gap-2 font-semibold shadow-lg"
+            onClick={() => {
+              if (categories.length > 0) {
+                setExcelForm(prev => ({ 
+                  ...prev, 
+                  categoryId: prev.categoryId || categories[0].id,
+                  count: 1000
+                }));
+                setShowExcelModal(true);
+              } else {
+                setError("Please create a category first");
+              }
+            }}
+          >
+            <span>📊</span>
+            Generate Excel (Gemini AI) - 1000 Questions
           </button>
         </div>
       </div>
@@ -862,6 +1122,357 @@ export default function QuestionBankPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-Generate Questions Modal */}
+      {showGenerateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <span>✨</span>
+              Auto Generate Questions with AI
+            </h2>
+            <form onSubmit={handleAutoGenerate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Category *</label>
+                <select
+                  className="w-full border rounded px-3 py-2"
+                  value={generateForm.categoryId}
+                  onChange={e => setGenerateForm(prev => ({ ...prev, categoryId: e.target.value }))}
+                  required
+                >
+                  <option value="">Select a category</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Topic/Subject *</label>
+                <input
+                  type="text"
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="e.g., Python Programming, History of India, Basic Math"
+                  value={generateForm.topic}
+                  onChange={e => setGenerateForm(prev => ({ ...prev, topic: e.target.value }))}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter the topic or subject for which you want questions generated
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Difficulty</label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    value={generateForm.difficulty}
+                    onChange={e => setGenerateForm(prev => ({ ...prev, difficulty: e.target.value as 'EASY' | 'MEDIUM' | 'HARD' }))}
+                  >
+                    <option value="EASY">Easy</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HARD">Hard</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Number of Questions</label>
+                  <input
+                    type="number"
+                    className="w-full border rounded px-3 py-2"
+                    min="1"
+                    max="10000"
+                    value={generateForm.count}
+                    onChange={e => setGenerateForm(prev => ({ ...prev, count: Math.max(1, Math.min(10000, parseInt(e.target.value) || 5)) }))}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {generateForm.count > 100 
+                      ? `⚠️ Large batch: ${generateForm.count} questions (will take time)` 
+                      : generateForm.count === 1000
+                      ? '🚀 Bulk mode: 1000 questions'
+                      : '1-10,000 questions'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Generation Method</label>
+                <select
+                  className="w-full border rounded px-3 py-2"
+                  value={generateForm.provider}
+                  onChange={e => setGenerateForm(prev => ({ ...prev, provider: e.target.value as 'openai' | 'gemini' | 'template' }))}
+                >
+                  <option value="template">🆓 Template-Based (FREE - Limited Variety)</option>
+                  <option value="gemini">🤖 Google Gemini (FREE - Real AI Questions) ⭐ Recommended</option>
+                  <option value="openai">💎 OpenAI GPT-3.5 (Paid - Best Quality)</option>
+                </select>
+                <div className="mt-2 space-y-1">
+                  {generateForm.provider === 'template' && (
+                    <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                      ⚠️ <strong>Note:</strong> Template-based questions are pre-defined and will repeat. 
+                      Same 10-15 base questions will be repeated {generateForm.count} times with variations.
+                      For better quality, use AI generation.
+                    </div>
+                  )}
+                  {generateForm.provider === 'gemini' && (
+                    <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
+                      ✅ <strong>Best Choice!</strong> Free tier available. Real, unique AI-generated questions.
+                      Get free API key: https://makersuite.google.com/app/apikey
+                    </div>
+                  )}
+                  {generateForm.provider === 'openai' && (
+                    <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                      💰 Paid option. High quality questions. Cost: ~₹0.16 per question.
+                      Get API key: https://platform.openai.com/api-keys
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {generationProgress && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-blue-800 font-medium">
+                      Generating questions...
+                    </p>
+                    <span className="text-blue-600 font-semibold">
+                      {generationProgress.current}/{generationProgress.total}
+                    </span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-2">
+                    {Math.round((generationProgress.current / generationProgress.total) * 100)}% complete
+                  </p>
+                </div>
+              )}
+
+              {generateResults && !generationProgress && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded">
+                  <p className="text-green-800 font-medium">
+                    ✅ Successfully generated {generateResults.saved} questions!
+                  </p>
+                  {generateResults.generated > generateResults.saved && (
+                    <p className="text-sm text-green-600 mt-1">
+                      Note: {generateResults.generated - generateResults.saved} questions could not be saved
+                    </p>
+                  )}
+                  <p className="text-xs text-green-600 mt-2">
+                    {generateResults.method === 'template-bulk' && '🚀 Generated using FREE template-based method'}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  className="flex-1 px-4 py-2 rounded bg-gray-300 text-gray-700 hover:bg-gray-400"
+                  onClick={() => {
+                    setShowGenerateModal(false);
+                    setGenerateForm({
+                      topic: "",
+                      categoryId: categories[0]?.id || "",
+                      difficulty: "MEDIUM",
+                      count: 5,
+                      provider: "openai"
+                    });
+                    setGenerateResults(null);
+                  }}
+                  disabled={generating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 rounded bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 disabled:opacity-50"
+                  disabled={generating}
+                >
+                  {generating ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="animate-spin">⏳</span>
+                      Generating...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <span>✨</span>
+                      Generate Questions
+                    </span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Excel Generation Modal */}
+      {showExcelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <span>📊</span>
+              Generate Excel File with Gemini AI
+            </h2>
+            <form onSubmit={handleExcelGenerate} className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>✨ Using Gemini AI:</strong> Real, unique questions generated with Google Gemini AI.
+                  Questions will be exported directly to Excel file - ready for quiz import!
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Category *</label>
+                <select
+                  className="w-full border rounded px-3 py-2"
+                  value={excelForm.categoryId}
+                  onChange={e => setExcelForm(prev => ({ ...prev, categoryId: e.target.value }))}
+                  required
+                >
+                  <option value="">Select a category</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Topic/Subject *</label>
+                <input
+                  type="text"
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="e.g., Python Programming, History of India, Basic Math"
+                  value={excelForm.topic}
+                  onChange={e => setExcelForm(prev => ({ ...prev, topic: e.target.value }))}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter the topic for which you want questions generated with AI
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Difficulty</label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    value={excelForm.difficulty}
+                    onChange={e => setExcelForm(prev => ({ ...prev, difficulty: e.target.value as 'EASY' | 'MEDIUM' | 'HARD' }))}
+                  >
+                    <option value="EASY">Easy</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HARD">Hard</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Number of Questions</label>
+                  <input
+                    type="number"
+                    className="w-full border rounded px-3 py-2"
+                    min="1"
+                    max="1000"
+                    value={excelForm.count}
+                    onChange={e => setExcelForm(prev => ({ ...prev, count: Math.max(1, Math.min(1000, parseInt(e.target.value) || 1000)) }))}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">1-1000 questions</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="saveToDb"
+                  checked={excelForm.saveToDatabase}
+                  onChange={e => setExcelForm(prev => ({ ...prev, saveToDatabase: e.target.checked }))}
+                  className="rounded"
+                />
+                <label htmlFor="saveToDb" className="text-sm text-gray-700">
+                  Also save questions to Question Bank database
+                </label>
+              </div>
+
+              {excelProgress && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-blue-800 font-medium">
+                      Generating questions with Gemini AI...
+                    </p>
+                    <span className="text-blue-600 font-semibold">
+                      {excelProgress.current}/{excelProgress.total}
+                    </span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(excelProgress.current / excelProgress.total) * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-2">
+                    {Math.round((excelProgress.current / excelProgress.total) * 100)}% complete - This may take a few minutes
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                <p className="text-xs text-yellow-800">
+                  <strong>Note:</strong> Large batches (500+) may take 5-10 minutes due to Gemini API rate limits.
+                  Please keep this window open while generating.
+                </p>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  className="flex-1 px-4 py-2 rounded bg-gray-300 text-gray-700 hover:bg-gray-400"
+                  onClick={() => {
+                    setShowExcelModal(false);
+                    setExcelForm({
+                      topic: "",
+                      categoryId: categories[0]?.id || "",
+                      difficulty: "MEDIUM",
+                      count: 1000,
+                      saveToDatabase: false
+                    });
+                    setExcelProgress(null);
+                  }}
+                  disabled={generatingExcel}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 rounded bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
+                  disabled={generatingExcel}
+                >
+                  {generatingExcel ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="animate-spin">⏳</span>
+                      Generating Excel...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <span>📊</span>
+                      Generate & Download Excel
+                    </span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

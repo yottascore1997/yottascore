@@ -93,47 +93,62 @@ export async function POST(req: Request) {
     // 1. Deduct entry fee from user's wallet
     // 2. Add user as participant
     // 3. Update spots left
-    const result = await prisma.$transaction(async (tx: any) => {
-      // Deduct entry fee
-      await tx.user.update({
-        where: { id: decoded.userId },
-        data: { wallet: { decrement: exam.entryFee } }
-      });
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // Deduct entry fee
+        await tx.user.update({
+          where: { id: decoded.userId },
+          data: { wallet: { decrement: exam.entryFee } }
+        });
 
-      // Create transaction record
-      await tx.transaction.create({
-        data: {
-          userId: decoded.userId,
-          amount: -exam.entryFee,
-          type: 'EXAM_ENTRY',
-          status: 'COMPLETED'
-        }
-      });
+        // Create transaction record
+        await tx.transaction.create({
+          data: {
+            userId: decoded.userId,
+            amount: -exam.entryFee,
+            type: 'EXAM_ENTRY',
+            status: 'COMPLETED',
+            description: `Joined live exam ${exam.title || examId}`
+          }
+        });
 
-      // Add participant
-      const participant = await tx.liveExamParticipant.create({
-        data: {
-          examId,
-          userId: decoded.userId,
-          paid: true
-        }
-      });
+        // Add participant
+        const participant = await tx.liveExamParticipant.create({
+          data: {
+            examId,
+            userId: decoded.userId,
+            paid: true
+          }
+        });
 
-      // Update spots left
-      await tx.liveExam.update({
-        where: { id: examId },
-        data: {
-          spotsLeft: { decrement: 1 },
-          totalCollection: { increment: exam.entryFee }
-        }
-      });
+        // Update spots left and collections
+        await tx.liveExam.update({
+          where: { id: examId },
+          data: {
+            spotsLeft: { decrement: 1 },
+            totalCollection: { increment: exam.entryFee }
+          }
+        });
 
-      return participant;
-    });
+        return participant;
+      },
+      {
+        timeout: 15000,
+        maxWait: 5000,
+      }
+    );
 
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error joining exam:', error);
+
+    if (error instanceof Error && 'code' in error && error.code === 'P2028') {
+      return NextResponse.json(
+        { error: 'Exam join timed out. Please retry in a moment.' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

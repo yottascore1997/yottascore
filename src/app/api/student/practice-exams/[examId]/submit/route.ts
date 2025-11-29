@@ -67,8 +67,11 @@ export async function POST(request: Request, { params }: { params: { examId: str
     const totalQuestions = exam.questions.length;
     const score = totalMarks > 0 ? (earnedMarks / totalMarks) * 100 : 0;
     
+    // Record completion time to reuse consistently
+    const completionTime = new Date();
+
     // Save the result
-    await prisma.practiceExamParticipant.update({
+    const updatedParticipant = await prisma.practiceExamParticipant.update({
       where: {
         examId_userId: {
           examId: params.examId,
@@ -78,10 +81,95 @@ export async function POST(request: Request, { params }: { params: { examId: str
       data: {
         score,
         answers: answers,
-        completedAt: new Date()
+        completedAt: completionTime
       }
     });
-    
+
+    // Calculate time taken for the current attempt
+    let timeTakenSeconds: number | null = null;
+    if (participant.startedAt) {
+      const startTime = new Date(participant.startedAt).getTime();
+      timeTakenSeconds = Math.max(
+        0,
+        Math.round((completionTime.getTime() - startTime) / 1000)
+      );
+    }
+
+    const timeTakenMinutes =
+      timeTakenSeconds !== null ? Math.round(timeTakenSeconds / 60) : null;
+
+    const formatTimeTaken = (seconds: number | null) => {
+      if (seconds === null) return null;
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const remainingSeconds = seconds % 60;
+
+      if (hours > 0) {
+        return `${hours}h ${minutes}m ${remainingSeconds}s`;
+      }
+      if (minutes > 0) {
+        return `${minutes}m ${remainingSeconds}s`;
+      }
+      return `${remainingSeconds}s`;
+    };
+
+    // Compute current rank similar to leaderboard calculation
+    const participants = await prisma.practiceExamParticipant.findMany({
+      where: {
+        examId: params.examId,
+        completedAt: {
+          not: null
+        }
+      }
+    });
+
+    const enhancedParticipants = participants.map((participant) => {
+      let timeTaken: number | null = null;
+
+      if (participant.startedAt && participant.completedAt) {
+        const startTime = new Date(participant.startedAt).getTime();
+        const endTime = new Date(participant.completedAt).getTime();
+        timeTaken = Math.round((endTime - startTime) / 1000); // seconds
+      }
+
+      return {
+        ...participant,
+        timeTaken
+      };
+    });
+
+    const sortedParticipants = enhancedParticipants.sort((a, b) => {
+      const aScore = a.score ?? 0;
+      const bScore = b.score ?? 0;
+
+      if (aScore !== bScore) {
+        return bScore - aScore;
+      }
+
+      if (a.timeTaken !== null && b.timeTaken !== null) {
+        return a.timeTaken - b.timeTaken;
+      }
+
+      if (a.timeTaken !== null && b.timeTaken === null) {
+        return -1;
+      }
+
+      if (a.timeTaken === null && b.timeTaken !== null) {
+        return 1;
+      }
+
+      if (a.completedAt && b.completedAt) {
+        return new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime();
+      }
+
+      return 0;
+    });
+
+    const currentRankIndex = sortedParticipants.findIndex(
+      (p) => p.userId === decoded.userId
+    );
+    const currentRank = currentRankIndex >= 0 ? currentRankIndex + 1 : null;
+
     // Return detailed result data for the beautiful result page
     return NextResponse.json({
       success: true,
@@ -95,7 +183,12 @@ export async function POST(request: Request, { params }: { params: { examId: str
         totalMarks,
         earnedMarks,
         answers,
-        completedAt: new Date().toISOString()
+        completedAt: completionTime.toISOString(),
+        timeTakenSeconds,
+        timeTakenMinutes,
+        timeTakenFormatted: formatTimeTaken(timeTakenSeconds),
+        rank: currentRank,
+        totalParticipants: sortedParticipants.length
       }
     });
   } catch (error) {

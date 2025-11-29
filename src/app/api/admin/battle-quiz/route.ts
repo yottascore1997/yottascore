@@ -187,16 +187,38 @@ export async function POST(req: NextRequest) {
     const randomQuestions = shuffled.slice(0, questionCount);
 
     // Add the random questions to the quiz
-    for (const question of randomQuestions) {
-      await prisma.battleQuizQuestion.create({
-        data: {
+    // Use batch insert for better performance (especially for 1000+ questions)
+    if (randomQuestions.length > 100) {
+      // Batch insert for large number of questions
+      const batchSize = 100;
+      for (let i = 0; i < randomQuestions.length; i += batchSize) {
+        const batch = randomQuestions.slice(i, i + batchSize);
+        const batchData = batch.map(q => ({
           quizId: quiz.id,
-          text: question.text,
-          options: question.options || [],
-          correct: question.correct,
+          text: q.text,
+          options: q.options || [],
+          correct: q.correct,
           marks: 1,
-        },
-      });
+        }));
+        
+        await prisma.battleQuizQuestion.createMany({
+          data: batchData,
+          skipDuplicates: true
+        });
+      }
+    } else {
+      // Single inserts for smaller batches
+      for (const question of randomQuestions) {
+        await prisma.battleQuizQuestion.create({
+          data: {
+            quizId: quiz.id,
+            text: question.text,
+            options: question.options || [],
+            correct: question.correct,
+            marks: 1,
+          },
+        });
+      }
     }
 
     return NextResponse.json({
