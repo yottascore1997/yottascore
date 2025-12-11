@@ -113,11 +113,20 @@ export default function TicketDetailPage() {
   const handleFileUpload = async (file: File) => {
     setUploading(true);
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       const formData = new FormData();
       formData.append('file', file);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-Upload-Token': token
+        },
         body: formData,
       });
 

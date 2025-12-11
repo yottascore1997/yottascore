@@ -601,6 +601,11 @@ function MessagesPageContent() {
     setIsUploading(true);
 
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       const formData = new FormData();
       formData.append('file', file);
 
@@ -612,6 +617,10 @@ function MessagesPageContent() {
 
       const response = await fetch('/api/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-Upload-Token': token
+        },
         body: formData,
       });
 

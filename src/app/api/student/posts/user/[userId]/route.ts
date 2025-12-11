@@ -33,7 +33,7 @@ export async function GET(
     const posts = await prisma.post.findMany({
       where: {
         authorId: userId,
-        status: 'APPROVED', // Only approved posts
+        status: 'APPROVED', // Show all visible posts (instantly visible, no approval needed)
         // Show private posts only if it's user's own profile
         ...(isOwnProfile ? {} : { isPrivate: false })
       },
@@ -72,7 +72,7 @@ export async function GET(
     // Check if user has liked each post
     const postsWithLikes = await Promise.all(
       posts.map(async (post) => {
-        const userLike = await prisma.postLike.findUnique({
+        const userLike = await prisma.like.findUnique({
           where: {
             userId_postId: {
               userId: decoded.userId,

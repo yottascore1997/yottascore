@@ -100,6 +100,31 @@ export default function ProfilePage() {
     }
   }, [profile])
 
+  // Refresh posts when page becomes visible (user returns from feed page after creating post)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && profile) {
+        // Page is now visible, refresh posts
+        fetchUserPosts(profile.id)
+      }
+    }
+
+    const handleFocus = () => {
+      if (profile) {
+        // Window gained focus, refresh posts
+        fetchUserPosts(profile.id)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [profile])
+
   const fetchCurrentUserId = async () => {
     try {
       const token = localStorage.getItem('token')
@@ -134,9 +159,11 @@ export default function ProfilePage() {
 
       if (response.ok) {
         const posts = await response.json()
+        console.log('Fetched user posts:', posts.length, posts) // Debug log
         setUserPosts(posts)
       } else {
-        console.error('Failed to fetch user posts')
+        const errorText = await response.text()
+        console.error('Failed to fetch user posts:', response.status, errorText)
       }
     } catch (error) {
       console.error('Error fetching user posts:', error)
@@ -413,16 +440,26 @@ export default function ProfilePage() {
   }
 
   const uploadPhoto = async (file: File): Promise<string> => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      throw new Error('No authentication token found')
+    }
+
     const formData = new FormData()
     formData.append('file', file)
 
     const response = await fetch('/api/upload', {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Upload-Token': token // Also send as X-Upload-Token for flexibility
+      },
       body: formData
     })
 
     if (!response.ok) {
-      throw new Error('Failed to upload photo')
+      const errorData = await response.json().catch(() => ({ error: 'Failed to upload photo' }))
+      throw new Error(errorData.error || 'Failed to upload photo')
     }
 
     const data = await response.json()

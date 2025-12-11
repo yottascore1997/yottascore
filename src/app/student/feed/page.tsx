@@ -223,16 +223,26 @@ export default function FeedPage() {
   }
 
   const uploadFile = async (file: File): Promise<string> => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      throw new Error('No authentication token found')
+    }
+
     const formData = new FormData()
     formData.append('file', file)
 
     const response = await fetch('/api/upload', {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Upload-Token': token // Also send as X-Upload-Token for flexibility
+      },
       body: formData
     })
 
     if (!response.ok) {
-      throw new Error('Failed to upload file')
+      const errorData = await response.json().catch(() => ({ error: 'Failed to upload file' }))
+      throw new Error(errorData.error || 'Failed to upload file')
     }
 
     const result = await response.json()

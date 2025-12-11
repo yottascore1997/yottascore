@@ -48,6 +48,14 @@ export async function GET(req: Request) {
       return new NextResponse('User not found', { status: 404 })
     }
 
+    // Count all visible posts (only APPROVED, matching what the posts API returns)
+    const visiblePostsCount = await prisma.post.count({
+      where: {
+        authorId: userId,
+        status: 'APPROVED' // Only approved posts (instantly visible)
+      }
+    })
+
     // Check if current user is following the profile user
     const iFollowThem = await prisma.follow.findUnique({
       where: {
@@ -80,6 +88,10 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       ...user,
+      _count: {
+        ...user._count,
+        posts: visiblePostsCount // Use visible posts count (instantly visible posts)
+      },
       isFollowing: !!iFollowThem,
       followRequestStatus: followRequest?.status || null,
       isMutualFollower: !!iFollowThem && !!theyFollowMe,
@@ -146,7 +158,21 @@ export async function PATCH(req: Request) {
       }
     })
 
-    return NextResponse.json(updatedUser)
+    // Count all visible posts (only APPROVED, matching what the posts API returns)
+    const visiblePostsCount = await prisma.post.count({
+      where: {
+        authorId: decoded.userId,
+        status: 'APPROVED' // Only approved posts (instantly visible)
+      }
+    })
+
+    return NextResponse.json({
+      ...updatedUser,
+      _count: {
+        ...updatedUser._count,
+        posts: visiblePostsCount // Use visible posts count (instantly visible posts)
+      }
+    })
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })

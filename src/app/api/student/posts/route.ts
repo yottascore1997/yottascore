@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken'
 const prisma = new PrismaClient()
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
-// GET - Fetch approved posts only
+// GET - Fetch all visible posts (instantly visible, no approval needed)
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization')
@@ -20,10 +20,10 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Forbidden', { status: 403 })
     }
 
-    // Fetch all approved public posts (exclude current user's posts)
+    // Fetch all visible posts (exclude FLAGGED and REJECTED, posts are instantly visible)
     const posts = await prisma.post.findMany({
       where: {
-        status: 'APPROVED', // Only approved posts
+        status: 'APPROVED', // Show all visible posts (instantly visible, no approval needed)
         isPrivate: false, // Public posts only
         authorId: { not: decoded.userId }, // Exclude current user's posts
         // Exclude posts from blocked users
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Create post with PENDING status
+// POST - Create post (instantly visible, no approval needed)
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization')
@@ -163,11 +163,11 @@ export async function POST(req: NextRequest) {
       allowMultipleVotes,
       questionType,
       questionOptions,
-      status: 'PENDING',
+      status: 'APPROVED', // Posts are instantly visible
       authorId: decoded.userId
     }) // Debug log
 
-    // Create post with APPROVED status (instantly visible)
+    // Create post with APPROVED status (instantly visible, no approval needed)
     const post = await prisma.post.create({
       data: {
         content,

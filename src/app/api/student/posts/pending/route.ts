@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken'
 const prisma = new PrismaClient()
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
-// GET - Fetch user's pending posts
+// GET - Fetch user's pending posts (deprecated: posts are now instantly visible)
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization')
@@ -20,27 +20,9 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Forbidden', { status: 403 })
     }
 
-    // Fetch user's pending posts
-    const pendingPosts = await prisma.post.findMany({
-      where: {
-        authorId: decoded.userId,
-        status: 'PENDING'
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            profilePhoto: true,
-            course: true,
-            year: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
-
-    return NextResponse.json(pendingPosts)
+    // Posts are now instantly visible, no pending posts
+    // Return empty array
+    return NextResponse.json([])
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })

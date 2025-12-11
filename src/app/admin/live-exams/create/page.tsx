@@ -415,10 +415,16 @@ export default function CreateLiveExam() {
       const formData = new FormData();
       formData.append('file', file);
       
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       const response = await fetch('/api/upload', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`,
+          'X-Upload-Token': token
         },
         body: formData,
       });
