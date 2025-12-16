@@ -62,7 +62,7 @@ testDatabaseConnection();
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: process.env.NEXT_PUBLIC_APP_URL || process.env.CORS_ORIGIN || "*",
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -3851,7 +3851,8 @@ async function endMatch(matchId) {
 }
 
 // Start HTTP server
-const PORT = process.env.PORT || 3001;
+// Use SOCKET_PORT if provided (for Railway), otherwise use PORT or default 3001
+const PORT = process.env.SOCKET_PORT || process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
   console.log(`🚀 Socket server running on port ${PORT}`);
   console.log(`🔗 WebSocket URL: ws://localhost:${PORT}/api/socket`);

@@ -136,17 +136,12 @@ export default function MyListingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Simple Heading */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Book Listings</h1>
-              <p className="mt-2 text-gray-600">
-                Manage your book listings and track sales
-              </p>
-            </div>
+            <h1 className="text-2xl font-bold text-gray-900">My Book Listings</h1>
             <button
               onClick={handleCreateBook}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"

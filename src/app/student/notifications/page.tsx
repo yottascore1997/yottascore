@@ -48,16 +48,15 @@ export default function NotificationsPage() {
   }, {} as Record<string, Notification[]>);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Exam Notifications</h1>
+    <div className="p-6 space-y-6">
       {loading ? (
         <div className="text-center text-gray-500">Loading...</div>
       ) : notifications.length === 0 ? (
         <div className="text-center text-gray-500">No notifications found.</div>
       ) : (
         Object.entries(groupedNotifications).map(([key, ns]) => (
-          <div key={key} className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">{key}</h2>
+          <div key={key} className="space-y-4">
+            <h2 className="text-xl font-semibold">{key}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {ns.map((n) => (
                 <div key={n.id} className="bg-white rounded shadow p-4 flex flex-col gap-2">
@@ -72,7 +71,7 @@ export default function NotificationsPage() {
                       </div>
                     )}
                     <div className="flex-1">
-                      <Link 
+                      <Link
                         href={`/student/notifications/${n.id}`}
                         className="font-bold text-lg mb-1 hover:text-blue-700 transition block"
                       >

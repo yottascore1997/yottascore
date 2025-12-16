@@ -1,12 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-// Use the standalone socket server URL
-// const SOCKET_URL = typeof window !== 'undefined' 
-//   ? 'http://localhost:3001'
-//   : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
-
-const SOCKET_URL =  `http://192.168.1.4:3001`;
+// Use environment variable for socket URL, fallback to localhost for development
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 
+  (typeof window !== 'undefined' 
+    ? 'http://localhost:3001'
+    : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001');
 // Check if running in React Native environment
 const isReactNative = typeof window !== 'undefined' && 
   (window as any).ReactNativeWebView !== undefined || 
