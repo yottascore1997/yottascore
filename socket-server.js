@@ -94,39 +94,6 @@ const waitingPlayers = new Map(); // quizId -> array of waiting players
 const activeMatches = new Map(); // matchId -> match data
 const privateRooms = new Map(); // roomCode -> room data
 
-// Spy Game Data
-const spyGames = new Map(); // gameId -> game data
-const spyGamePlayers = new Map(); // socketId -> gameId
-
-// Word Packs for Spy Game
-const wordPacks = {
-  default: [
-    { word: "Pizza", spyWord: "Burger" },
-    { word: "Beach", spyWord: "Mountain" },
-    { word: "Coffee", spyWord: "Tea" },
-    { word: "Movie", spyWord: "Book" },
-    { word: "Summer", spyWord: "Winter" },
-    { word: "Dog", spyWord: "Cat" },
-    { word: "Car", spyWord: "Bike" },
-    { word: "Phone", spyWord: "Computer" },
-    { word: "Music", spyWord: "Dance" },
-    { word: "Sleep", spyWord: "Wake" }
-  ],
-  funny: [
-    { word: "Dancing", spyWord: "Singing" },
-    { word: "Jokes", spyWord: "Stories" },
-    { word: "Party", spyWord: "Meeting" },
-    { word: "Laugh", spyWord: "Cry" },
-    { word: "Fun", spyWord: "Work" }
-  ],
-  hard: [
-    { word: "Philosophy", spyWord: "Psychology" },
-    { word: "Quantum", spyWord: "Classical" },
-    { word: "Algorithm", spyWord: "Formula" },
-    { word: "Synthesis", spyWord: "Analysis" },
-    { word: "Paradigm", spyWord: "Model" }
-  ]
-};
 
 // Redis Queue Management with fallback
 class QueueManager {
@@ -1799,89 +1766,6 @@ io.on('connection', (socket) => {
       });
     }
   });
-
-  // Spy Game Events
-  socket.on('create_spy_game', async (data) => {
-    console.log('🎮 create_spy_game event received:', data);
-    const { userId, maxPlayers = 6, wordPack = 'default' } = data;
-    
-    try {
-      // Generate room code
-      const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      console.log(`Generated room code: ${roomCode}`);
-      
-      // Create game in database
-      const game = await prisma.spyGame.create({
-        data: {
-          roomCode,
-          hostId: userId,
-          maxPlayers,
-          wordPack
-        }
-      });
-      
-      console.log(`✅ Game created in database: ${game.id}`);
-      
-      // Add host as player
-      await prisma.spyGamePlayer.create({
-        data: {
-          gameId: game.id,
-          userId,
-          isHost: true
-        }
-      });
-      
-      console.log(`✅ Host added as player`);
-      
-      // Create game in memory
-      const hostUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
-      const gameData = {
-        id: game.id,
-        roomCode,
-        hostId: userId,
-        maxPlayers,
-        wordPack,
-        players: [{
-          userId,
-          socketId: socket.id,
-          isHost: true,
-          name: hostUser?.name || 'Host'
-        }],
-        status: 'WAITING',
-        currentPhase: 'LOBBY',
-        currentTurn: 0
-      };
-      
-      spyGames.set(game.id, gameData);
-      spyGamePlayers.set(socket.id, game.id);
-      
-      socket.join(`spy_game_${game.id}`);
-      
-      console.log(`✅ Game data created in memory`);
-      console.log(`✅ Game ID: ${game.id}`);
-      console.log(`✅ Room Code: ${roomCode}`);
-      console.log(`✅ Total games in memory now: ${spyGames.size}`);
-      console.log(`✅ Game data:`, JSON.stringify(gameData, null, 2));
-      
-      socket.emit('spy_game_created', {
-        gameId: game.id,
-        roomCode,
-        game: gameData
-      });
-      
-      console.log(`🎮 Spy game created: ${roomCode} by user ${userId}`);
-      
-    } catch (error) {
-      console.error('❌ Error creating spy game:', error);
-      console.error('❌ Error name:', error.name);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error stack:', error.stack);
-      console.error('❌ Error code:', error.code);
-      socket.emit('spy_game_error', { message: 'Failed to create game: ' + error.message });
-    }
-  });
-
-  socket.on('join_spy_game', async (data) => {
     console.log('🎮 join_spy_game event received:', data);
     const { userId, roomCode } = data;
     console.log(`🔍 Looking for game with room code: ${roomCode}`);
@@ -3851,10 +3735,11 @@ async function endMatch(matchId) {
 }
 
 // Start HTTP server
-// Use SOCKET_PORT if provided (for Railway), otherwise use PORT or default 3001
-const PORT = process.env.SOCKET_PORT || process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Socket server running on port ${PORT}`);
-  console.log(`🔗 WebSocket URL: ws://localhost:${PORT}/api/socket`);
-  console.log(`🌐 HTTP URL: http://localhost:${PORT}`);
+// Use SOCKET_PORT if provided (for Railway), otherwise use default 3001
+// Note: Don't use PORT env variable as it conflicts with Next.js on Railway
+const SOCKET_PORT = process.env.SOCKET_PORT || 3001;
+httpServer.listen(SOCKET_PORT, () => {
+  console.log(`🚀 Socket server running on port ${SOCKET_PORT}`);
+  console.log(`🔗 WebSocket URL: ws://localhost:${SOCKET_PORT}/api/socket`);
+  console.log(`🌐 HTTP URL: http://localhost:${SOCKET_PORT}`);
 });
