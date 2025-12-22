@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "socket": "node socket-server.js",
+    "dev:all": "concurrently --names \"APP,SOCKET\" --prefix-colors \"blue,green\" \"npm run dev\" \"npm run socket\"",
     "start:all": "concurrently --names \"APP,SOCKET\" --prefix-colors \"blue,green\" \"npm start\" \"npm run socket\"",
     "start:railway": "concurrently --names \"APP,SOCKET\" --prefix-colors \"blue,green\" \"npm start\" \"npm run socket\"",
     "postinstall": "prisma generate"

@@ -1766,254 +1766,28 @@ io.on('connection', (socket) => {
       });
     }
   });
-    console.log('🎮 join_spy_game event received:', data);
-    const { userId, roomCode } = data;
-    console.log(`🔍 Looking for game with room code: ${roomCode}`);
-    console.log(`🔍 Current user ID: ${userId}`);
-    
+
+  // Spy Game Events - REMOVED (Feature removed as requested)
+
+  // WebRTC Events
+  socket.on('webrtc_join', (data) => {
+    const { gameId } = data || {};
+    if (!gameId) return;
     try {
-      // First check in-memory games
-      console.log(`🔍 Checking in-memory games...`);
-      console.log(`🔍 Total games in memory:`, spyGames.size);
-      for (const [gameId, data] of spyGames.entries()) {
-        console.log(`🔍 Game ${gameId}: roomCode=${data.roomCode}, players=${data.players.length}`);
-      }
-      
-      let memoryGameData = null;
-      for (const [gameId, data] of spyGames.entries()) {
-        if (data.roomCode === roomCode) {
-          memoryGameData = data;
-          console.log(`✅ Found game in memory: ${gameId}`);
-          break;
-        }
-      }
-      
-      // Find game by room code in database
-      const game = await prisma.spyGame.findUnique({
-        where: { roomCode },
-        include: { players: true }
-      });
-      
-      if (!game && !memoryGameData) {
-        console.log(`❌ Game not found with room code: ${roomCode}`);
-        socket.emit('spy_game_error', { message: 'Game not found' });
-        return;
-      }
-      
-      // If game exists in memory but not in database, use memory data
-      if (!game && memoryGameData) {
-        console.log(`⚠️ Game found in memory but not in database: ${roomCode}`);
-        // We'll use the memory data for now
-      }
-      
-      // Use database game or memory game data
-      const gameToUse = game || memoryGameData;
-      const gameStatus = game?.status || memoryGameData?.status;
-      const gamePlayers = game?.players || memoryGameData?.players || [];
-      const gameMaxPlayers = game?.maxPlayers || memoryGameData?.maxPlayers;
-      
-      if (gameStatus !== 'WAITING') {
-        console.log(`❌ Game already started: ${roomCode}`);
-        socket.emit('spy_game_error', { message: 'Game already started' });
-        return;
-      }
-      
-      if (gamePlayers.length >= gameMaxPlayers) {
-        console.log(`❌ Game is full: ${roomCode}`);
-        socket.emit('spy_game_error', { message: 'Game is full' });
-        return;
-      }
-      
-      // Check if player already in game
-      const existingPlayer = gamePlayers.find(p => p.userId === userId);
-      if (existingPlayer) {
-        console.log(`❌ Player already in game: ${userId}`);
-        console.log(`🔍 Existing player data:`, existingPlayer);
-        console.log(`🔍 All players in game:`, gamePlayers);
-        console.log(`🔍 Game to use:`, gameToUse);
-        console.log(`🔍 Game ID:`, gameToUse?.id);
-        
-        // Instead of blocking, let's try to rejoin the game
-        console.log(`🔄 Attempting to rejoin game for player: ${userId}`);
-        
-        // Get the game data and send it to the player
-        let gameData = spyGames.get(gameToUse.id);
-        console.log(`🔍 Game data from memory:`, gameData);
-        if (!gameData) {
-          gameData = {
-            id: gameToUse.id,
-            roomCode: gameToUse.roomCode,
-            hostId: gameToUse.hostId,
-            maxPlayers: gameToUse.maxPlayers,
-            wordPack: gameToUse.wordPack,
-            players: gamePlayers,
-            status: gameToUse.status,
-            currentPhase: gameToUse.currentPhase,
-            currentTurn: gameToUse.currentTurn
-          };
-          spyGames.set(gameToUse.id, gameData);
-        }
-        
-        // Update the player's socket ID
-        const playerIndex = gameData.players.findIndex(p => p.userId === userId);
-        if (playerIndex !== -1) {
-          gameData.players[playerIndex].socketId = socket.id;
-          console.log(`🔄 Updated socket ID for player ${userId} (isHost: ${gameData.players[playerIndex].isHost})`);
-        }
-        
-        spyGamePlayers.set(socket.id, gameToUse.id);
-        socket.join(`spy_game_${gameToUse.id}`);
-        
-        // Send the game data to the player
-        console.log(`📤 Sending spy_game_joined event to player ${userId}`);
-        socket.emit('spy_game_joined', {
-          gameId: gameToUse.id,
-          game: gameData
-        });
-        // If the game is already in voting phase, ensure this rejoining client sees the voting UI
-        if (gameData.currentPhase === 'VOTING') {
-          try {
-            socket.emit('voting_started', { players: gameData.players });
-            console.log(`🗳️ Sent voting_started to rejoined player ${userId}`);
-          } catch {}
-        }
-        
-        console.log(`✅ Player ${userId} rejoined spy game ${roomCode}`);
-        return;
-      }
-      
-      // Add player to database if game exists in database
-      if (game) {
-        try {
-          await prisma.spyGamePlayer.create({
-            data: {
-              gameId: game.id,
-              userId
-            }
-          });
-          console.log(`✅ Player added to database`);
-        } catch (error) {
-          if (error.code === 'P2002' && error.message.includes('spy_game_players_gameId_userId_key')) {
-            console.log(`ℹ️ Player already exists in database: ${userId}`);
-            // This is fine, the player already exists in the database
-          } else {
-            throw error; // Re-throw other errors
-          }
-        }
-      }
-      
-      // Get or create game data in memory
-      let gameData = spyGames.get(gameToUse.id);
-      if (!gameData) {
-        // Create new game data with all existing players
-        const allPlayers = [];
-        
-        // Add database players
-        if (gameToUse.players) {
-          allPlayers.push(...gameToUse.players.map(p => ({
-            userId: p.userId,
-            socketId: null,
-            isHost: p.isHost,
-            name: p.name || 'Player'
-          })));
-        }
-        
-        gameData = {
-          id: gameToUse.id,
-          roomCode: gameToUse.roomCode,
-          hostId: gameToUse.hostId,
-          maxPlayers: gameToUse.maxPlayers,
-          wordPack: gameToUse.wordPack,
-          players: allPlayers,
-          status: gameToUse.status,
-          currentPhase: gameToUse.currentPhase,
-          currentTurn: gameToUse.currentTurn
-        };
-        spyGames.set(gameToUse.id, gameData);
-        console.log(`🆕 Created new game data in memory with ${allPlayers.length} players`);
-      } else {
-        console.log(`📋 Using existing game data in memory with ${gameData.players.length} players`);
-      }
-      
-      // Add player to memory
-      const isHost = gameData.hostId === userId;
-      gameData.players.push({
-        userId,
-        socketId: socket.id,
-        isHost: isHost,
-        name: 'Player'
-      });
-      
-      console.log(`👤 Added player ${userId} to game (isHost: ${isHost})`);
-      console.log(`📊 Total players in game: ${gameData.players.length}`);
-      
-      spyGamePlayers.set(socket.id, gameToUse.id);
-      socket.join(`spy_game_${gameToUse.id}`);
-      
-      // Debug: Check who's in the room
-      const room = io.sockets.adapter.rooms.get(`spy_game_${gameToUse.id}`);
-      console.log(`🏠 Players in room spy_game_${gameToUse.id}:`, room ? Array.from(room) : 'No room found');
-      console.log(`🏠 Total sockets in room:`, room ? room.size : 0);
-      
-      // Notify all players
-      console.log(`📢 Sending player_joined_spy_game to all players in room spy_game_${gameToUse.id}`);
-      console.log(`📢 Game data being sent:`, JSON.stringify(gameData, null, 2));
-      
-      io.to(`spy_game_${gameToUse.id}`).emit('player_joined_spy_game', {
-        player: { userId, name: 'Player', isHost: isHost },
-        game: gameData
-      });
-      
-      // Notify the joining player
-      console.log(`📢 Sending spy_game_joined to player ${userId}`);
-      socket.emit('spy_game_joined', {
-        gameId: gameToUse.id,
-        game: gameData
-      });
-      
-      console.log(`📢 Notified all players about new player. Total players: ${gameData.players.length}`);
-      
-      console.log(`🎮 Player ${userId} joined spy game ${roomCode}`);
-      
+      const room = `spy_game_${gameId}`;
+      // Ensure the socket is in the spy game room
+      try { socket.join(room); } catch {}
+
+      // Send back current peers in room (socket ids)
+      const roomSockets = io.sockets.adapter.rooms.get(room) || new Set();
+      const peers = Array.from(roomSockets).filter((id) => id !== socket.id);
+      socket.emit('webrtc_peers', { peers });
     } catch (error) {
-      console.error('❌ Error joining spy game:', error);
-      socket.emit('spy_game_error', { message: 'Failed to join game: ' + error.message });
+      console.error('Error in webrtc_join:', error);
     }
   });
 
-  // Test event to check if players can communicate
-  socket.on('test_spy_game', (data) => {
-    const { gameId, message } = data;
-    console.log(`🧪 Test event received from ${socket.id}: ${message}`);
-    console.log(`🧪 Game ID: ${gameId}`);
-    
-    // Send test message to all players in the game
-    io.to(`spy_game_${gameId}`).emit('test_spy_game_response', {
-      message: `Test from ${socket.id}: ${message}`,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Also test the broadcast event
-    console.log(`🧪 Testing broadcast event for game ${gameId}`);
-    const gameData = spyGames.get(gameId);
-    if (gameData) {
-      const testPlayerWords = gameData.players.map((player, index) => ({
-        userId: player.userId,
-        word: `Test Word ${index + 1}`,
-        isSpy: index === 0
-      }));
-      
-      io.to(`spy_game_${gameId}`).emit('spy_game_started_broadcast', {
-        gameData: { ...gameData, currentPhase: 'WORD_ASSIGNMENT' },
-        playerWords: testPlayerWords
-      });
-      console.log(`🧪 Sent test broadcast with ${testPlayerWords.length} player words`);
-    } else {
-      console.log(`❌ No game data found for game ${gameId}`);
-    }
-  });
-
-  // Chat message handler
+  // Chat message handler (for other features, not spy game)
   socket.on('send_chat_message', (data) => {
     const { gameId, message } = data;
     const gameData = spyGames.get(gameId);
