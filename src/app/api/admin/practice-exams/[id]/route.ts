@@ -71,14 +71,52 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Delete the exam and all related data
+    // Check if exam exists
+    const exam = await prisma.practiceExam.findUnique({
+      where: { id: params.id },
+      select: { id: true, createdById: true }
+    });
+
+    if (!exam) {
+      return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
+    }
+
+    // Verify the exam belongs to the admin
+    if (exam.createdById !== decoded.userId) {
+      return NextResponse.json({ error: 'You can only delete your own exams' }, { status: 403 });
+    }
+
+    // Delete related data first (due to foreign key constraints)
+    // 1. Delete all participants
+    await prisma.practiceExamParticipant.deleteMany({
+      where: { examId: params.id }
+    });
+
+    // 2. Delete all questions
+    await prisma.practiceExamQuestion.deleteMany({
+      where: { examId: params.id }
+    });
+
+    // 3. Now delete the exam
     await prisma.practiceExam.delete({
       where: { id: params.id },
     });
 
     return NextResponse.json({ message: 'Exam deleted successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting exam:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    
+    // Provide more specific error messages
+    if (error.code === 'P2003') {
+      return NextResponse.json({ 
+        error: 'Cannot delete exam. It has related records that need to be removed first.',
+        details: error.meta?.field_name 
+      }, { status: 400 });
+    }
+    
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error.message || 'Failed to delete exam'
+    }, { status: 500 });
   }
 } 

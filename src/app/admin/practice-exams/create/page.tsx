@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import * as XLSX from 'xlsx';
 
@@ -31,6 +31,111 @@ export default function CreatePracticeExamPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'questions'>('details');
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; _count: { questions: number } }>>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [questionCount, setQuestionCount] = useState<number>(10);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const res = await fetch("/api/admin/question-categories", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+        if (data.length > 0 && !selectedCategoryId) {
+          setSelectedCategoryId(data[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+    }
+  };
+
+  const handleImportFromQuestionBank = async () => {
+    if (!selectedCategoryId) {
+      setError("Please select a category");
+      return;
+    }
+
+    if (questionCount < 1 || questionCount > 100) {
+      setError("Please enter a valid number of questions (1-100)");
+      return;
+    }
+
+    setLoadingQuestions(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError("Not authenticated");
+        return;
+      }
+
+      // Fetch questions from question bank
+      const res = await fetch(`/api/admin/question-bank?categoryId=${selectedCategoryId}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        setError("Failed to fetch questions from question bank");
+        return;
+      }
+
+      const questionBankItems = await res.json();
+
+      if (questionBankItems.length === 0) {
+        setError("No questions found in the selected category");
+        return;
+      }
+
+      // Shuffle and select random questions
+      const shuffled = [...questionBankItems].sort(() => 0.5 - Math.random());
+      const selectedQuestions = shuffled.slice(0, Math.min(questionCount, questionBankItems.length));
+
+      // Convert QuestionBankItem format to Practice Exam Question format
+      const convertedQuestions: Question[] = selectedQuestions.map((q: any) => ({
+        text: q.text || "",
+        options: Array.isArray(q.options) ? q.options : [],
+        correct: q.correct !== undefined && q.correct !== null ? q.correct : null,
+        marks: 1
+      }));
+
+      // Ask user if they want to append or replace
+      const shouldAppend = questions.length > 0 && 
+        window.confirm(`You have ${questions.length} existing question(s). Do you want to add these ${convertedQuestions.length} questions from Question Bank? (Click OK to append, Cancel to replace)`);
+      
+      if (shouldAppend) {
+        setQuestions([...questions, ...convertedQuestions]);
+        setSuccess(`Successfully added ${convertedQuestions.length} questions from Question Bank! Total: ${questions.length + convertedQuestions.length}`);
+      } else {
+        setQuestions(convertedQuestions);
+        setSuccess(`Successfully imported ${convertedQuestions.length} questions from Question Bank!`);
+      }
+
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.message || "Failed to import questions from Question Bank");
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
 
   const handleAddQuestion = () => {
     setQuestions([
@@ -473,6 +578,68 @@ export default function CreatePracticeExamPage() {
           {/* Questions Tab */}
           {activeTab === 'questions' && (
             <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+              {/* Question Bank Import Section */}
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 mb-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Import Questions from Question Bank</h3>
+                  <p className="text-gray-600 text-sm">Select a category and import questions directly from your Question Bank</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                    <select
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      value={selectedCategoryId}
+                      onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.name} ({category._count.questions} questions)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Number of Questions</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      value={questionCount}
+                      onChange={(e) => setQuestionCount(Number(e.target.value))}
+                      placeholder="Enter number of questions"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={handleImportFromQuestionBank}
+                      disabled={loadingQuestions || !selectedCategoryId || questionCount < 1}
+                      className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loadingQuestions ? (
+                        <>
+                          <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Loading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                          <span>Import from Question Bank</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Excel Import Section */}
               <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 mb-6">
                 <div className="flex items-center justify-between">
@@ -589,7 +756,7 @@ export default function CreatePracticeExamPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No questions added yet</h3>
-                    <p className="text-gray-500 mb-4">Start by adding questions manually or import them from Excel</p>
+                    <p className="text-gray-500 mb-4">Start by adding questions manually, importing from Question Bank, or importing from Excel</p>
                   </div>
                 )}
               </div>

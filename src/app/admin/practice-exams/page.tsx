@@ -83,11 +83,18 @@ export default function AdminPracticeExamsPage() {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         });
+        
         if (res.ok) {
+          const data = await res.json();
+          alert(data.message || 'Exam deleted successfully');
           fetchExams();
+        } else {
+          const errorData = await res.json();
+          alert(errorData.error || errorData.message || 'Failed to delete exam. Please try again.');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to delete exam:', error);
+        alert('Failed to delete exam. Please check your connection and try again.');
       }
     }
   };

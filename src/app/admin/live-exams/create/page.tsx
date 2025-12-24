@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -129,10 +129,136 @@ export default function CreateLiveExam() {
   const [importError, setImportError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // Question Bank import states
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; _count: { questions: number } }>>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [questionCount, setQuestionCount] = useState<number>(10);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
   // Image upload states
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [imageUploading, setImageUploading] = useState(false);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const res = await fetch("/api/admin/question-categories", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+        if (data.length > 0 && !selectedCategoryId) {
+          setSelectedCategoryId(data[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+    }
+  };
+
+  const handleImportFromQuestionBank = async () => {
+    if (!selectedCategoryId) {
+      setImportError("Please select a category");
+      return;
+    }
+
+    if (questionCount < 1 || questionCount > 100) {
+      setImportError("Please enter a valid number of questions (1-100)");
+      return;
+    }
+
+    setLoadingQuestions(true);
+    setImportError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setImportError("Not authenticated");
+        return;
+      }
+
+      // Fetch questions from question bank
+      const res = await fetch(`/api/admin/question-bank?categoryId=${selectedCategoryId}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        setImportError("Failed to fetch questions from question bank");
+        return;
+      }
+
+      const questionBankItems = await res.json();
+
+      if (questionBankItems.length === 0) {
+        setImportError("No questions found in the selected category");
+        return;
+      }
+
+      // Shuffle and select random questions
+      const shuffled = [...questionBankItems].sort(() => 0.5 - Math.random());
+      const selectedQuestions = shuffled.slice(0, Math.min(questionCount, questionBankItems.length));
+
+      // Convert QuestionBankItem format to Live Exam Question format
+      const convertedQuestions: Question[] = selectedQuestions.map((q: any) => {
+        const options = Array.isArray(q.options) ? q.options : [];
+        // Ensure we have at least 2 options, pad with empty strings if needed
+        const paddedOptions = [...options];
+        while (paddedOptions.length < 4) {
+          paddedOptions.push('');
+        }
+        
+        return {
+          question: q.text || "",
+          type: "MCQ" as "MCQ" | "TRUE_FALSE", // Question Bank items are always MCQ
+          options: paddedOptions.slice(0, 4).filter(opt => opt !== ''), // Remove empty options
+          correctAnswer: q.correct !== undefined && q.correct !== null ? q.correct : 0
+        };
+      }).filter(q => q.options.length >= 2); // Only keep questions with at least 2 options
+
+      if (convertedQuestions.length === 0) {
+        setImportError("No valid questions could be converted. Please check the question format.");
+        return;
+      }
+
+      // Ask user if they want to append or replace
+      const shouldAppend = formData.questions.length > 0 && 
+        window.confirm(`You have ${formData.questions.length} existing question(s). Do you want to add these ${convertedQuestions.length} questions from Question Bank? (Click OK to append, Cancel to replace)`);
+      
+      if (shouldAppend) {
+        setFormData(prev => ({
+          ...prev,
+          questions: [...prev.questions, ...convertedQuestions]
+        }));
+        setImportError(null);
+        alert(`Successfully added ${convertedQuestions.length} questions from Question Bank! Total: ${formData.questions.length + convertedQuestions.length}`);
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          questions: convertedQuestions
+        }));
+        setImportError(null);
+        alert(`Successfully imported ${convertedQuestions.length} questions from Question Bank!`);
+      }
+    } catch (err: any) {
+      setImportError(err.message || "Failed to import questions from Question Bank");
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -850,12 +976,77 @@ export default function CreateLiveExam() {
                 </div>
               </div>
 
+              {/* Question Bank Import Section */}
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 mb-8 border border-purple-200">
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-2">
+                    <BookOpen className="w-5 h-5 mr-2 text-purple-500" />
+                    Import from Question Bank
+                  </h3>
+                  <p className="text-sm text-gray-600">Select a category and import questions directly from your Question Bank</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                    <select
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white"
+                      value={selectedCategoryId}
+                      onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.name} ({category._count.questions} questions)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Number of Questions</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white"
+                      value={questionCount}
+                      onChange={(e) => setQuestionCount(Number(e.target.value))}
+                      placeholder="Enter number of questions"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      type="button"
+                      onClick={handleImportFromQuestionBank}
+                      disabled={loadingQuestions || !selectedCategoryId || questionCount < 1}
+                      className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-xl px-4 py-3 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loadingQuestions ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                          <span>Loading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          <span>Import from Question Bank</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                {importError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-red-600 text-sm">{importError}</p>
+                  </div>
+                )}
+              </div>
+
               {/* Bulk Import Section */}
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 mb-8 border border-green-200">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                     <FileSpreadsheet className="w-5 h-5 mr-2 text-green-500" />
-                    Bulk Import Questions
+                    Bulk Import from Excel
                   </h3>
                   <Button
                     type="button"

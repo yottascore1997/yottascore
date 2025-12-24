@@ -210,12 +210,28 @@ function cleanupMemory() {
         }
       });
 
-      // Clean up old matches (older than 10 minutes)
+      // Clean up old matches (older than 10 minutes) and stuck matches
       const now = Date.now();
+      const matchesToDelete = [];
       activeMatches.forEach((match, matchId) => {
-        if (now - match.startTime > 600000) { // 10 minutes
+        const matchStartTime = match.startTime || match.createdAt || now;
+        const matchAge = now - matchStartTime;
+        const isOld = matchAge > 600000; // 10 minutes
+        // Check for stuck matches - if status is PLAYING and match is older than 5 minutes, it might be stuck
+        const isStuck = match.status === 'PLAYING' && matchAge > 300000; // 5 minutes for stuck playing matches
+        
+        if (isOld || isStuck) {
+          matchesToDelete.push({ matchId, reason: isOld ? 'old' : 'stuck', age: Math.round(matchAge/1000) });
+        }
+      });
+      
+      // Delete matches
+      matchesToDelete.forEach(({ matchId, reason, age }) => {
+        const match = activeMatches.get(matchId);
+        if (match) {
+          console.log(`🧹 Cleaning up ${reason} match: ${matchId} (age: ${age}s)`);
+          console.log(`   - Player1: ${match.player1Id}, Player2: ${match.player2Id}, Status: ${match.status || 'unknown'}`);
           activeMatches.delete(matchId);
-          console.log(`🧹 Cleaned up old match: ${matchId}`);
         }
       });
 
@@ -229,6 +245,16 @@ function cleanupMemory() {
 
       console.log(`🧹 Memory cleanup completed. Active matches: ${activeMatches.size}, Private rooms: ${privateRooms.size}`);
       console.log(`   - Total connections: ${io.engine.clientsCount}`);
+      
+      // Log active matches for debugging
+      if (activeMatches.size > 0) {
+        console.log('📋 Current active matches:');
+        activeMatches.forEach((match, matchId) => {
+          const matchStartTime = match.startTime || match.createdAt || Date.now();
+          const age = Math.round((Date.now() - matchStartTime) / 1000);
+          console.log(`   - ${matchId}: P1=${match.player1Id?.substring(0, 8)}..., P2=${match.player2Id?.substring(0, 8)}..., Status=${match.status || 'unknown'}, Age=${age}s`);
+        });
+      }
       
       // Memory usage warning
       const totalConnections = io.engine.clientsCount;
@@ -1415,6 +1441,54 @@ io.on('connection', (socket) => {
         console.log(`Removed disconnected player from quiz ${quizId}`);
       }
     }
+  });
+
+  // Debug: Clear stuck matches for a user
+  socket.on('debug_clear_user_matches', async (data) => {
+    const { userId } = data || {};
+    if (!userId) {
+      socket.emit('debug_result', { success: false, message: 'userId required' });
+      return;
+    }
+    
+    console.log(`🧪 DEBUG: Clearing matches for user ${userId}`);
+    const matchesToDelete = [];
+    activeMatches.forEach((match, matchId) => {
+      if (match.player1Id === userId || match.player2Id === userId) {
+        matchesToDelete.push(matchId);
+      }
+    });
+    
+    matchesToDelete.forEach(matchId => {
+      activeMatches.delete(matchId);
+      console.log(`🗑️ Deleted match ${matchId} for user ${userId}`);
+    });
+    
+    socket.emit('debug_result', {
+      success: true,
+      message: `Cleared ${matchesToDelete.length} matches for user ${userId}`,
+      deletedMatches: matchesToDelete,
+      remainingMatches: activeMatches.size
+    });
+  });
+
+  // Debug: Get active matches info
+  socket.on('debug_get_active_matches', () => {
+    const matchesInfo = Array.from(activeMatches.entries()).map(([matchId, match]) => ({
+      matchId,
+      player1Id: match.player1Id,
+      player2Id: match.player2Id,
+      status: match.status || 'unknown',
+      age: Math.round((Date.now() - (match.startTime || match.createdAt || Date.now())) / 1000),
+      startTime: match.startTime || match.createdAt
+    }));
+    
+    socket.emit('debug_active_matches', {
+      total: activeMatches.size,
+      matches: matchesInfo
+    });
+    
+    console.log(`📋 DEBUG: Active matches info sent. Total: ${activeMatches.size}`);
   });
 
   // Test wallet update endpoint
@@ -2869,6 +2943,16 @@ async function tryMatchPlayers(quizId) {
       console.log(`   - Player 1 (${player1.userId}) in match: ${player1InMatch}`);
       console.log(`   - Player 2 (${player2.userId}) in match: ${player2InMatch}`);
       
+      // Log which matches they're in
+      if (player1InMatch) {
+        const match1 = getActiveMatchForPlayer(player1.userId);
+        console.log(`   - Player 1's match: ${match1 ? Object.keys(activeMatches).find(k => activeMatches.get(k) === match1) : 'unknown'}`);
+      }
+      if (player2InMatch) {
+        const match2 = getActiveMatchForPlayer(player2.userId);
+        console.log(`   - Player 2's match: ${match2 ? Object.keys(activeMatches).find(k => activeMatches.get(k) === match2) : 'unknown'}`);
+      }
+      
       // Remove active match players from queue instead of putting them back
       if (player1InMatch) {
         await queueManager.removeFromQueue(quizId, player1);
@@ -3491,7 +3575,17 @@ async function endMatch(matchId) {
   }
   
   // Clean up the match and remove players from active matches tracking
-  activeMatches.delete(matchId);
+  const deleted = activeMatches.delete(matchId);
+  console.log(`🗑️ Match ${matchId} ${deleted ? 'successfully deleted' : 'NOT FOUND in activeMatches'} from activeMatches`);
+  console.log(`📊 Active matches after cleanup: ${activeMatches.size}`);
+  
+  // Log all remaining active matches for debugging
+  if (activeMatches.size > 0) {
+    console.log('📋 Remaining active matches:');
+    activeMatches.forEach((m, id) => {
+      console.log(`   - ${id}: Player1=${m.player1Id}, Player2=${m.player2Id}, Status=${m.status || 'unknown'}`);
+    });
+  }
   
   // Check if players are still in any other active matches
   const player1StillInMatch = isPlayerInActiveMatch(match.player1Id);
@@ -3499,13 +3593,15 @@ async function endMatch(matchId) {
   
   if (!player1StillInMatch) {
     console.log(`✅ Player 1 (${match.player1Id}) is now free to join new matches`);
+  } else {
+    console.log(`⚠️ Player 1 (${match.player1Id}) is still in another active match`);
   }
   
   if (!player2StillInMatch) {
     console.log(`✅ Player 2 (${match.player2Id}) is now free to join new matches`);
+  } else {
+    console.log(`⚠️ Player 2 (${match.player2Id}) is still in another active match`);
   }
-  
-  console.log(`🗑️ Match ${matchId} cleaned up`);
 }
 
 // Start HTTP server

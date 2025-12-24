@@ -342,376 +342,114 @@ const upcomingExams = [
       {/* Spacer */}
       <div className="h-20"></div>
 
-      {/* Hero Section - Mobile Optimized */}
-      <section className="relative min-h-[90vh] sm:min-h-[95vh] flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
-        {/* Animated Background - Mobile Optimized */}
+      {/* Hero Section - Professional & Clean */}
+      <section className="relative py-16 sm:py-20 flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
+        {/* Simple Background */}
         <div className="absolute inset-0">
-          <div className="absolute top-10 left-10 w-48 h-48 sm:w-96 sm:h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-pulse"></div>
-          <div className="absolute top-20 right-10 w-64 h-64 sm:w-[500px] sm:h-[500px] bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-pulse" style={{animationDelay: '2s'}}></div>
-          <div className="absolute bottom-10 left-1/2 w-48 h-48 sm:w-96 sm:h-96 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-pulse" style={{animationDelay: '4s'}}></div>
-          
-          {/* Floating Icons - Mobile Optimized */}
-          <div className="absolute top-1/4 left-1/4 text-3xl sm:text-6xl opacity-10 animate-float">📚</div>
-          <div className="absolute top-1/3 right-1/4 text-2xl sm:text-5xl opacity-10 animate-float" style={{animationDelay: '1s'}}>🎓</div>
-          <div className="absolute bottom-1/4 left-1/3 text-4xl sm:text-7xl opacity-10 animate-float" style={{animationDelay: '2s'}}>🏆</div>
-          <div className="absolute bottom-1/3 right-1/3 text-2xl sm:text-5xl opacity-10 animate-float" style={{animationDelay: '3s'}}>💰</div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-3xl"></div>
         </div>
 
         <div className="container mx-auto px-3 sm:px-4 relative z-10">
           <div className="max-w-7xl mx-auto">
-            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div className="max-w-3xl mx-auto text-center">
               {/* Left - Content - Mobile Optimized */}
               <div className="text-center lg:text-left">
-                {/* Live Status Badge - Mobile Optimized */}
-                <div className="inline-flex items-center bg-white/20 backdrop-blur-md text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full mb-6 sm:mb-8 border border-white/30 shadow-2xl">
-                  <div className="relative mr-2 sm:mr-3">
-                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full animate-ping absolute"></div>
-                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full"></div>
+                {/* Live Status Badge - Clean */}
+                <div className="inline-flex items-center bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-lg mb-4 border border-white/30">
+                  <div className="relative mr-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                   </div>
-                  <FaFire className="text-yellow-400 mr-1 sm:mr-2 text-sm sm:text-lg animate-pulse" />
-                  <span className="font-bold text-sm sm:text-lg">{liveExamCount} LIVE • {activeStudents.toLocaleString()} Online!</span>
+                  <FaFire className="text-yellow-400 mr-2 text-sm" />
+                  <span className="font-semibold text-sm">{liveExamCount} LIVE • {activeStudents.toLocaleString()} Online</span>
                 </div>
 
-                {/* Main Headline - Mobile Optimized */}
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black mb-4 sm:mb-6 leading-tight">
-                  <span className="block bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent drop-shadow-2xl">
+                {/* Main Headline - Professional & Clean */}
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 leading-tight">
+                  <span className="block text-white">
                     Ace Your Exams
                   </span>
-                  <span className="block bg-gradient-to-r from-yellow-300 via-orange-300 to-yellow-300 bg-clip-text text-transparent mt-1 sm:mt-2">
-                    Earn Big Rewards!
+                  <span className="block text-yellow-300 mt-1">
+                    Earn Big Rewards
                   </span>
                 </h1>
 
-                <p className="text-lg sm:text-xl md:text-2xl text-white/95 mb-6 sm:mb-8 leading-relaxed font-medium">
-                  Practice • Compete • Win Real Money 💸
+                <p className="text-sm sm:text-base text-white/90 mb-5 leading-relaxed">
+                  Practice • Compete • Win Real Money
                   <br />
-                  <span className="text-yellow-300 font-bold">India's Most Trusted Exam Platform</span>
+                  <span className="text-yellow-200 font-medium">India's Most Trusted Exam Platform</span>
                 </p>
 
-                {/* Stats Pills - Mobile Optimized */}
-                <div className="flex flex-wrap gap-2 sm:gap-4 mb-8 sm:mb-10 justify-center lg:justify-start">
-                  <div className="bg-white/20 backdrop-blur-md px-3 py-2 sm:px-6 sm:py-3 rounded-full border border-white/30 shadow-xl">
-                    <div className="text-white font-bold text-sm sm:text-lg">1M+ Students</div>
+                {/* Stats Pills - Clean */}
+                <div className="flex flex-wrap gap-2 mb-5 justify-center lg:justify-start">
+                  <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/30">
+                    <div className="text-white font-medium text-xs">1M+ Students</div>
                   </div>
-                  <div className="bg-white/20 backdrop-blur-md px-3 py-2 sm:px-6 sm:py-3 rounded-full border border-white/30 shadow-xl">
-                    <div className="text-white font-bold text-sm sm:text-lg">₹50Cr+ Won</div>
+                  <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/30">
+                    <div className="text-white font-medium text-xs">₹50Cr+ Won</div>
                   </div>
-                  <div className="bg-white/20 backdrop-blur-md px-3 py-2 sm:px-6 sm:py-3 rounded-full border border-white/30 shadow-xl">
-                    <div className="text-white font-bold text-sm sm:text-lg">4.9★ Rated</div>
+                  <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/30">
+                    <div className="text-white font-medium text-xs">4.9★ Rated</div>
                   </div>
                 </div>
 
-                {/* CTA Buttons - Mobile Optimized */}
-                <div className="flex flex-col gap-3 sm:gap-4 justify-center lg:justify-start">
+                {/* CTA Buttons - Clean */}
+                <div className="flex flex-col gap-2 justify-center lg:justify-start">
                   <Link 
                     href="/register"
-                    className="group relative px-6 py-4 sm:px-10 sm:py-5 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-full font-black text-lg sm:text-xl shadow-2xl hover:shadow-yellow-500/50 hover:scale-105 transition-all duration-300 overflow-hidden"
+                    className="group relative px-6 py-2.5 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden"
                   >
-                    <span className="relative z-10 flex items-center justify-center">
-                      <FaRocket className="mr-2 sm:mr-3 text-lg sm:text-2xl group-hover:rotate-45 transition-transform duration-300" />
-                      <span className="hidden sm:inline">Start Free - Win ₹50 Bonus!</span>
-                      <span className="sm:hidden">Start Free - ₹50 Bonus!</span>
+                    <span className="relative z-20 flex items-center justify-center text-white">
+                      <FaRocket className="mr-2 text-base" />
+                      <span>Start Free - Win ₹50 Bonus!</span>
                     </span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 sm:px-4 sm:py-1.5 rounded-full animate-pulse shadow-lg">
-                      ₹50
-                    </div>
                   </Link>
                   <Link 
                     href="/student/live-exams"
-                    className="group px-6 py-4 sm:px-10 sm:py-5 bg-white/20 backdrop-blur-md text-white border-2 border-white/50 rounded-full font-bold text-lg sm:text-xl hover:bg-white/30 transition-all duration-300 flex items-center justify-center"
+                    className="group px-6 py-2.5 bg-white/20 backdrop-blur-md text-white border border-white/50 rounded-lg font-medium text-sm hover:bg-white/30 transition-all duration-300 flex items-center justify-center"
                   >
-                    <FaPlay className="mr-2 sm:mr-3 group-hover:translate-x-1 transition-transform" />
+                    <FaPlay className="mr-2" />
                     Join Live Exam
                   </Link>
                 </div>
 
-                {/* Trust Badges - Mobile Optimized */}
-                <div className="flex flex-wrap justify-center lg:justify-start gap-4 sm:gap-6 mt-8 sm:mt-10 text-white/90">
-                  <div className="flex items-center gap-2">
-                    <FaShieldAlt className="text-green-400 text-xl sm:text-2xl" />
+                {/* Trust Badges - Clean */}
+                <div className="flex flex-wrap justify-center lg:justify-start gap-3 mt-5 text-white/90">
+                  <div className="flex items-center gap-1.5">
+                    <FaShieldAlt className="text-green-400 text-sm" />
                     <div>
-                      <div className="font-bold text-xs sm:text-sm">100% Secure</div>
-                      <div className="text-xs text-white/70">Bank Level Security</div>
+                      <div className="font-medium text-xs">100% Secure</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FaCheckCircle className="text-blue-400 text-xl sm:text-2xl" />
+                  <div className="flex items-center gap-1.5">
+                    <FaCheckCircle className="text-blue-400 text-sm" />
                     <div>
-                      <div className="font-bold text-xs sm:text-sm">Instant Payouts</div>
-                      <div className="text-xs text-white/70">Withdraw Anytime</div>
+                      <div className="font-medium text-xs">Instant Payouts</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FaStar className="text-yellow-400 text-xl sm:text-2xl" />
+                  <div className="flex items-center gap-1.5">
+                    <FaStar className="text-yellow-400 text-sm" />
                     <div>
-                      <div className="font-bold text-xs sm:text-sm">Top Rated</div>
-                      <div className="text-xs text-white/70">4.9★ by 1M Users</div>
+                      <div className="font-medium text-xs">4.9★ Rated</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right - Visual/Dashboard Preview */}
-              <div className="hidden lg:block relative">
-                <div className="relative">
-                  {/* Main Dashboard Card */}
-                  <div className="bg-white/10 backdrop-blur-2xl rounded-3xl p-8 border border-white/20 shadow-2xl">
-                    {/* Mini Dashboard */}
-                    <div className="space-y-6">
-                      {/* Header */}
-                      <div className="flex items-center justify-between mb-6">
-                        <div>
-                          <h3 className="text-white font-bold text-2xl">Your Dashboard</h3>
-                          <p className="text-white/70 text-sm">Track your progress</p>
-                        </div>
-                        <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
-                          <FaChartLine className="text-white text-xl" />
-                        </div>
-                      </div>
-
-                      {/* Stats Grid */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-5 shadow-lg">
-                          <div className="text-white/80 text-sm mb-1">Exams Taken</div>
-                          <div className="text-white font-black text-3xl">156</div>
-                        </div>
-                        <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl p-5 shadow-lg">
-                          <div className="text-white/80 text-sm mb-1">Win Rate</div>
-                          <div className="text-white font-black text-3xl">89%</div>
-                        </div>
-                        <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-5 shadow-lg">
-                          <div className="text-white/80 text-sm mb-1">Total Won</div>
-                          <div className="text-white font-black text-3xl">₹2.4K</div>
-                        </div>
-                        <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl p-5 shadow-lg">
-                          <div className="text-white/80 text-sm mb-1">Rank</div>
-                          <div className="text-white font-black text-3xl">#47</div>
-                        </div>
-                      </div>
-
-                      {/* Recent Activity */}
-                      <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5">
-                        <h4 className="text-white font-bold mb-4 flex items-center">
-                          <FaClock className="mr-2 text-blue-400" />
-                          Recent Activity
-                        </h4>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                              <span className="text-white text-sm">Physics Test</span>
-                            </div>
-                            <span className="text-green-400 font-bold text-sm">+₹75</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                              <span className="text-white text-sm">Math Quiz</span>
-                            </div>
-                            <span className="text-green-400 font-bold text-sm">+₹50</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                              <span className="text-white text-sm">GK Battle</span>
-                            </div>
-                            <span className="text-green-400 font-bold text-sm">+₹100</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Floating Achievement Badges */}
-                  <div className="absolute -top-4 -right-4 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-2xl animate-bounce">
-                    <FaTrophy className="text-white text-2xl" />
-                  </div>
-                  <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-2xl animate-bounce" style={{animationDelay: '1s'}}>
-                    <FaMedal className="text-white text-xl" />
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center pt-2">
-            <div className="w-1 h-3 bg-white rounded-full animate-pulse"></div>
-          </div>
-        </div>
       </section>
 
 
 
-      {/* Exam Categories Section - Mobile Optimized */}
-      <section id="exams" className="py-16 sm:py-20 lg:py-24 bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 relative overflow-hidden">
-        {/* Animated Background - Mobile Optimized */}
-        <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_20%_50%,rgba(59,130,246,0.3),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(168,85,247,0.3),transparent_50%)]"></div>
-          <div className="absolute top-10 left-10 w-48 h-48 sm:w-96 sm:h-96 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse"></div>
-          <div className="absolute bottom-10 right-10 w-48 h-48 sm:w-96 sm:h-96 bg-purple-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{animationDelay: '2s'}}></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 sm:w-[600px] sm:h-[600px] bg-pink-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-pulse" style={{animationDelay: '4s'}}></div>
-        </div>
-
-        <div className="container mx-auto px-3 sm:px-4 relative z-10">
-          {/* Section Header - Mobile Optimized */}
-          <div className="text-center mb-12 sm:mb-16 lg:mb-20">
-            <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 sm:px-8 sm:py-3 rounded-full font-black text-xs sm:text-sm mb-4 sm:mb-6 shadow-2xl animate-pulse">
-              <FaFire className="mr-1 sm:mr-2 text-sm sm:text-lg" />
-              <span className="hidden sm:inline">🔥 TRENDING EXAMS - 50,000+ STUDENTS ONLINE NOW!</span>
-              <span className="sm:hidden">🔥 TRENDING EXAMS - 50K+ ONLINE!</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-white mb-4 sm:mb-6 leading-tight">
-              <span className="bg-gradient-to-r from-yellow-300 via-orange-300 to-red-300 bg-clip-text text-transparent drop-shadow-2xl">
-                Choose Your Dream Exam
-              </span>
-            </h2>
-            <p className="text-lg sm:text-xl lg:text-2xl text-blue-100 max-w-4xl mx-auto leading-relaxed">
-              Join <span className="text-yellow-300 font-bold">lakhs of students</span> preparing for India's top competitive exams
-              <br className="hidden sm:block" />
-              <span className="text-green-300 font-bold">Live Classes • Mock Tests • Instant Results • Real Money Prizes! 💰</span>
-            </p>
-          </div>
-
-          {/* Exam Cards Grid - Mobile Optimized */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-12 sm:mb-16">
-            {examCategories.map((category, index) => (
-              <Link
-                key={index}
-                href="/student/practice-exams"
-                className="group relative bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl hover:shadow-[0_20px_60px_rgba(59,130,246,0.5)] transition-all duration-500 hover:-translate-y-2 sm:hover:-translate-y-4 hover:scale-105 border-2 border-white/50"
-              >
-                {/* Animated Background Gradient */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                {/* Live Pulse Badge - Mobile Optimized */}
-                {category.liveExams > 0 && (
-                  <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"></div>
-                      <div className="relative bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-full text-xs font-black flex items-center gap-1 sm:gap-2 shadow-2xl">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
-                        <span className="hidden sm:inline">{category.liveExams} LIVE</span>
-                        <span className="sm:hidden">{category.liveExams}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Content - Mobile Optimized */}
-                <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-                  {/* Icon with Glow Effect - Mobile Optimized */}
-                  <div className="relative mb-4 sm:mb-6">
-                    <div className={`absolute inset-0 bg-gradient-to-br ${category.color} rounded-2xl sm:rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition-opacity duration-500`}></div>
-                    <div className={`relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-gradient-to-br ${category.color} rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:rotate-12 transition-all duration-500`}>
-                      <span className="text-3xl sm:text-4xl lg:text-6xl group-hover:scale-125 transition-transform duration-500">{category.icon}</span>
-                    </div>
-                  </div>
-
-                  {/* Title with Gradient - Mobile Optimized */}
-                  <h3 className={`text-xl sm:text-2xl lg:text-3xl font-black mb-4 sm:mb-6 bg-gradient-to-r ${category.color} bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300`}>
-                    {category.name}
-                  </h3>
-
-                  {/* Enhanced Stats Grid - Mobile Optimized */}
-                  <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-                    {/* Active Students */}
-                    <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg sm:rounded-xl p-3 sm:p-4 group-hover:shadow-lg transition-all">
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <FaUsers className="text-blue-600 text-sm sm:text-lg" />
-                        <span className="text-gray-700 font-bold text-xs sm:text-sm">Students</span>
-                      </div>
-                      <span className="font-black text-blue-600 text-sm sm:text-lg">{category.students}</span>
-                    </div>
-
-                    {/* Live Exams */}
-                    <div className="flex items-center justify-between bg-gradient-to-r from-red-50 to-pink-50 rounded-lg sm:rounded-xl p-3 sm:p-4 group-hover:shadow-lg transition-all">
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <FaFire className="text-red-600 text-sm sm:text-lg animate-pulse" />
-                        <span className="text-gray-700 font-bold text-xs sm:text-sm">Live Now</span>
-                      </div>
-                      <span className="font-black text-red-600 text-sm sm:text-lg">{category.liveExams} Exams</span>
-                    </div>
-
-                    {/* Next Exam Countdown */}
-                    <div className="flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg sm:rounded-xl p-3 sm:p-4 group-hover:shadow-lg transition-all">
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <FaClock className="text-purple-600 text-sm sm:text-lg" />
-                        <span className="text-gray-700 font-bold text-xs sm:text-sm">Next Exam</span>
-                      </div>
-                      <span className="font-black text-purple-600 text-sm sm:text-lg">{category.nextExam}</span>
-                    </div>
-
-                    {/* Prize Pool */}
-                    <div className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 group-hover:shadow-lg transition-all">
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <FaTrophy className="text-green-600 text-sm sm:text-lg" />
-                        <span className="text-gray-700 font-bold text-xs sm:text-sm">Win Upto</span>
-                      </div>
-                      <span className="font-black text-green-600 text-sm sm:text-lg">{category.prize}</span>
-                    </div>
-                  </div>
-
-                  {/* Call to Action Button - Mobile Optimized */}
-                  <div className={`relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r ${category.color} p-1 shadow-2xl group-hover:shadow-[0_10px_40px_rgba(59,130,246,0.6)] transition-all duration-500`}>
-                    <div className="bg-white rounded-lg sm:rounded-xl px-4 py-3 sm:px-6 sm:py-4 group-hover:bg-transparent transition-all duration-300">
-                      <div className={`flex items-center justify-center gap-2 sm:gap-3 font-black text-sm sm:text-lg group-hover:text-white transition-colors duration-300 bg-gradient-to-r ${category.color} bg-clip-text text-transparent group-hover:bg-clip-border`}>
-                        <FaRocket className="text-lg sm:text-2xl group-hover:rotate-45 transition-transform duration-500" />
-                        <span className="hidden sm:inline">Start Free Trial</span>
-                        <span className="sm:hidden">Start Free</span>
-                        <FaArrowRight className="group-hover:translate-x-2 transition-transform duration-300" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bonus Badge - Mobile Optimized */}
-                  <div className="mt-3 sm:mt-4 text-center">
-                    <div className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-black border-2 border-yellow-300 shadow-lg">
-                      <span className="hidden sm:inline">🎁 FREE TRIAL + ₹50 BONUS</span>
-                      <span className="sm:hidden">🎁 FREE + ₹50</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Shimmer Effect on Hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shimmer"></div>
-                </div>
-
-                {/* Corner Decoration - Mobile Optimized */}
-                <div className="absolute -top-1 -left-1 sm:-top-2 sm:-left-2 w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center">
-                  <FaStar className="text-white text-sm sm:text-xl animate-spin" style={{animationDuration: '3s'}} />
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* Bottom CTA Bar - Mobile Optimized */}
-          <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl text-center">
-            <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 sm:mb-4">
-              🎯 Not Sure Which Exam? Take Our FREE Career Quiz!
-            </h3>
-            <p className="text-lg sm:text-xl text-white/90 mb-4 sm:mb-6">
-              Get personalized exam recommendations based on your interests & strengths
-            </p>
-            <button className="px-6 py-3 sm:px-10 sm:py-4 bg-white text-orange-600 rounded-full font-black text-lg sm:text-xl hover:scale-110 transition-all duration-300 shadow-2xl">
-              <span className="hidden sm:inline">Start Career Quiz →</span>
-              <span className="sm:hidden">Start Quiz →</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Upcoming Exams Section */}
-      <section className="bg-slate-50 py-20">
+{/* Upcoming Exams Section - Professional & Clean */}
+      <section className="bg-slate-50 py-12 sm:py-16">
         <div className="w-full px-4 sm:px-6 lg:px-10">
           <div className="w-full">
             <div className="mb-12 text-center">
-              <h2 className="text-3xl font-semibold tracking-tight text-slate-800 sm:text-4xl">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
                 <FaFire className="mr-2 inline h-6 w-6 text-amber-500 sm:mr-3 sm:h-7 sm:w-7" />
                 Upcoming live exams
               </h2>
@@ -790,68 +528,14 @@ const upcomingExams = [
         </div>
       </section>
 
-      {/* Features Section - Enhanced */}
-      <section id="features" className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
+{/* Achievements Showcase - Professional & Clean */}
+      <section className="py-12 sm:py-16 bg-white">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <div className="inline-block bg-purple-100 text-purple-600 px-6 py-2 rounded-full font-bold text-sm mb-4">
-              WHY CHOOSE US
-            </div>
-            <h2 className="text-5xl md:text-6xl font-black text-gray-800 mb-6">
-              Everything You Need to Excel
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Complete exam preparation platform with gamified learning and real money rewards
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div 
-                key={index}
-                className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-3 border-2 border-gray-100 hover:border-blue-500 overflow-hidden"
-              >
-                {/* Badge */}
-                <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                  {feature.badge}
-                </div>
-
-                {/* Icon */}
-                <div className={`w-20 h-20 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
-                  <feature.icon className="text-3xl text-white" />
-                </div>
-                
-                {/* Content */}
-                <h3 className="text-2xl font-black text-gray-800 mb-4 group-hover:text-blue-600 transition-colors">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  {feature.description}
-                </p>
-                
-                {/* Stats Badge */}
-                <div className={`inline-flex items-center px-5 py-3 bg-gradient-to-r ${feature.color} bg-opacity-10 rounded-full border-2 border-transparent group-hover:border-current`}>
-                  <span className="font-black text-sm bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    {feature.stats}
-                  </span>
-                </div>
-
-                {/* Hover Effect */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none`}></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Achievements Showcase */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-black text-gray-800 mb-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">
               Unlock Amazing Achievements
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-base text-gray-600 max-w-2xl mx-auto">
               Complete challenges, earn badges, and showcase your skills!
             </p>
           </div>
@@ -873,14 +557,14 @@ const upcomingExams = [
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="py-20 bg-gradient-to-br from-slate-50 to-purple-50">
+      {/* How It Works Section - Professional & Clean */}
+      <section className="py-12 sm:py-16 bg-gradient-to-br from-slate-50 to-purple-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl md:text-6xl font-black text-gray-800 mb-6">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-4">
               Get Started in 3 Simple Steps
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-base text-gray-600 max-w-2xl mx-auto">
               Start your exam preparation journey and earning in just minutes!
             </p>
           </div>
@@ -942,8 +626,8 @@ const upcomingExams = [
         </div>
       </section>
 
-      {/* Battle Quiz Preview */}
-      <section id="battle" className="py-20 bg-black relative overflow-hidden">
+      {/* Battle Quiz Preview - Professional & Clean */}
+      <section id="battle" className="py-12 sm:py-16 bg-black relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-10 left-10 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-pink-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{animationDelay: '2s'}}></div>
@@ -957,10 +641,10 @@ const upcomingExams = [
                 <div className="inline-block bg-purple-500/20 backdrop-blur-sm text-purple-300 px-6 py-2 rounded-full font-bold text-sm mb-6 border border-purple-500/30">
                   🎮 BATTLE QUIZ
                 </div>
-                <h2 className="text-5xl md:text-6xl font-black text-white mb-6">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
                   Challenge & Win Real Money!
                 </h2>
-                <p className="text-xl text-white/80 mb-8 leading-relaxed">
+                <p className="text-base text-white/80 mb-6 leading-relaxed">
                   1v1 Quiz Battles • Instant Payouts • Win Every Minute!
                   <br />
                   <span className="text-green-400 font-bold">Minimum Entry: Just ₹10</span>
@@ -1072,8 +756,8 @@ const upcomingExams = [
         </div>
       </section>
 
-      {/* App Download Section - Enhanced */}
-      <section className="py-20 bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-600 relative overflow-hidden">
+      {/* App Download Section - Professional & Clean */}
+      <section className="py-12 sm:py-16 bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-600 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-10 left-10 w-96 h-96 bg-blue-400 rounded-full mix-blend-overlay filter blur-3xl opacity-30 animate-pulse"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-cyan-400 rounded-full mix-blend-overlay filter blur-3xl opacity-30 animate-pulse" style={{animationDelay: '2s'}}></div>
@@ -1084,10 +768,10 @@ const upcomingExams = [
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               {/* Left - Content */}
               <div className="text-center lg:text-left">
-                <h2 className="text-5xl md:text-6xl font-black text-white mb-6">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
                   Download YottaScore App
                 </h2>
-                <p className="text-2xl text-white/90 mb-8 leading-relaxed">
+                <p className="text-base sm:text-lg text-white/90 mb-6 leading-relaxed">
                   Practice Anywhere, Anytime! 
                   <br />
                   <span className="text-yellow-300 font-bold">Available on All Platforms 📱💻</span>
@@ -1214,8 +898,8 @@ const upcomingExams = [
         </div>
       </section>
 
-      {/* Social Proof - Numbers */}
-      <section className="py-16 bg-white">
+      {/* Social Proof - Numbers - Professional & Clean */}
+      <section className="py-12 bg-white">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-12 shadow-2xl">
@@ -1242,22 +926,22 @@ const upcomingExams = [
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-24 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 relative overflow-hidden">
+      {/* Final CTA - Professional & Clean */}
+      <section className="py-16 sm:py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-10 animate-pulse"></div>
         </div>
 
         <div className="container mx-auto px-4 text-center relative z-10">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-5xl md:text-7xl font-black text-white mb-8">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6">
               Ready to Start Your
               <br />
               <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
                 Success Journey?
               </span>
             </h2>
-            <p className="text-2xl text-white/90 mb-12 leading-relaxed">
+            <p className="text-base sm:text-lg text-white/90 mb-8 leading-relaxed">
               Trusted by Crores of Students Who Are Already Learning & Earning! 
               <br />
               <span className="text-yellow-300 font-bold text-3xl">🎁 Get ₹50 Sign-Up Bonus + ₹100 First Exam Bonus!</span>
@@ -1266,13 +950,13 @@ const upcomingExams = [
             <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12">
               <Link 
                 href="/register"
-                className="group relative px-12 py-6 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-full font-black text-2xl shadow-2xl hover:shadow-yellow-500/50 hover:scale-110 transition-all duration-300 overflow-hidden"
+                className="group relative px-8 py-4 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-lg font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
               >
-                <span className="relative z-10 flex items-center justify-center">
-                  <FaRocket className="mr-3 text-3xl group-hover:rotate-12 transition-transform" />
+                <span className="relative z-20 flex items-center justify-center text-white">
+                  <FaRocket className="mr-3 text-2xl group-hover:rotate-12 transition-transform" />
                   Sign Up Free Now!
                 </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"></div>
               </Link>
             </div>
 
