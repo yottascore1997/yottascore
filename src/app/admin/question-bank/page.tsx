@@ -34,6 +34,7 @@ export default function QuestionBankPage() {
   const [questions, setQuestions] = useState<QuestionBankItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'categories' | 'questions'>('categories');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   
   // Category form state
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -94,8 +95,11 @@ export default function QuestionBankPage() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const url = categoryId 
-        ? `/api/admin/question-bank?categoryId=${categoryId}`
+      // Use categoryId parameter if provided, otherwise use selectedCategoryFilter
+      const filterCategoryId = categoryId || (selectedCategoryFilter !== 'all' ? selectedCategoryFilter : undefined);
+      
+      const url = filterCategoryId 
+        ? `/api/admin/question-bank?categoryId=${filterCategoryId}`
         : "/api/admin/question-bank";
 
       const res = await fetch(url, {
@@ -110,6 +114,16 @@ export default function QuestionBankPage() {
       }
     } catch (err) {
       console.error("Failed to fetch questions:", err);
+    }
+  };
+
+  // Handle category filter change
+  const handleCategoryFilterChange = (categoryId: string) => {
+    setSelectedCategoryFilter(categoryId);
+    if (categoryId === 'all') {
+      fetchQuestions();
+    } else {
+      fetchQuestions(categoryId);
     }
   };
 
@@ -260,8 +274,10 @@ export default function QuestionBankPage() {
           file: null
         });
         
-        // Refresh questions list
-        fetchQuestions(importForm.categoryId);
+        // Refresh questions list based on current filter
+        if (selectedCategoryFilter === 'all' || selectedCategoryFilter === importForm.categoryId) {
+          fetchQuestions(selectedCategoryFilter === 'all' ? undefined : selectedCategoryFilter);
+        }
       } else {
         const data = await res.json();
         setError(data.message || "Failed to import questions");
@@ -361,7 +377,8 @@ export default function QuestionBankPage() {
           }`}
           onClick={() => {
             setActiveTab('questions');
-            fetchQuestions();
+            // Fetch questions based on current filter
+            handleCategoryFilterChange(selectedCategoryFilter);
           }}
         >
           Questions ({questions.length})
@@ -408,6 +425,7 @@ export default function QuestionBankPage() {
                       <button 
                         className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                         onClick={() => {
+                          setSelectedCategoryFilter(category.id);
                           setActiveTab('questions');
                           fetchQuestions(category.id);
                         }}
@@ -434,7 +452,24 @@ export default function QuestionBankPage() {
       {activeTab === 'questions' && (
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Questions</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Questions</h2>
+              <div className="flex items-center space-x-3">
+                <label className="text-sm font-medium text-gray-700">Filter by Category:</label>
+                <select
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  value={selectedCategoryFilter}
+                  onChange={(e) => handleCategoryFilterChange(e.target.value)}
+                >
+                  <option value="all">All Categories</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name} ({category._count.questions})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
           
           {questions.length === 0 ? (
