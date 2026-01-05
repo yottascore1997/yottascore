@@ -14,6 +14,28 @@ interface Question {
   createdAt: string
 }
 
+interface QuestionBankItem {
+  id: string
+  text: string
+  options: string[]
+  correct: number
+  explanation?: string
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD'
+  category: {
+    id: string
+    name: string
+    color: string
+  }
+}
+
+interface Category {
+  id: string
+  name: string
+  _count: {
+    questions: number
+  }
+}
+
 export default function QuestionOfTheDayPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,9 +49,79 @@ export default function QuestionOfTheDayPage() {
   })
   const router = useRouter()
 
+  // Question Bank import states
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
+  const [questionBankQuestions, setQuestionBankQuestions] = useState<QuestionBankItem[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(false)
+  const [loadingQuestionBank, setLoadingQuestionBank] = useState(false)
+
   useEffect(() => {
     fetchQuestions()
   }, [])
+
+  useEffect(() => {
+    if (showImportModal) {
+      fetchCategories()
+    }
+  }, [showImportModal])
+
+  useEffect(() => {
+    if (selectedCategoryId && showImportModal) {
+      fetchQuestionBankQuestions(selectedCategoryId)
+    }
+  }, [selectedCategoryId, showImportModal])
+
+  const fetchCategories = async () => {
+    try {
+      setLoadingCategories(true)
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const res = await fetch("/api/admin/question-categories", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setCategories(data)
+        if (data.length > 0 && !selectedCategoryId) {
+          setSelectedCategoryId(data[0].id)
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch categories:", err)
+    } finally {
+      setLoadingCategories(false)
+    }
+  }
+
+  const fetchQuestionBankQuestions = async (categoryId: string) => {
+    try {
+      setLoadingQuestionBank(true)
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const res = await fetch(`/api/admin/question-bank?categoryId=${categoryId}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setQuestionBankQuestions(data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch question bank questions:", err)
+      setQuestionBankQuestions([])
+    } finally {
+      setLoadingQuestionBank(false)
+    }
+  }
 
   const fetchQuestions = async () => {
     try {
@@ -119,6 +211,55 @@ export default function QuestionOfTheDayPage() {
     }
   }
 
+  const handleUseQuestionFromBank = async (questionBankItem: QuestionBankItem) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      // Convert QuestionBankItem format to QuestionOfTheDay format
+      const questionOfTheDay = {
+        question: questionBankItem.text,
+        options: questionBankItem.options,
+        correct: questionBankItem.correct !== undefined && questionBankItem.correct !== null ? questionBankItem.correct : 0,
+        timeLimit: 10 // Default time limit
+      }
+
+      const response = await fetch('/api/admin/question-of-the-day', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(questionOfTheDay)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add question')
+      }
+
+      setShowImportModal(false)
+      fetchQuestions()
+      setError(null)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to add question from Question Bank')
+    }
+  }
+
+  const handlePickRandomQuestion = () => {
+    if (questionBankQuestions.length === 0) {
+      setError('No questions available in the selected category')
+      return
+    }
+
+    // Pick a random question
+    const randomIndex = Math.floor(Math.random() * questionBankQuestions.length)
+    const randomQuestion = questionBankQuestions[randomIndex]
+    handleUseQuestionFromBank(randomQuestion)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -164,15 +305,26 @@ export default function QuestionOfTheDayPage() {
               </h1>
               <p className="text-gray-600 mt-1">Manage daily questions for student engagement</p>
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              <span>Add New Question</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>Import from Question Bank</span>
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Add New Question</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -327,6 +479,150 @@ export default function QuestionOfTheDayPage() {
           </div>
         )}
       </div>
+
+      {/* Import from Question Bank Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">Import from Question Bank</h2>
+                  <p className="text-sm text-gray-600 mt-1">Select a category and choose a question from your Question Bank</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowImportModal(false)
+                    setSelectedCategoryId('')
+                    setQuestionBankQuestions([])
+                  }}
+                  className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Category Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Select Category</label>
+                <select
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                  value={selectedCategoryId}
+                  onChange={(e) => setSelectedCategoryId(e.target.value)}
+                  disabled={loadingCategories}
+                >
+                  <option value="">Select a category...</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name} ({category._count.questions} questions)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Pick Random Button */}
+              {selectedCategoryId && questionBankQuestions.length > 0 && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={handlePickRandomQuestion}
+                    className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-600 hover:to-pink-700 transition-all duration-200 flex items-center space-x-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Pick Random Question</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Questions List */}
+              {loadingQuestionBank ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-500 border-t-transparent"></div>
+                  <span className="ml-4 text-gray-600">Loading questions...</span>
+                </div>
+              ) : selectedCategoryId && questionBankQuestions.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+                  <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Questions Found</h3>
+                  <p className="text-gray-600">This category doesn't have any questions yet.</p>
+                </div>
+              ) : selectedCategoryId && questionBankQuestions.length > 0 ? (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Available Questions ({questionBankQuestions.length})
+                    </h3>
+                  </div>
+                  {questionBankQuestions.map((q) => (
+                    <div key={q.id} className="bg-white border border-gray-200 rounded-xl p-5 hover:border-green-300 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <p className="text-gray-900 font-medium mb-3">{q.text}</p>
+                          <div className="grid grid-cols-2 gap-2 mb-3">
+                            {q.options.map((option, index) => (
+                              <div
+                                key={index}
+                                className={`p-2 rounded-lg text-sm ${
+                                  index === q.correct
+                                    ? 'bg-green-50 border border-green-200 text-green-800'
+                                    : 'bg-gray-50 border border-gray-200 text-gray-700'
+                                }`}
+                              >
+                                <span className="font-medium">{String.fromCharCode(65 + index)}. </span>
+                                {option}
+                                {index === q.correct && (
+                                  <svg className="w-4 h-4 text-green-500 inline-block ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          {q.explanation && (
+                            <p className="text-sm text-gray-600 mb-2">
+                              <strong>Explanation:</strong> {q.explanation}
+                            </p>
+                          )}
+                          <div className="flex items-center space-x-3">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              q.difficulty === 'EASY' ? 'bg-green-100 text-green-800' :
+                              q.difficulty === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {q.difficulty}
+                            </span>
+                            <span className="text-xs text-gray-500">{q.category.name}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleUseQuestionFromBank(q)}
+                        className="w-full mt-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center space-x-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Use as Question of the Day</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+                  <p className="text-gray-600">Please select a category to view questions</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Question Modal */}
       {showAddModal && (
