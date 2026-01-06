@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     
-    // Handle logo upload
+    // Handle logo upload - use same path as live exams (PHP upload endpoint)
     let logoUrl: string | null = null;
     if (logoFile && logoFile.size > 0) {
       console.log('Processing logo file:', {
@@ -78,31 +78,67 @@ export async function POST(req: Request) {
       });
       
       try {
-        const fs = require('fs');
-        const path = require('path');
+        // Use the same PHP upload endpoint as live exams
+        const PHP_UPLOAD_URL = process.env.PHP_UPLOAD_URL || 'https://store.beyondspacework.com/upload.php';
+        const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN;
         
-        // Create uploads directory if it doesn't exist
-        const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
+        // Validate file size (max 5MB)
+        const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+        if (logoFile.size > MAX_SIZE_BYTES) {
+          console.error('Logo file too large');
+          // Continue without logo
+        } else {
+          // Validate file type
+          const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+          if (!ALLOWED_TYPES.includes(logoFile.type)) {
+            console.error('Invalid logo file type');
+            // Continue without logo
+          } else if (UPLOAD_TOKEN && PHP_UPLOAD_URL && PHP_UPLOAD_URL.includes('upload.php')) {
+            // Forward to PHP endpoint (same as live exams) - use same multipart/form-data construction
+            const buffer = Buffer.from(await logoFile.arrayBuffer());
+            const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2, 15)}`;
+            const formDataParts: Buffer[] = [];
+            
+            // Add file field
+            const fileHeader = `--${boundary}\r\n` +
+              `Content-Disposition: form-data; name="file"; filename="${logoFile.name}"\r\n` +
+              `Content-Type: ${logoFile.type}\r\n\r\n`;
+            formDataParts.push(Buffer.from(fileHeader));
+            formDataParts.push(buffer);
+            formDataParts.push(Buffer.from('\r\n'));
+            
+            // Add closing boundary
+            formDataParts.push(Buffer.from(`--${boundary}--\r\n`));
+            
+            const formDataBody = Buffer.concat(formDataParts);
+            
+            const uploadResponse = await fetch(PHP_UPLOAD_URL, {
+              method: 'POST',
+              body: formDataBody,
+              headers: {
+                'X-Upload-Token': UPLOAD_TOKEN,
+                'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                'Content-Length': formDataBody.length.toString(),
+              },
+            });
+            
+            if (uploadResponse.ok) {
+              const uploadData = await uploadResponse.json();
+              logoUrl = uploadData.url;
+              console.log('Logo uploaded successfully via PHP endpoint (same as live exams):', logoUrl);
+            } else {
+              const errorData = await uploadResponse.json().catch(() => ({ error: 'Upload failed' }));
+              console.error('Error uploading logo via PHP endpoint:', errorData);
+              // Continue without logo if upload fails
+            }
+          } else {
+            console.warn('PHP upload not configured, skipping logo upload');
+            // Continue without logo
+          }
         }
-        
-        // Generate unique filename
-        const timestamp = Date.now();
-        const fileExtension = path.extname(logoFile.name);
-        const fileName = `${timestamp}-${Math.random().toString(36).substring(2)}${fileExtension}`;
-        const filePath = path.join(uploadsDir, fileName);
-        
-        // Save file
-        const bytes = await logoFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        fs.writeFileSync(filePath, buffer);
-        
-        logoUrl = `/uploads/${fileName}`;
-        console.log('Logo saved successfully:', logoUrl);
       } catch (fileError) {
-        console.error('Error saving logo file:', fileError);
-        // Continue without logo if file save fails
+        console.error('Error uploading logo file:', fileError);
+        // Continue without logo if file upload fails
       }
     }
     
