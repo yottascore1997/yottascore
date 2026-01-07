@@ -106,8 +106,8 @@ export default function PracticeExamResultPage() {
         setExam(examData)
       }
 
-      // Fetch result
-      const resultRes = await fetch(`/api/student/practice-exams/${examId}/attempts`, {
+      // Fetch result (includes rank preview)
+      const resultRes = await fetch(`/api/student/practice-exams/${examId}/result`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (!resultRes.ok) {
@@ -115,8 +115,19 @@ export default function PracticeExamResultPage() {
         setLoading(false)
         return
       }
-      const resultData = await resultRes.json()
-      setResult(resultData)
+      const resultResponse = await resultRes.json()
+      
+      // Extract result and rank preview from response
+      if (resultResponse.success && resultResponse.result) {
+        setResult(resultResponse.result)
+        
+        // Set rank preview if available
+        if (resultResponse.rankPreview) {
+          setRankPreview(resultResponse.rankPreview)
+        }
+      } else {
+        setResult(resultResponse)
+      }
 
       // Fetch questions for detailed analysis
       const questionsRes = await fetch(`/api/student/practice-exams/${examId}/questions-with-answers`, {
@@ -128,34 +139,16 @@ export default function PracticeExamResultPage() {
       }
 
       setLoading(false)
-      
-      // Fetch rank preview after result is loaded
-      fetchRankPreview()
     } catch (err) {
       setError('Failed to load result')
       setLoading(false)
     }
   }
 
+  // Rank preview is now included in result API response, so this function is no longer needed
+  // Keeping it for backward compatibility but it won't be called
   const fetchRankPreview = async () => {
-    try {
-      setLoadingRankPreview(true)
-      const token = localStorage.getItem('token')
-      if (!token) return
-
-      const res = await fetch('/api/student/performance/rank-preview?examType=DEFAULT', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setRankPreview(data)
-      }
-    } catch (err) {
-      console.error('Failed to fetch rank preview:', err)
-    } finally {
-      setLoadingRankPreview(false)
-    }
+    // This function is deprecated - rank preview comes from result API
   }
 
   const fetchImprovementSuggestions = async () => {
