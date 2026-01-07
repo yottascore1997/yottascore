@@ -196,7 +196,10 @@ export async function POST(request: Request, { params }: { params: { examId: str
     const currentRank = currentRankIndex >= 0 ? currentRankIndex + 1 : null;
 
     // Calculate rank preview (Future Rank Preview™)
-    let rankPreview: any = null;
+    let rankPreview: any = {
+      hasEnoughData: false,
+      message: 'Calculating rank preview...'
+    };
     try {
       // Use DEFAULT exam type for now (can be enhanced to get from exam metadata)
       const examTypeParam = 'DEFAULT';
@@ -271,10 +274,10 @@ export async function POST(request: Request, { params }: { params: { examId: str
         // Calculate statistics
         const avgAccuracy = performanceData.reduce((sum, p) => sum + p.accuracy, 0) / totalAttempts;
         const avgScore = performanceData.reduce((sum, p) => sum + p.score, 0) / totalAttempts;
-        const avgTimePerQuestion = performanceData
-          .filter(p => p.timePerQuestion !== null)
-          .reduce((sum, p) => sum + (p.timePerQuestion || 0), 0) / 
-          performanceData.filter(p => p.timePerQuestion !== null).length;
+        const attemptsWithTime = performanceData.filter(p => p.timePerQuestion !== null);
+        const avgTimePerQuestion = attemptsWithTime.length > 0
+          ? attemptsWithTime.reduce((sum, p) => sum + (p.timePerQuestion || 0), 0) / attemptsWithTime.length
+          : 60; // Default 60 seconds if no time data
 
         const scores = performanceData.map(p => p.score);
         const meanScore = avgScore;
