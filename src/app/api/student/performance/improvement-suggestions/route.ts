@@ -82,12 +82,14 @@ export async function GET(request: Request) {
       });
     }
 
+    const attemptsWithTime = performanceData.filter(p => p.timePerQuestion > 0);
+    const avgTimePerQuestion = attemptsWithTime.length > 0
+      ? attemptsWithTime.reduce((sum, p) => sum + p.timePerQuestion, 0) / attemptsWithTime.length
+      : null;
+
     const userStats = {
       avgAccuracy: performanceData.reduce((sum, p) => sum + p.accuracy, 0) / totalAttempts,
-      avgTimePerQuestion: performanceData
-        .filter(p => p.timePerQuestion > 0)
-        .reduce((sum, p) => sum + p.timePerQuestion, 0) / 
-        performanceData.filter(p => p.timePerQuestion > 0).length || null,
+      avgTimePerQuestion,
       avgAttemptRatio: performanceData.reduce((sum, p) => sum + p.attemptRatio, 0) / totalAttempts,
       consistency: (() => {
         const scores = performanceData.map(p => p.score);
@@ -160,12 +162,14 @@ export async function GET(request: Request) {
     const top25Index = Math.floor(total * 0.25);
     const top25Percent = participantMetrics.slice(0, Math.max(1, top25Index));
 
+    const top25WithTime = top25Percent.filter(p => p.timePerQuestion > 0);
+    const avgTimePerQuestionBenchmark = top25WithTime.length > 0
+      ? top25WithTime.reduce((sum, p) => sum + p.timePerQuestion, 0) / top25WithTime.length
+      : null;
+
     const benchmark = {
       avgAccuracy: top25Percent.reduce((sum, p) => sum + p.accuracy, 0) / top25Percent.length,
-      avgTimePerQuestion: top25Percent
-        .filter(p => p.timePerQuestion > 0)
-        .reduce((sum, p) => sum + p.timePerQuestion, 0) / 
-        top25Percent.filter(p => p.timePerQuestion > 0).length || null,
+      avgTimePerQuestion: avgTimePerQuestionBenchmark,
       avgAttemptRatio: top25Percent.reduce((sum, p) => sum + p.attemptRatio, 0) / top25Percent.length
     };
 
@@ -186,8 +190,9 @@ export async function GET(request: Request) {
       });
     }
 
-    const userStats = historyData.statistics;
-    const benchmark = benchmarkData.top25Percent; // Compare with top 25%
+    // Use the already defined userStats and benchmark
+    const finalUserStats = historyData.statistics;
+    const finalBenchmark = benchmarkData.top25Percent; // Compare with top 25%
 
     const suggestions: Array<{
       area: string;
@@ -199,12 +204,12 @@ export async function GET(request: Request) {
     }> = [];
 
     // 1. Accuracy improvement
-    if (userStats.avgAccuracy < benchmark.avgAccuracy) {
-      const improvement = benchmark.avgAccuracy - userStats.avgAccuracy;
+    if (finalUserStats.avgAccuracy < finalBenchmark.avgAccuracy) {
+      const improvement = finalBenchmark.avgAccuracy - finalUserStats.avgAccuracy;
       suggestions.push({
         area: 'Accuracy',
-        current: Math.round(userStats.avgAccuracy * 10) / 10,
-        target: Math.round(benchmark.avgAccuracy * 10) / 10,
+        current: Math.round(finalUserStats.avgAccuracy * 10) / 10,
+        target: Math.round(finalBenchmark.avgAccuracy * 10) / 10,
         improvement: Math.round(improvement * 10) / 10,
         priority: improvement > 10 ? 'high' : improvement > 5 ? 'medium' : 'low',
         action: `Focus on accuracy. Practice more questions in weak areas. Target: +${Math.round(improvement)}% accuracy.`
@@ -212,13 +217,13 @@ export async function GET(request: Request) {
     }
 
     // 2. Speed improvement
-    if (benchmark.avgTimePerQuestion && userStats.avgTimePerQuestion) {
-      if (userStats.avgTimePerQuestion > benchmark.avgTimePerQuestion) {
-        const improvement = ((userStats.avgTimePerQuestion - benchmark.avgTimePerQuestion) / userStats.avgTimePerQuestion) * 100;
+    if (finalBenchmark.avgTimePerQuestion && finalUserStats.avgTimePerQuestion) {
+      if (finalUserStats.avgTimePerQuestion > finalBenchmark.avgTimePerQuestion) {
+        const improvement = ((finalUserStats.avgTimePerQuestion - finalBenchmark.avgTimePerQuestion) / finalUserStats.avgTimePerQuestion) * 100;
         suggestions.push({
           area: 'Speed',
-          current: Math.round(userStats.avgTimePerQuestion * 10) / 10,
-          target: Math.round(benchmark.avgTimePerQuestion * 10) / 10,
+          current: Math.round(finalUserStats.avgTimePerQuestion * 10) / 10,
+          target: Math.round(finalBenchmark.avgTimePerQuestion * 10) / 10,
           improvement: Math.round(improvement * 10) / 10,
           priority: improvement > 20 ? 'high' : improvement > 10 ? 'medium' : 'low',
           action: `Improve speed. Practice time-bound tests. Target: Reduce time per question by ${Math.round(improvement)}%.`
@@ -227,12 +232,12 @@ export async function GET(request: Request) {
     }
 
     // 3. Attempt ratio improvement
-    if (userStats.avgAttemptRatio < benchmark.avgAttemptRatio) {
-      const improvement = (benchmark.avgAttemptRatio - userStats.avgAttemptRatio) * 100;
+    if (finalUserStats.avgAttemptRatio < finalBenchmark.avgAttemptRatio) {
+      const improvement = (finalBenchmark.avgAttemptRatio - finalUserStats.avgAttemptRatio) * 100;
       suggestions.push({
         area: 'Attempt Ratio',
-        current: Math.round(userStats.avgAttemptRatio * 100 * 10) / 10,
-        target: Math.round(benchmark.avgAttemptRatio * 100 * 10) / 10,
+        current: Math.round(finalUserStats.avgAttemptRatio * 100 * 10) / 10,
+        target: Math.round(finalBenchmark.avgAttemptRatio * 100 * 10) / 10,
         improvement: Math.round(improvement * 10) / 10,
         priority: improvement > 15 ? 'high' : improvement > 8 ? 'medium' : 'low',
         action: `Attempt more questions. Don't skip questions - even guessing is better. Target: +${Math.round(improvement)}% attempt rate.`
@@ -240,14 +245,14 @@ export async function GET(request: Request) {
     }
 
     // 4. Consistency improvement
-    if (userStats.consistency < 80) {
+    if (finalUserStats.consistency < 80) {
       suggestions.push({
         area: 'Consistency',
-        current: Math.round(userStats.consistency * 10) / 10,
+        current: Math.round(finalUserStats.consistency * 10) / 10,
         target: 85,
-        improvement: Math.round((85 - userStats.consistency) * 10) / 10,
-        priority: userStats.consistency < 60 ? 'high' : 'medium',
-        action: `Maintain consistency. Take regular practice tests. Avoid missing tests. Target: ${Math.round(85 - userStats.consistency)}% more consistency.`
+        improvement: Math.round((85 - finalUserStats.consistency) * 10) / 10,
+        priority: finalUserStats.consistency < 60 ? 'high' : 'medium',
+        action: `Maintain consistency. Take regular practice tests. Avoid missing tests. Target: ${Math.round(85 - finalUserStats.consistency)}% more consistency.`
       });
     }
 
