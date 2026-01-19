@@ -37,6 +37,8 @@ export async function GET(req: Request, { params }: { params: { examId: string }
       duration: exam.duration,
       spots: exam.spots,
       spotsLeft: exam.spotsLeft,
+      logoUrl: exam.logoUrl,
+      categoryLogoUrl: exam.categoryLogoUrl,
       attempted: exam.participants.length > 0 && !!exam.participants[0].completedAt
     });
   } catch (error) {

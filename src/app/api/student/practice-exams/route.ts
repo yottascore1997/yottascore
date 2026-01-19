@@ -46,6 +46,7 @@ export async function GET(req: Request) {
       startTime: exam.startTime,
       endTime: exam.endTime,
       logoUrl: exam.logoUrl,
+      categoryLogoUrl: exam.categoryLogoUrl,
       attempted: exam.participants.length > 0 && !!exam.participants[0].completedAt
     }));
     return NextResponse.json(examsWithAttempted);
