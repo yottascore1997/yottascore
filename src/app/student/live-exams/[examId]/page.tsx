@@ -65,6 +65,24 @@ function getTimeLeft(endTime?: string) {
     .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
+function getTimeUntilStart(startTime: string) {
+  const start = new Date(startTime).getTime();
+  const now = Date.now();
+  const diff = start - now;
+  if (diff <= 0) return null; // Exam has started
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  
+  if (days > 0) {
+    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  }
+  return `${hours.toString().padStart(2, '0')}:${minutes
+    .toString()
+    .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
 function formatTimeTaken(seconds: number | null | undefined): string {
   if (!seconds) return 'N/A';
   const minutes = Math.floor(seconds / 60);
@@ -222,6 +240,12 @@ export default function LiveExamDetailPage() {
   }, [activeTab, examId]);
 
   const handleStartExam = async () => {
+    // Check if exam has started
+    if (!hasExamStarted) {
+      alert('Exam has not started yet. Please wait for the start time.');
+      return;
+    }
+
     setQuestionsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -245,7 +269,11 @@ export default function LiveExamDetailPage() {
       });
 
       if (!res.ok) {
-        throw new Error('Could not fetch questions');
+        const errorData = await res.json().catch(() => ({}));
+        if (res.status === 403 && errorData.error === 'Exam has not started yet') {
+          throw new Error('Exam has not started yet. Please wait for the start time.');
+        }
+        throw new Error(errorData.error || 'Could not fetch questions');
       }
 
       const data = await res.json();
@@ -313,6 +341,11 @@ export default function LiveExamDetailPage() {
   const spotsLeft = exam.spotsLeft;
   const percent = totalSpots ? (spotsLeft / totalSpots) * 100 : 0;
   const timeLeft = getTimeLeft(exam.endTime);
+  
+  // Check if exam has started
+  const examStartTime = new Date(exam.startTime).getTime();
+  const hasExamStarted = now >= examStartTime;
+  const timeUntilStart = getTimeUntilStart(exam.startTime);
 
   // If exam started (questions loaded and not completed), show questions UI
   if (questions.length > 0 && !(attempt && attempt.completedAt)) {
@@ -448,6 +481,19 @@ export default function LiveExamDetailPage() {
       <div className="flex-1 px-4 pb-32">
         {activeTab === 'info' && (
           <div className="bg-white rounded-lg shadow p-4">
+            {!hasExamStarted && timeUntilStart && (
+              <div className="mb-4 p-4 bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg border-2 border-purple-300">
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 mb-1">Exam will start in:</div>
+                  <div className="text-3xl font-bold text-purple-700">
+                    {timeUntilStart}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2">
+                    Start Time: {new Date(exam.startTime).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div><span className="font-semibold">Description:</span> {exam.description}</div>
               <div><span className="font-semibold">Start Time:</span> {new Date(exam.startTime).toLocaleString()}</div>
@@ -456,7 +502,7 @@ export default function LiveExamDetailPage() {
               <div><span className="font-semibold">Spots:</span> {exam.spots}</div>
               <div><span className="font-semibold">Entry Fee:</span> ₹{exam.entryFee}</div>
               <div><span className="font-semibold">Prize Pool:</span> ₹{exam.prizePool}</div>
-              <div><span className="font-semibold">Status:</span> {exam.isLive ? 'Live' : 'Not Live'}</div>
+              <div><span className="font-semibold">Status:</span> {hasExamStarted ? 'Started' : exam.isLive ? 'Scheduled' : 'Not Live'}</div>
             </div>
           </div>
         )}
@@ -620,14 +666,31 @@ export default function LiveExamDetailPage() {
         )}
       </div>
       {/* Sticky Attempt Button */}
-      <div className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-end z-10">
-        <button
-          className="px-8 py-3 bg-purple-600 text-white rounded-full font-bold text-lg shadow-lg hover:bg-purple-700 transition"
-          onClick={handleStartExam}
-          disabled={questionsLoading || !exam.isLive || spotsLeft === 0 || (attempt && attempt.completedAt)}
-        >
-          {attempt && attempt.completedAt ? 'Already Attempted' : questionsLoading ? 'Starting...' : `Attempt ₹${exam.entryFee}`}
-        </button>
+      <div className="fixed bottom-0 left-0 w-full bg-white border-t p-4 z-10">
+        {!hasExamStarted ? (
+          <div className="text-center">
+            <div className="text-sm text-gray-600 mb-2">Exam starts in:</div>
+            <div className="text-2xl font-bold text-purple-600 mb-3">
+              {timeUntilStart || '00:00:00'}
+            </div>
+            <button
+              className="px-8 py-3 bg-gray-400 text-white rounded-full font-bold text-lg shadow-lg cursor-not-allowed"
+              disabled={true}
+            >
+              Attempt Now (Wait for start time)
+            </button>
+          </div>
+        ) : (
+          <div className="flex justify-end">
+            <button
+              className="px-8 py-3 bg-purple-600 text-white rounded-full font-bold text-lg shadow-lg hover:bg-purple-700 transition"
+              onClick={handleStartExam}
+              disabled={questionsLoading || !exam.isLive || spotsLeft === 0 || (attempt && attempt.completedAt) || !hasExamStarted}
+            >
+              {attempt && attempt.completedAt ? 'Already Attempted' : questionsLoading ? 'Starting...' : `Attempt Now`}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

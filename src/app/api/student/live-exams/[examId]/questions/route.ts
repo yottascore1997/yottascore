@@ -14,6 +14,29 @@ export async function GET(req: Request, { params }: { params: { examId: string }
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const { examId } = params;
+    
+    // Get exam details to check start time
+    const exam = await prisma.liveExam.findUnique({
+      where: { id: examId },
+      select: { startTime: true }
+    });
+    
+    if (!exam) {
+      return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
+    }
+    
+    // Check if exam has started
+    const now = new Date();
+    const startTime = new Date(exam.startTime);
+    
+    if (now < startTime) {
+      return NextResponse.json({ 
+        error: 'Exam has not started yet',
+        startTime: exam.startTime,
+        timeUntilStart: startTime.getTime() - now.getTime()
+      }, { status: 403 });
+    }
+    
     // Check if user is a participant
     const participant = await prisma.liveExamParticipant.findUnique({
       where: {
