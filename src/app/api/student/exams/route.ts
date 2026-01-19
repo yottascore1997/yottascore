@@ -31,31 +31,47 @@ export async function GET(req: Request) {
 
     // Get current time
     const now = new Date()
+    
+    console.log('Fetching exams with filters:', {
+      isLive: true,
+      now: now.toISOString(),
+      userId: decoded.userId
+    })
 
     // Fetch available exams (both upcoming and started exams that haven't ended)
     const exams = await prisma.liveExam.findMany({
       where: {
-        isLive: true, // Only show exams that are marked as live
-        // Remove startTime filter to include upcoming exams (startTime > now)
-        // Only exclude exams that have ended (if endTime exists and has passed)
-        OR: [
+        AND: [
           {
-            endTime: null // No end time, show if live
+            isLive: true // Only show exams that are marked as live
           },
           {
-            endTime: {
-              gt: now // End time hasn't passed yet
+            // Remove startTime filter to include upcoming exams (startTime > now)
+            // Only exclude exams that have ended (if endTime exists and has passed)
+            OR: [
+              {
+                endTime: null // No end time, show if live
+              },
+              {
+                endTime: {
+                  gt: now // End time hasn't passed yet
+                }
+              }
+            ]
+          },
+          {
+            spotsLeft: {
+              gt: 0
+            }
+          },
+          {
+            participants: {
+              none: {
+                userId: decoded.userId
+              }
             }
           }
-        ],
-        spotsLeft: {
-          gt: 0
-        },
-        participants: {
-          none: {
-            userId: decoded.userId
-          }
-        }
+        ]
       },
       select: {
         id: true,
@@ -87,9 +103,19 @@ export async function GET(req: Request) {
     console.log('Sample exam data:', exams.length > 0 ? {
       id: exams[0].id,
       title: exams[0].title,
+      startTime: exams[0].startTime,
+      endTime: exams[0].endTime,
+      isLive: exams[0].isLive,
+      spotsLeft: exams[0].spotsLeft,
       imageUrl: exams[0].imageUrl,
       hasImageUrl: !!exams[0].imageUrl
     } : 'No exams found')
+    
+    // Also check total exams without filters for debugging
+    const totalExams = await prisma.liveExam.count({
+      where: { isLive: true }
+    })
+    console.log(`Total live exams in database: ${totalExams}`)
     return NextResponse.json(exams)
   } catch (error) {
     console.error('[STUDENT_EXAMS_GET] Detailed error:', error)
