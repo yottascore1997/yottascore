@@ -59,6 +59,7 @@ export async function POST(req: Request) {
     const spots = parseInt(formData.get('spots') as string);
     const questions = JSON.parse(formData.get('questions') as string);
     const logoFile = formData.get('logo') as File | null;
+    const categoryLogoFile = formData.get('categoryLogo') as File | null;
     
     console.log('Parsed form data:', {
       title, description, instructions, category, subcategory,
@@ -68,77 +69,100 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     
-    // Handle logo upload - use same path as live exams (PHP upload endpoint)
+    // Handle logo uploads - use same path as live exams (PHP upload endpoint)
     let logoUrl: string | null = null;
-    if (logoFile && logoFile.size > 0) {
-      console.log('Processing logo file:', {
-        name: logoFile.name,
-        size: logoFile.size,
-        type: logoFile.type
-      });
-      
+    let categoryLogoUrl: string | null = null;
+    
+    // Helper function to upload a file
+    const uploadFile = async (file: File): Promise<string | null> => {
       try {
-        // Use the same PHP upload endpoint as live exams
         const PHP_UPLOAD_URL = process.env.PHP_UPLOAD_URL || 'https://store.beyondspacework.com/upload.php';
         const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN;
         
         // Validate file size (max 5MB)
         const MAX_SIZE_BYTES = 5 * 1024 * 1024;
-        if (logoFile.size > MAX_SIZE_BYTES) {
-          console.error('Logo file too large');
-          // Continue without logo
-        } else {
-          // Validate file type
-          const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-          if (!ALLOWED_TYPES.includes(logoFile.type)) {
-            console.error('Invalid logo file type');
-            // Continue without logo
-          } else if (UPLOAD_TOKEN && PHP_UPLOAD_URL && PHP_UPLOAD_URL.includes('upload.php')) {
-            // Forward to PHP endpoint (same as live exams) - use same multipart/form-data construction
-            const buffer = Buffer.from(await logoFile.arrayBuffer());
-            const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2, 15)}`;
-            const formDataParts: Buffer[] = [];
-            
-            // Add file field
-            const fileHeader = `--${boundary}\r\n` +
-              `Content-Disposition: form-data; name="file"; filename="${logoFile.name}"\r\n` +
-              `Content-Type: ${logoFile.type}\r\n\r\n`;
-            formDataParts.push(Buffer.from(fileHeader));
-            formDataParts.push(buffer);
-            formDataParts.push(Buffer.from('\r\n'));
-            
-            // Add closing boundary
-            formDataParts.push(Buffer.from(`--${boundary}--\r\n`));
-            
-            const formDataBody = Buffer.concat(formDataParts);
-            
-            const uploadResponse = await fetch(PHP_UPLOAD_URL, {
-              method: 'POST',
-              body: formDataBody,
-              headers: {
-                'X-Upload-Token': UPLOAD_TOKEN,
-                'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                'Content-Length': formDataBody.length.toString(),
-              },
-            });
-            
-            if (uploadResponse.ok) {
-              const uploadData = await uploadResponse.json();
-              logoUrl = uploadData.url;
-              console.log('Logo uploaded successfully via PHP endpoint (same as live exams):', logoUrl);
-            } else {
-              const errorData = await uploadResponse.json().catch(() => ({ error: 'Upload failed' }));
-              console.error('Error uploading logo via PHP endpoint:', errorData);
-              // Continue without logo if upload fails
-            }
+        if (file.size > MAX_SIZE_BYTES) {
+          console.error('File too large');
+          return null;
+        }
+        
+        // Validate file type
+        const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          console.error('Invalid file type');
+          return null;
+        }
+        
+        if (UPLOAD_TOKEN && PHP_UPLOAD_URL && PHP_UPLOAD_URL.includes('upload.php')) {
+          // Forward to PHP endpoint (same as live exams) - use same multipart/form-data construction
+          const buffer = Buffer.from(await file.arrayBuffer());
+          const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2, 15)}`;
+          const formDataParts: Buffer[] = [];
+          
+          // Add file field
+          const fileHeader = `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="file"; filename="${file.name}"\r\n` +
+            `Content-Type: ${file.type}\r\n\r\n`;
+          formDataParts.push(Buffer.from(fileHeader));
+          formDataParts.push(buffer);
+          formDataParts.push(Buffer.from('\r\n'));
+          
+          // Add closing boundary
+          formDataParts.push(Buffer.from(`--${boundary}--\r\n`));
+          
+          const formDataBody = Buffer.concat(formDataParts);
+          
+          const uploadResponse = await fetch(PHP_UPLOAD_URL, {
+            method: 'POST',
+            body: formDataBody,
+            headers: {
+              'X-Upload-Token': UPLOAD_TOKEN,
+              'Content-Type': `multipart/form-data; boundary=${boundary}`,
+              'Content-Length': formDataBody.length.toString(),
+            },
+          });
+          
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json();
+            return uploadData.url;
           } else {
-            console.warn('PHP upload not configured, skipping logo upload');
-            // Continue without logo
+            const errorData = await uploadResponse.json().catch(() => ({ error: 'Upload failed' }));
+            console.error('Error uploading file via PHP endpoint:', errorData);
+            return null;
           }
+        } else {
+          console.warn('PHP upload not configured, skipping file upload');
+          return null;
         }
       } catch (fileError) {
-        console.error('Error uploading logo file:', fileError);
-        // Continue without logo if file upload fails
+        console.error('Error uploading file:', fileError);
+        return null;
+      }
+    };
+    
+    // Upload subcategory logo
+    if (logoFile && logoFile.size > 0) {
+      console.log('Processing subcategory logo file:', {
+        name: logoFile.name,
+        size: logoFile.size,
+        type: logoFile.type
+      });
+      logoUrl = await uploadFile(logoFile);
+      if (logoUrl) {
+        console.log('Subcategory logo uploaded successfully:', logoUrl);
+      }
+    }
+    
+    // Upload category logo
+    if (categoryLogoFile && categoryLogoFile.size > 0) {
+      console.log('Processing category logo file:', {
+        name: categoryLogoFile.name,
+        size: categoryLogoFile.size,
+        type: categoryLogoFile.type
+      });
+      categoryLogoUrl = await uploadFile(categoryLogoFile);
+      if (categoryLogoUrl) {
+        console.log('Category logo uploaded successfully:', categoryLogoUrl);
       }
     }
     
@@ -180,6 +204,7 @@ export async function POST(req: Request) {
       spotsLeft: spots,
       createdById: decoded.userId,
       logoUrl,
+      categoryLogoUrl,
     };
     
     console.log('Exam data without questions:', examData);

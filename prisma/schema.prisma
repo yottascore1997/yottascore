@@ -324,24 +324,25 @@ model Transaction {
 }
 
 model PracticeExam {
-  id          String      @id @default(cuid())
-  title       String
-  description String?
-  instructions String?    @db.Text
-  duration    Int         // in minutes
-  spots       Int
-  spotsLeft   Int
-  startTime   DateTime
-  endTime     DateTime?
-  logoUrl     String?     // URL for exam logo/image
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  createdBy   User       @relation(fields: [createdById], references: [id])
-  createdById String
-  questions   PracticeExamQuestion[]
-  participants PracticeExamParticipant[]
-  category    String
-  subcategory String
+  id              String      @id @default(cuid())
+  title           String
+  description     String?
+  instructions    String?     @db.Text
+  duration        Int         // in minutes
+  spots           Int
+  spotsLeft       Int
+  startTime       DateTime
+  endTime         DateTime?
+  logoUrl         String?     // URL for subcategory logo/image
+  categoryLogoUrl String?     // URL for category logo/image
+  createdAt       DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  createdBy       User        @relation(fields: [createdById], references: [id])
+  createdById     String
+  questions       PracticeExamQuestion[]
+  participants    PracticeExamParticipant[]
+  category        String
+  subcategory     String
   
   @@map("PracticeExam")
 }

@@ -26,6 +26,8 @@ export default function CreatePracticeExamPage() {
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>("");
+  const [categoryLogoFile, setCategoryLogoFile] = useState<File | null>(null);
+  const [categoryLogoPreview, setCategoryLogoPreview] = useState<string>("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -171,6 +173,18 @@ export default function CreatePracticeExamPage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCategoryLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setCategoryLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setCategoryLogoPreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -339,6 +353,10 @@ export default function CreatePracticeExamPage() {
         formData.append("logo", logoFile);
       }
       
+      if (categoryLogoFile) {
+        formData.append("categoryLogo", categoryLogoFile);
+      }
+      
       const res = await fetch("/api/admin/practice-exams", {
         method: "POST",
         headers: {
@@ -487,29 +505,54 @@ export default function CreatePracticeExamPage() {
                     </div>
                   </div>
 
-                  {/* Logo Upload */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Logo</label>
-                    <div className="flex items-center space-x-4">
-                      <div className="flex-1">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        />
-                      </div>
-                      {logoPreview && (
-                        <div className="w-16 h-16 border-2 border-gray-300 rounded-lg overflow-hidden">
-                          <img
-                            src={logoPreview}
-                            alt="Logo preview"
-                            className="w-full h-full object-cover"
+                  {/* Logo Uploads */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Category Logo</label>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex-1">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleCategoryLogoChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                           />
                         </div>
-                      )}
+                        {categoryLogoPreview && (
+                          <div className="w-16 h-16 border-2 border-gray-300 rounded-lg overflow-hidden">
+                            <img
+                              src={categoryLogoPreview}
+                              alt="Category logo preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Upload a logo for the category (optional)</p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Upload a logo for this exam (optional)</p>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Subcategory Logo</label>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex-1">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          />
+                        </div>
+                        {logoPreview && (
+                          <div className="w-16 h-16 border-2 border-gray-300 rounded-lg overflow-hidden">
+                            <img
+                              src={logoPreview}
+                              alt="Subcategory logo preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Upload a logo for the subcategory (optional)</p>
+                    </div>
                   </div>
                 </div>
 
