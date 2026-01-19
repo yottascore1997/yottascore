@@ -32,13 +32,22 @@ export async function GET(req: Request) {
     // Get current time
     const now = new Date()
 
-    // Fetch available exams
+    // Fetch available exams (both upcoming and started exams that haven't ended)
     const exams = await prisma.liveExam.findMany({
       where: {
         isLive: true, // Only show exams that are marked as live
-        startTime: {
-          lte: now,
-        },
+        // Remove startTime filter to include upcoming exams (startTime > now)
+        // Only exclude exams that have ended (if endTime exists and has passed)
+        OR: [
+          {
+            endTime: null // No end time, show if live
+          },
+          {
+            endTime: {
+              gt: now // End time hasn't passed yet
+            }
+          }
+        ],
         spotsLeft: {
           gt: 0
         },
