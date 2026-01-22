@@ -16,9 +16,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Get user's performance history directly
+    // Get user's performance history from both practice and live exams
     const limit = 10;
-    const attempts = await prisma.practiceExamParticipant.findMany({
+    
+    // Fetch practice exam attempts
+    const practiceAttempts = await prisma.practiceExamParticipant.findMany({
       where: {
         userId: decoded.userId,
         completedAt: { not: null },
@@ -37,25 +39,58 @@ export async function GET(request: Request) {
       take: limit
     });
 
-    // Calculate user statistics
-    const performanceData = attempts.map((attempt) => {
+    // Fetch live exam attempts
+    const liveAttempts = await prisma.liveExamParticipant.findMany({
+      where: {
+        userId: decoded.userId,
+        completedAt: { not: null },
+        score: { not: null }
+      },
+      include: {
+        exam: {
+          include: {
+            questions: true
+          }
+        }
+      },
+      orderBy: {
+        completedAt: 'desc'
+      },
+      take: limit
+    });
+
+    // Combine both types of attempts
+    const allAttempts = [
+      ...practiceAttempts.map(attempt => ({ ...attempt, examType: 'practice' as const })),
+      ...liveAttempts.map(attempt => ({ ...attempt, examType: 'live' as const }))
+    ].sort((a, b) => {
+      const dateA = new Date(a.completedAt!).getTime();
+      const dateB = new Date(b.completedAt!).getTime();
+      return dateB - dateA;
+    }).slice(0, limit);
+
+    // Calculate user statistics from combined attempts
+    const performanceData = allAttempts.map((attempt) => {
       const answers = (attempt.answers as Record<string, number>) || {};
       const questions = attempt.exam.questions;
       
       let correctAnswers = 0;
       let attemptedCount = 0;
 
-      questions.forEach((question) => {
+      questions.forEach((question: any) => {
         const selectedOption = answers[question.id];
         if (selectedOption !== undefined) {
           attemptedCount++;
-          if (selectedOption === question.correct) {
+          // For practice exams, use question.correct, for live exams use question.correctAnswer
+          const correctAnswer = question.correct !== undefined ? question.correct : question.correctAnswer;
+          if (correctAnswer !== undefined && selectedOption === correctAnswer) {
             correctAnswers++;
           }
         }
       });
 
       const accuracy = attemptedCount > 0 ? (correctAnswers / attemptedCount) * 100 : 0;
+      // For live exams, score is percentage, for practice it might be different
       const score = attempt.score || 0;
       
       let timePerQuestion: number | null = null;
@@ -78,7 +113,7 @@ export async function GET(request: Request) {
     if (totalAttempts < 5) {
       return NextResponse.json({
         hasEnoughData: false,
-        message: 'Complete at least 5 practice exams to get improvement suggestions'
+        message: 'Complete at least 5 exams (practice or live) to get improvement suggestions'
       });
     }
 
@@ -99,8 +134,8 @@ export async function GET(request: Request) {
       })()
     };
 
-    // Get benchmark data
-    const allParticipants = await prisma.practiceExamParticipant.findMany({
+    // Get benchmark data from both practice and live exams
+    const practiceParticipants = await prisma.practiceExamParticipant.findMany({
       where: {
         completedAt: { not: null },
         score: { not: null }
@@ -113,6 +148,26 @@ export async function GET(request: Request) {
         }
       }
     });
+
+    const liveParticipants = await prisma.liveExamParticipant.findMany({
+      where: {
+        completedAt: { not: null },
+        score: { not: null }
+      },
+      include: {
+        exam: {
+          include: {
+            questions: true
+          }
+        }
+      }
+    });
+
+    // Combine all participants for benchmark
+    const allParticipants = [
+      ...practiceParticipants.map(p => ({ ...p, examType: 'practice' as const })),
+      ...liveParticipants.map(p => ({ ...p, examType: 'live' as const }))
+    ];
 
     if (allParticipants.length === 0) {
       return NextResponse.json({
@@ -128,11 +183,13 @@ export async function GET(request: Request) {
       let correctAnswers = 0;
       let attemptedCount = 0;
 
-      questions.forEach((question) => {
+      questions.forEach((question: any) => {
         const selectedOption = answers[question.id];
         if (selectedOption !== undefined) {
           attemptedCount++;
-          if (selectedOption === question.correct) {
+          // For practice exams, use question.correct, for live exams use question.correctAnswer
+          const correctAnswer = question.correct !== undefined ? question.correct : question.correctAnswer;
+          if (correctAnswer !== undefined && selectedOption === correctAnswer) {
             correctAnswers++;
           }
         }
@@ -179,7 +236,7 @@ export async function GET(request: Request) {
     if (!historyData.statistics || !historyData.statistics.hasEnoughData) {
       return NextResponse.json({
         hasEnoughData: false,
-        message: 'Complete at least 5 practice exams to get improvement suggestions'
+        message: 'Complete at least 5 exams (practice or live) to get improvement suggestions'
       });
     }
 

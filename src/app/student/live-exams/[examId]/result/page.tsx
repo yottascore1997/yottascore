@@ -26,6 +26,27 @@ interface ExamResult {
   message: string
 }
 
+interface ImprovementSuggestion {
+  area: string
+  current: number
+  target: number
+  improvement: number
+  priority: 'high' | 'medium' | 'low'
+  action: string
+}
+
+interface ImprovementData {
+  hasEnoughData: boolean
+  suggestions: ImprovementSuggestion[]
+  summary?: {
+    totalAreas: number
+    avgImprovement: number
+    estimatedRankImprovement: string
+  }
+  nextSteps?: string[]
+  message?: string
+}
+
 export default function LiveExamResultPage() {
   const router = useRouter()
   const params = useParams()
@@ -35,6 +56,9 @@ export default function LiveExamResultPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [animateScore, setAnimateScore] = useState(false)
+  const [improvementData, setImprovementData] = useState<ImprovementData | null>(null)
+  const [showImproveModal, setShowImproveModal] = useState(false)
+  const [loadingImprovements, setLoadingImprovements] = useState(false)
 
   useEffect(() => {
     if (!examId) return
@@ -119,6 +143,28 @@ export default function LiveExamResultPage() {
     if (rank === 2) return <FaMedal className="text-gray-400 text-4xl" />
     if (rank === 3) return <FaMedal className="text-orange-500 text-4xl" />
     return <FaStar className="text-blue-500 text-3xl" />
+  }
+
+  const fetchImprovementSuggestions = async () => {
+    try {
+      setLoadingImprovements(true)
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const res = await fetch('/api/student/performance/improvement-suggestions', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setImprovementData(data)
+        setShowImproveModal(true)
+      }
+    } catch (err) {
+      console.error('Failed to fetch improvement suggestions:', err)
+    } finally {
+      setLoadingImprovements(false)
+    }
   }
 
   if (loading) {
@@ -298,6 +344,44 @@ export default function LiveExamResultPage() {
           </div>
         </div>
 
+        {/* Improvement Suggestions Card */}
+        <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 rounded-3xl shadow-xl border border-purple-200 p-8 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+                <FaChartLine className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">🚀 Improve Your Performance</h3>
+                <p className="text-sm text-gray-600">Get personalized suggestions for future live exams</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-purple-200">
+            <p className="text-gray-700 mb-4">
+              Want to improve your rank in future live exams? Get actionable suggestions based on your performance.
+            </p>
+            <button
+              onClick={fetchImprovementSuggestions}
+              disabled={loadingImprovements}
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {loadingImprovements ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                  <span>Loading suggestions...</span>
+                </>
+              ) : (
+                <>
+                  <FaChartLine className="mr-2" />
+                  <span>Get Improvement Suggestions</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link 
@@ -325,6 +409,131 @@ export default function LiveExamResultPage() {
           </div>
         </div>
       </div>
+
+      {/* Improve Performance Modal */}
+      {showImproveModal && improvementData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-800">🚀 Improve Your Performance</h2>
+                <button
+                  onClick={() => setShowImproveModal(false)}
+                  className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {improvementData.hasEnoughData ? (
+                <>
+                  {improvementData.summary && (
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
+                      <p className="text-sm text-gray-700">
+                        <strong>Summary:</strong> {improvementData.summary.totalAreas} areas need improvement. 
+                        Average improvement needed: {improvementData.summary.avgImprovement}%
+                      </p>
+                    </div>
+                  )}
+
+                  {improvementData.suggestions.length > 0 ? (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Actionable Steps:</h3>
+                      {improvementData.suggestions.map((suggestion, index) => (
+                        <div
+                          key={index}
+                          className={`border-2 rounded-xl p-5 ${
+                            suggestion.priority === 'high'
+                              ? 'border-red-200 bg-red-50'
+                              : suggestion.priority === 'medium'
+                              ? 'border-yellow-200 bg-yellow-50'
+                              : 'border-blue-200 bg-blue-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <h4 className="font-semibold text-gray-900">{suggestion.area}</h4>
+                                <span
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    suggestion.priority === 'high'
+                                      ? 'bg-red-100 text-red-700'
+                                      : suggestion.priority === 'medium'
+                                      ? 'bg-yellow-100 text-yellow-700'
+                                      : 'bg-blue-100 text-blue-700'
+                                  }`}
+                                >
+                                  {suggestion.priority.toUpperCase()} PRIORITY
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-700 mb-2">{suggestion.action}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <div className="text-gray-500">Current</div>
+                              <div className="font-semibold text-gray-900">{suggestion.current}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-500">Target</div>
+                              <div className="font-semibold text-green-600">{suggestion.target}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-500">Improve</div>
+                              <div className="font-semibold text-purple-600">+{suggestion.improvement}%</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Great Job!</h3>
+                      <p className="text-gray-600">You're performing well. Keep maintaining your current performance!</p>
+                    </div>
+                  )}
+
+                  {improvementData.nextSteps && improvementData.nextSteps.length > 0 && (
+                    <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                      <h3 className="font-semibold text-gray-900 mb-3">📋 Next Steps:</h3>
+                      <ul className="space-y-2">
+                        {improvementData.nextSteps.map((step, index) => (
+                          <li key={index} className="flex items-start space-x-2 text-sm text-gray-700">
+                            <span className="text-purple-600 font-bold mt-1">•</span>
+                            <span>{step}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">{improvementData.message || 'Complete more exams to get personalized improvement suggestions'}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-2xl">
+              <button
+                onClick={() => setShowImproveModal(false)}
+                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-200"
+              >
+                Got it! Let's Improve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 
