@@ -12,7 +12,7 @@ const updateBookSchema = z.object({
   price: z.number().positive().optional(),
   rentPrice: z.number().positive().optional(),
   listingType: z.enum(['SELL', 'RENT', 'DONATE']).optional(),
-  condition: z.enum(['NEW', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR']).optional(),
+  condition: z.enum(['NEW', 'EXCELLENT', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR']).optional(),
   category: z.string().min(1).optional(),
   subcategory: z.string().optional(),
   class: z.string().optional(),

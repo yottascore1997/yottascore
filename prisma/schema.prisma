@@ -1878,6 +1878,7 @@ enum BookListingType {
 
 enum BookCondition {
   NEW
+  EXCELLENT
   LIKE_NEW
   GOOD
   FAIR

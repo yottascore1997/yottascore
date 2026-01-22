@@ -9,7 +9,7 @@ import { calculateDistance, getBoundingBox } from '@/lib/distance';
 const createBookSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   listingType: z.enum(['SELL', 'RENT', 'DONATE']),
-  condition: z.enum(['NEW', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR']),
+  condition: z.enum(['NEW', 'EXCELLENT', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR']),
   price: z.number().positive().optional(),
   category: z.string().min(1, 'Category is required'),
   location: z.string().min(1, 'Location is required'),

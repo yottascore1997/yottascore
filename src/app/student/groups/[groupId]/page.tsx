@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { format } from 'date-fns'
-import { Heart, MessageCircle, Share2, Send, Paperclip } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Send, Paperclip, Trash2 } from 'lucide-react'
 
 interface GroupPost {
   id: string
@@ -66,6 +66,7 @@ export default function GroupDetailPage() {
   })
   const [creating, setCreating] = useState(false)
   const [creatingEvent, setCreatingEvent] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const router = useRouter()
   const params = useParams()
   const groupId = params.groupId as string
@@ -76,6 +77,16 @@ export default function GroupDetailPage() {
       fetchGroupPosts()
       fetchGroupMessages()
       fetchGroupEvents()
+      // Get current user ID from token
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]))
+          setCurrentUserId(payload.userId)
+        } catch (error) {
+          console.error('Error decoding token:', error)
+        }
+      }
     }
   }, [groupId])
 
@@ -310,6 +321,39 @@ export default function GroupDetailPage() {
     }
   }
 
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/auth/login')
+        return
+      }
+
+      const response = await fetch(`/api/student/groups/${groupId}/events/${eventId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to delete event')
+      }
+
+      // Refresh events list
+      fetchGroupEvents()
+      alert('Event deleted successfully')
+    } catch (error) {
+      console.error('Error deleting event:', error)
+      alert(error instanceof Error ? error.message : 'Failed to delete event. Please try again.')
+    }
+  }
+
   if (loading) {
     return <div className="p-4">Loading...</div>
   }
@@ -480,11 +524,27 @@ export default function GroupDetailPage() {
               events.map((event: any) => (
                 <div key={event.id} className="bg-white p-4 rounded-lg shadow">
                   <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-lg">{event.title}</h3>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold text-lg">{event.title}</h3>
+                        {event.creator && currentUserId === event.creator.id && (
+                          <button
+                            onClick={() => handleDeleteEvent(event.id)}
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                            title="Delete event"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-500">
                         {new Date(event.startTime).toLocaleDateString()} at {new Date(event.startTime).toLocaleTimeString()}
                       </p>
+                      {event.creator && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Created by {event.creator.name}
+                        </p>
+                      )}
                     </div>
                     <span className={`text-xs px-2 py-1 rounded ${
                       event.eventType === 'STUDY_SESSION' ? 'bg-blue-100 text-blue-800' :
