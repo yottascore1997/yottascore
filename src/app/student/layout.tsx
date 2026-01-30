@@ -17,6 +17,7 @@ const studentLinks = [
   { name: 'Spy Game', href: '/spy-game', icon: Eye },
   { name: 'Weekly Leaderboard', href: '/student/weekly-leaderboard', icon: Trophy },
   { name: 'Exam Notifications', href: '/student/notifications', icon: Bell },
+  { name: 'Success Stories', href: '/student/success-stories', icon: Trophy },
   { name: 'Push Notifications', href: '/student/notifications/push', icon: Bell },
   { name: 'My Exams', href: '/student/my-exams', icon: FileText },
   { name: 'Wallet', href: '/student/wallet', icon: Wallet },

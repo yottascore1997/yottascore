@@ -61,6 +61,23 @@ model Blog {
   @@map("Blog")
 }
 
+// Admin-curated success stories (video/image) shown on student app
+model SuccessStory {
+  id          String   @id @default(cuid())
+  title       String?
+  description String?  @db.Text
+  mediaUrl    String   // Video or image URL
+  mediaType   String   // VIDEO | IMAGE
+  order       Int      @default(0) // Display order
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  @@index([createdById])
+  @@index([order])
+  @@map("SuccessStory")
+}
+
 model User {
   id              String      @id @default(cuid())
   name            String?
@@ -183,7 +200,10 @@ model User {
   
   // Story Relations
   storyLikes     StoryLike[]
-  
+
+  // Admin: Success Stories (curated for app)
+  createdSuccessStories SuccessStory[]
+
   // Chat Relations
   sentMessages     DirectMessage[] @relation("MessageSender")
   receivedMessages DirectMessage[] @relation("MessageReceiver")

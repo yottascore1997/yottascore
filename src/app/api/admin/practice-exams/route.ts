@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     // Helper function to upload a file
     const uploadFile = async (file: File): Promise<string | null> => {
       try {
-        const PHP_UPLOAD_URL = process.env.PHP_UPLOAD_URL || 'https://store.beyondspacework.com/upload.php';
+        const PHP_UPLOAD_URL = process.env.PHP_UPLOAD_URL || 'https://score.yottascore.com/upload.php';
         const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN;
         
         // Validate file size (max 5MB)

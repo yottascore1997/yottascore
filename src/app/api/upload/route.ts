@@ -15,7 +15,7 @@ const ALLOWED_TYPES = [
 
 // Get PHP endpoint URL from environment variable
 // Update this with your GoDaddy domain
-const PHP_UPLOAD_URL = process.env.PHP_UPLOAD_URL || 'https://store.beyondspacework.com/upload.php';
+const PHP_UPLOAD_URL = process.env.PHP_UPLOAD_URL || 'https://score.yottascore.com/upload.php';
 const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN;
 
 export async function POST(request: NextRequest) {
