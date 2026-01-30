@@ -3,8 +3,23 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
-import { Loader2, Video, Image as ImageIcon } from 'lucide-react'
+import { Loader2, Video, Image as ImageIcon, Youtube } from 'lucide-react'
 import { format } from 'date-fns'
+
+// Extract YouTube video ID from various URL formats
+function getYoutubeVideoId(url: string): string | null {
+  if (!url?.trim()) return null
+  const u = url.trim()
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ]
+  for (const re of patterns) {
+    const m = u.match(re)
+    if (m) return m[1]
+  }
+  return null
+}
 
 interface SuccessStoryItem {
   id: string
@@ -68,7 +83,15 @@ export default function StudentSuccessStoriesPage() {
           {list.map((item) => (
             <Card key={item.id} className="overflow-hidden">
               <div className="aspect-video bg-black relative group">
-                {item.mediaType === 'VIDEO' ? (
+                {getYoutubeVideoId(item.mediaUrl) ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${getYoutubeVideoId(item.mediaUrl)}?rel=0`}
+                    title={item.title ?? 'YouTube video'}
+                    className="absolute inset-0 w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : item.mediaType === 'VIDEO' ? (
                   <video
                     src={item.mediaUrl}
                     controls
@@ -84,12 +107,14 @@ export default function StudentSuccessStoriesPage() {
                 )}
                 <div className="absolute top-2 left-2">
                   <span className="px-2 py-1 rounded bg-black/60 text-white text-xs flex items-center gap-1 w-fit">
-                    {item.mediaType === 'VIDEO' ? (
+                    {getYoutubeVideoId(item.mediaUrl) ? (
+                      <Youtube className="w-3.5 h-3.5" />
+                    ) : item.mediaType === 'VIDEO' ? (
                       <Video className="w-3.5 h-3.5" />
                     ) : (
                       <ImageIcon className="w-3.5 h-3.5" />
                     )}
-                    {item.mediaType}
+                    {getYoutubeVideoId(item.mediaUrl) ? 'YouTube' : item.mediaType}
                   </span>
                 </div>
               </div>

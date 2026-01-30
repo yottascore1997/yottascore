@@ -62,7 +62,12 @@ export async function PUT(
     if (body.title !== undefined) data.title = body.title?.trim() || null
     if (body.description !== undefined) data.description = body.description?.trim() || null
     if (body.mediaUrl !== undefined) data.mediaUrl = body.mediaUrl
-    if (body.mediaType !== undefined) data.mediaType = body.mediaType === 'IMAGE' ? 'IMAGE' : 'VIDEO'
+    if (body.mediaType !== undefined) {
+      data.mediaType = body.mediaType === 'IMAGE' ? 'IMAGE' : body.mediaType === 'YOUTUBE' ? 'YOUTUBE' : 'VIDEO'
+    }
+    if (body.mediaUrl && /youtube\.com|youtu\.be/i.test(body.mediaUrl)) {
+      data.mediaType = 'YOUTUBE'
+    }
     if (typeof body.order === 'number') data.order = body.order
     const story = await prisma.successStory.update({
       where: { id },

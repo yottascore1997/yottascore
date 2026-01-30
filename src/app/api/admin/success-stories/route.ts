@@ -122,7 +122,13 @@ export async function POST(req: NextRequest) {
       mediaType = file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE'
     } else if (mediaUrlFromForm) {
       mediaUrl = mediaUrlFromForm
-      mediaType = (formData.get('mediaType') as string) === 'IMAGE' ? 'IMAGE' : 'VIDEO'
+      const requestedType = (formData.get('mediaType') as string) || ''
+      // YouTube URLs: store as YOUTUBE so frontend can embed
+      if (/youtube\.com|youtu\.be/i.test(mediaUrlFromForm)) {
+        mediaType = 'YOUTUBE'
+      } else {
+        mediaType = requestedType === 'IMAGE' ? 'IMAGE' : 'VIDEO'
+      }
     } else {
       return NextResponse.json({ error: 'Either upload a file or provide mediaUrl' }, { status: 400 })
     }

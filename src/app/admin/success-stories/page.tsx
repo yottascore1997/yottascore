@@ -32,8 +32,14 @@ export default function AdminSuccessStoriesPage() {
     title: '',
     description: '',
     mediaUrl: '',
-    mediaType: 'VIDEO' as 'VIDEO' | 'IMAGE',
+    mediaType: 'VIDEO' as 'VIDEO' | 'IMAGE' | 'YOUTUBE',
   })
+
+  const isYoutubeUrl = (url: string) => /youtube\.com|youtu\.be/i.test(url?.trim() || '')
+  const getYoutubeEmbedUrl = (url: string) => {
+    const id = url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/)?.[1]
+    return id ? `https://www.youtube.com/embed/${id}` : null
+  }
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
 
@@ -216,7 +222,14 @@ export default function AdminSuccessStoriesPage() {
             {list.map((item) => (
               <Card key={item.id} className="overflow-hidden">
                 <div className="aspect-video bg-gray-100 relative">
-                  {item.mediaType === 'VIDEO' ? (
+                  {item.mediaType === 'YOUTUBE' || isYoutubeUrl(item.mediaUrl) ? (
+                    <iframe
+                      src={getYoutubeEmbedUrl(item.mediaUrl) || item.mediaUrl}
+                      title={item.title ?? 'YouTube'}
+                      className="w-full h-full"
+                      allowFullScreen
+                    />
+                  ) : item.mediaType === 'VIDEO' ? (
                     <video
                       src={item.mediaUrl}
                       className="w-full h-full object-cover"
@@ -265,7 +278,7 @@ export default function AdminSuccessStoriesPage() {
                     </p>
                   )}
                   <p className="text-xs text-gray-400 mt-1">
-                    {format(new Date(item.createdAt), 'dd MMM yyyy')} · {item.mediaType}
+                    {format(new Date(item.createdAt), 'dd MMM yyyy')} · {item.mediaType === 'YOUTUBE' || isYoutubeUrl(item.mediaUrl) ? 'YouTube' : item.mediaType}
                   </p>
                 </div>
               </Card>
@@ -323,33 +336,57 @@ export default function AdminSuccessStoriesPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Or paste media URL (if already hosted)
+                      Or paste media URL (YouTube link bhi chalega)
                     </label>
                     <Input
                       value={form.mediaUrl}
-                      onChange={(e) => setForm((f) => ({ ...f, mediaUrl: e.target.value }))}
-                      placeholder="https://..."
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setForm((f) => ({
+                          ...f,
+                          mediaUrl: v,
+                          mediaType: /youtube\.com|youtu\.be/i.test(v) ? 'YOUTUBE' : f.mediaType === 'YOUTUBE' ? 'VIDEO' : f.mediaType,
+                        }))
+                      }}
+                      placeholder="https://www.youtube.com/watch?v=... ya https://youtu.be/..."
                     />
+                    {isYoutubeUrl(form.mediaUrl) && (
+                      <p className="text-xs text-green-600 mt-1">YouTube link — app par video embed hoke chalegi.</p>
+                    )}
                   </div>
                 </>
               )}
               {editingId && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Media URL (edit if needed)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Media URL (edit if needed, YouTube bhi chalega)</label>
                   <Input
                     value={form.mediaUrl}
-                    onChange={(e) => setForm((f) => ({ ...f, mediaUrl: e.target.value }))}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setForm((f) => ({
+                        ...f,
+                        mediaUrl: v,
+                        mediaType: /youtube\.com|youtu\.be/i.test(v) ? 'YOUTUBE' : f.mediaType === 'YOUTUBE' ? 'VIDEO' : f.mediaType,
+                      }))
+                    }}
                     placeholder="https://..."
                   />
                 </div>
               )}
-              {filePreview && (
+              {(filePreview || form.mediaUrl) && (
                 <div className="rounded border overflow-hidden">
-                  {form.mediaType === 'VIDEO' ? (
+                  {getYoutubeEmbedUrl(form.mediaUrl) ? (
+                    <iframe
+                      src={getYoutubeEmbedUrl(form.mediaUrl)!}
+                      title="YouTube preview"
+                      className="w-full aspect-video max-h-48"
+                      allowFullScreen
+                    />
+                  ) : form.mediaType === 'VIDEO' && filePreview ? (
                     <video src={filePreview} controls className="w-full max-h-48" />
-                  ) : (
+                  ) : filePreview ? (
                     <img src={filePreview} alt="Preview" className="w-full max-h-48 object-contain" />
-                  )}
+                  ) : null}
                 </div>
               )}
               <div className="flex gap-2 pt-2">
