@@ -157,11 +157,14 @@ function RegisterForm() {
                 name="email"
                 type="email"
                 required
+                pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+                title="Enter a valid email (e.g. name@example.com)"
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                placeholder="Enter your email"
+                placeholder="name@example.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value.trim().toLowerCase() })}
               />
+              <p className="mt-1 text-xs text-gray-500">Use a real email address; invalid format will be rejected.</p>
             </div>
             <div>
               <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
