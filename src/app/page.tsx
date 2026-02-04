@@ -17,6 +17,7 @@ export default function HomePage() {
   const [activeStudents, setActiveStudents] = useState(2847);
   const [totalEarnings, setTotalEarnings] = useState(5000000000);
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
+  const [heroWinnerIndex, setHeroWinnerIndex] = useState(0);
 
   // Simulate live counter updates
   useEffect(() => {
@@ -33,6 +34,19 @@ export default function HomePage() {
       setCurrentFeatureIndex(prev => (prev + 1) % 3);
     }, 4000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Hero exam winners slider
+  const heroWinners = [
+    { name: 'Priya S.', exam: 'NEET 2024', score: 'AIR 247', amount: '₹15,000', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Priya&backgroundColor=b6e3f4' },
+    { name: 'Rahul K.', exam: 'JEE Main 2024', score: '99.2%ile', amount: '₹22,000', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Rahul&backgroundColor=c0aede' },
+    { name: 'Amit S.', exam: 'UPSC Prelims', score: 'Qualified', amount: '₹18,500', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Amit&backgroundColor=ffd5dc' },
+    { name: 'Sneha P.', exam: 'SSC CGL 2024', score: 'Selected', amount: '₹12,000', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sneha&backgroundColor=d1d4f9' },
+    { name: 'Vikram J.', exam: 'SBI PO', score: 'Selected', amount: '₹9,500', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Vikram&backgroundColor=ffdfbf' },
+  ];
+  useEffect(() => {
+    const t = setInterval(() => setHeroWinnerIndex(prev => (prev + 1) % 5), 3500);
+    return () => clearInterval(t);
   }, []);
 
   const examCategories = [
@@ -339,107 +353,131 @@ const upcomingExams = [
         </div>
       </header>
 
-      {/* Spacer */}
-      <div className="h-20"></div>
+      {/* Hero Section - Full screen, premium */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-20 pb-16 sm:pt-24 sm:pb-20">
+        {/* Premium gradient base */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#7a28a0] via-[#aa35ce] to-[#8b2db8]" />
+        {/* Mesh / grid overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+        {/* Soft orbs */}
+        <div className="absolute top-1/4 -left-32 w-[28rem] h-[28rem] rounded-full hero-glow blur-[100px]" style={{ backgroundColor: 'rgba(170,53,206,0.25)' }} />
+        <div className="absolute bottom-1/4 -right-32 w-[32rem] h-[32rem] rounded-full hero-glow blur-[120px]" style={{ backgroundColor: 'rgba(170,53,206,0.2)' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[24rem] h-[24rem] rounded-full blur-[80px]" style={{ backgroundColor: 'rgba(170,53,206,0.15)' }} />
 
-      {/* Hero Section - Professional & Clean */}
-      <section className="relative py-16 sm:py-20 flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
-        {/* Simple Background */}
-        <div className="absolute inset-0">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-3xl"></div>
-        </div>
+        <div className="container relative z-10 mx-auto px-4 sm:px-6 flex-1 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-12">
+          {/* Left - Text content */}
+          <div className="w-full lg:max-w-[52%] text-center lg:text-left flex flex-col items-center lg:items-start">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 px-4 py-2 mb-5 sm:mb-6 shadow-lg shadow-black/10">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+              </span>
+              <FaFire className="text-amber-400 text-sm" />
+              <span className="text-sm font-semibold text-white/95">{liveExamCount} LIVE</span>
+              <span className="text-white/60">•</span>
+              <span className="text-sm font-medium text-white/90">{activeStudents.toLocaleString()} Online</span>
+            </div>
 
-        <div className="container mx-auto px-3 sm:px-4 relative z-10">
-          <div className="max-w-7xl mx-auto">
-            <div className="max-w-3xl mx-auto text-center">
-              {/* Left - Content - Mobile Optimized */}
-              <div className="text-center lg:text-left">
-                {/* Live Status Badge - Clean */}
-                <div className="inline-flex items-center bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-lg mb-4 border border-white/30">
-                  <div className="relative mr-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  </div>
-                  <FaFire className="text-yellow-400 mr-2 text-sm" />
-                  <span className="font-semibold text-sm">{liveExamCount} LIVE • {activeStudents.toLocaleString()} Online</span>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-extrabold tracking-tight mb-3 sm:mb-4 hero-float">
+              <span className="block text-white drop-shadow-lg">Ace Your Exams</span>
+              <span className="block mt-1 sm:mt-2 bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent drop-shadow-md">
+                Earn Big Rewards
+              </span>
+            </h1>
+            <p className="text-base sm:text-lg text-white/80 mb-5 sm:mb-6 leading-relaxed max-w-xl lg:max-w-none">
+              Practice • Compete • Win Real Money
+              <br />
+              <span className="text-amber-200/95 font-semibold">India&apos;s Most Trusted Exam Platform</span>
+            </p>
+
+            <div className="flex flex-wrap justify-center lg:justify-start gap-3 sm:gap-4 mb-6 sm:mb-8">
+              {[
+                { label: '1M+ Students', Icon: FaUsers },
+                { label: '₹50Cr+ Won', Icon: FaCoins },
+                { label: '4.9★ Rated', Icon: FaStar },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex items-center gap-2 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 px-4 py-3 sm:px-5 sm:py-3.5 shadow-xl shadow-black/10 hover:bg-white/15 transition-all duration-300"
+                >
+                  <stat.Icon className="text-amber-400/90 text-lg sm:text-xl" />
+                  <span className="text-sm sm:text-base font-semibold text-white">{stat.label}</span>
                 </div>
+              ))}
+            </div>
 
-                {/* Main Headline - Professional & Clean */}
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 leading-tight">
-                  <span className="block text-white">
-                    Ace Your Exams
-                  </span>
-                  <span className="block text-yellow-300 mt-1">
-                    Earn Big Rewards
-                  </span>
-                </h1>
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <Link
+                href="/register"
+                className="group relative w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 px-8 py-4 text-base font-bold text-white shadow-xl shadow-amber-500/30 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+              >
+                <FaRocket className="text-lg" />
+                <span>Start Free — Win ₹50 Bonus</span>
+              </Link>
+              <Link
+                href="/student/live-exams"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-white/15 backdrop-blur-xl border-2 border-white/30 px-8 py-4 text-base font-semibold text-white hover:bg-white/25 hover:border-white/50 transition-all duration-300"
+              >
+                <FaPlay className="text-lg" />
+                <span>Join Live Exam</span>
+              </Link>
+            </div>
 
-                <p className="text-sm sm:text-base text-white/90 mb-5 leading-relaxed">
-                  Practice • Compete • Win Real Money
-                  <br />
-                  <span className="text-yellow-200 font-medium">India's Most Trusted Exam Platform</span>
-                </p>
-
-                {/* Stats Pills - Clean */}
-                <div className="flex flex-wrap gap-2 mb-5 justify-center lg:justify-start">
-                  <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/30">
-                    <div className="text-white font-medium text-xs">1M+ Students</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/30">
-                    <div className="text-white font-medium text-xs">₹50Cr+ Won</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/30">
-                    <div className="text-white font-medium text-xs">4.9★ Rated</div>
-                  </div>
-                </div>
-
-                {/* CTA Buttons - Clean */}
-                <div className="flex flex-col gap-2 justify-center lg:justify-start">
-                  <Link 
-                    href="/register"
-                    className="group relative px-6 py-2.5 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden"
-                  >
-                    <span className="relative z-20 flex items-center justify-center text-white">
-                      <FaRocket className="mr-2 text-base" />
-                      <span>Start Free - Win ₹50 Bonus!</span>
-                    </span>
-                  </Link>
-                  <Link 
-                    href="/student/live-exams"
-                    className="group px-6 py-2.5 bg-white/20 backdrop-blur-md text-white border border-white/50 rounded-lg font-medium text-sm hover:bg-white/30 transition-all duration-300 flex items-center justify-center"
-                  >
-                    <FaPlay className="mr-2" />
-                    Join Live Exam
-                  </Link>
-                </div>
-
-                {/* Trust Badges - Clean */}
-                <div className="flex flex-wrap justify-center lg:justify-start gap-3 mt-5 text-white/90">
-                  <div className="flex items-center gap-1.5">
-                    <FaShieldAlt className="text-green-400 text-sm" />
-                    <div>
-                      <div className="font-medium text-xs">100% Secure</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <FaCheckCircle className="text-blue-400 text-sm" />
-                    <div>
-                      <div className="font-medium text-xs">Instant Payouts</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <FaStar className="text-yellow-400 text-sm" />
-                    <div>
-                      <div className="font-medium text-xs">4.9★ Rated</div>
-                    </div>
-                  </div>
-                </div>
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 sm:gap-8 text-white/80">
+              <div className="flex items-center gap-2">
+                <FaShieldAlt className="text-emerald-400 text-lg" />
+                <span className="text-sm font-medium">100% Secure</span>
               </div>
+              <div className="flex items-center gap-2">
+                <FaCheckCircle className="text-blue-400 text-lg" />
+                <span className="text-sm font-medium">Instant Payouts</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <FaStar className="text-amber-400 text-lg" />
+                <span className="text-sm font-medium">4.9★ Rated</span>
+              </div>
+            </div>
+          </div>
 
+          {/* Right - Exam winners slider */}
+          <div className="w-full lg:max-w-[44%] flex items-center justify-center">
+            <div className="relative w-full max-w-md aspect-[4/5] rounded-3xl overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+              <div className="absolute inset-0 flex">
+                {heroWinners.map((winner, i) => (
+                  <div
+                    key={winner.name}
+                    className="absolute inset-0 flex flex-col items-center justify-center p-6 sm:p-8 transition-all duration-500 ease-out"
+                    style={{
+                      opacity: i === heroWinnerIndex ? 1 : 0,
+                      zIndex: i === heroWinnerIndex ? 10 : 0,
+                      transform: `translateX(${(i - heroWinnerIndex) * 20}%)`,
+                    }}
+                  >
+                    <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden border-4 border-white/30 shadow-xl mb-4 flex-shrink-0">
+                      <img src={winner.image} alt={winner.name} className="w-full h-full object-cover" />
+                    </div>
+                    <p className="text-amber-400 text-xs font-semibold uppercase tracking-wider mb-1">Exam Winner</p>
+                    <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">{winner.name}</h3>
+                    <p className="text-white/90 text-sm sm:text-base mb-2">{winner.exam} • {winner.score}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-amber-400">{winner.amount} Won</p>
+                  </div>
+                ))}
+              </div>
+              {/* Dots */}
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-20">
+                {heroWinners.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-label={`Slide ${i + 1}`}
+                    onClick={() => setHeroWinnerIndex(i)}
+                    className={`h-2 rounded-full transition-all duration-300 ${i === heroWinnerIndex ? 'w-8 bg-amber-400' : 'w-2 bg-white/50 hover:bg-white/70'}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
-
       </section>
 
 

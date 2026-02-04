@@ -110,6 +110,20 @@ export default function AdminExamNotificationsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="px-8 py-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Exam Notifications</h1>
+            <p className="text-gray-600 mt-1">Create and manage exam notifications for students</p>
+          </div>
+          <button
+            onClick={() => router.push("/admin/exam-notifications/create")}
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200 w-full sm:w-auto"
+          >
+            + Add Notification
+          </button>
+        </div>
+
         {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
