@@ -124,7 +124,16 @@ export async function POST(req: Request) {
           
           if (uploadResponse.ok) {
             const uploadData = await uploadResponse.json();
-            return uploadData.url;
+            const returnedUrl = uploadData.url;
+            if (!returnedUrl || typeof returnedUrl !== 'string') return null;
+            // Normalize URL: use same origin as PHP_UPLOAD_URL so DB always has correct domain (e.g. yottascore.com)
+            try {
+              const origin = new URL(PHP_UPLOAD_URL).origin;
+              const pathname = new URL(returnedUrl).pathname;
+              return origin + pathname;
+            } catch {
+              return returnedUrl;
+            }
           } else {
             const errorData = await uploadResponse.json().catch(() => ({ error: 'Upload failed' }));
             console.error('Error uploading file via PHP endpoint:', errorData);
