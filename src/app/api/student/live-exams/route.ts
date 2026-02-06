@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { withCORS } from '@/lib/cors';
+import { normalizeUploadUrl } from '@/lib/upload';
 
 export const GET = withCORS(async (req: Request) => {
   try {
@@ -39,9 +40,10 @@ export const GET = withCORS(async (req: Request) => {
       }
     });
 
-    // Add attempted: true/false for each exam
+    // Add attempted and normalize imageUrl (correct domain for old records)
     const examsWithAttempted = liveExams.map((exam: any) => ({
       ...exam,
+      imageUrl: exam.imageUrl ? normalizeUploadUrl(exam.imageUrl) : exam.imageUrl,
       attempted: exam.participants.length > 0 && !!exam.participants[0].completedAt
     }));
 

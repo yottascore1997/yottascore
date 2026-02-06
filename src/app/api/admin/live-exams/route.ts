@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
+import { normalizeUploadUrl } from '@/lib/upload';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -52,7 +53,13 @@ export async function GET(req: Request) {
       }
     });
 
-    return NextResponse.json(liveExams);
+    // Normalize imageUrl in response so old records show correct domain (yottascore.com)
+    const normalized = liveExams.map((exam) => ({
+      ...exam,
+      imageUrl: exam.imageUrl ? normalizeUploadUrl(exam.imageUrl) : exam.imageUrl,
+    }));
+
+    return NextResponse.json(normalized);
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
@@ -128,13 +135,15 @@ export async function POST(req: Request) {
       questionsCount: validatedData.questions.length
     });
 
+    const imageUrlToSave = normalizeUploadUrl(validatedData.imageUrl);
+
     const liveExam = await prisma.liveExam.create({
       data: {
         title: validatedData.title,
         description: validatedData.description,
         instructions: validatedData.instructions,
         category: validatedData.category,
-        imageUrl: validatedData.imageUrl,
+        imageUrl: imageUrlToSave,
         startTime: new Date(validatedData.startTime),
         endTime: new Date(validatedData.endTime),
         duration: validatedData.duration,

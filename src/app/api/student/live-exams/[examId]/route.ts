@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { normalizeUploadUrl } from '@/lib/upload';
 
 export async function GET(req: Request, { params }: { params: { examId: string } }) {
   try {
@@ -36,7 +37,10 @@ export async function GET(req: Request, { params }: { params: { examId: string }
     if (!exam) {
       return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
     }
-    return NextResponse.json(exam);
+    return NextResponse.json({
+      ...exam,
+      imageUrl: exam.imageUrl ? normalizeUploadUrl(exam.imageUrl) : exam.imageUrl,
+    });
   } catch (error) {
     console.error('Error fetching exam details:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
