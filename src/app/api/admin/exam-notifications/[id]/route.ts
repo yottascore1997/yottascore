@@ -56,7 +56,7 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { title, description, year, month, applyLastDate, applyLink } = body;
+    const { title, description, year, month, applyLastDate, applyLink, category } = body;
 
     if (!title || !description || !year || !month || !applyLastDate || !applyLink) {
       return NextResponse.json(
@@ -74,6 +74,7 @@ export async function PUT(
         month,
         applyLastDate: new Date(applyLastDate),
         applyLink,
+        category: category || null,
       },
     });
 

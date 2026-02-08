@@ -10,6 +10,7 @@ interface Notification {
   month: number;
   applyLastDate: string;
   applyLink: string;
+  category?: string;
 }
 
 export default function EditExamNotificationPage({ params }: { params: { id: string } }) {
@@ -22,6 +23,16 @@ export default function EditExamNotificationPage({ params }: { params: { id: str
   const [applyLastDate, setApplyLastDate] = useState("");
   const [applyLink, setApplyLink] = useState("");
   const [loading, setLoading] = useState(false);
+  const [category, setCategory] = useState<string>("");
+  const CATEGORIES = [
+    'Mathematics','Physics','Chemistry','Biology','English','Hindi','History','Geography','Economics','Computer Science',
+    'General Knowledge','Reasoning','Current Affairs','Literature','Science','JEE Main','JEE Advanced','NEET','UPSC',
+    'Banking','SSC','CAT','GATE','CLAT','AIIMS','BITSAT','VITEEE','COMEDK','Class 6','Class 7','Class 8','Class 9',
+    'Class 10','Class 11','Class 12','Practice Test','Mock Exam','Competitive Exam','Quiz Competition','Olympiad',
+    'Scholarship Test','Entrance Exam','Assessment Test','Daily Quiz','Weekly Test','Monthly Assessment','Aptitude',
+    'Logical Reasoning','Verbal Ability','Quantitative Aptitude','Data Interpretation','Programming','Digital Marketing',
+    'Finance','Business','Other'
+  ];
 
   useEffect(() => {
     const fetchNotification = async () => {
@@ -39,6 +50,10 @@ export default function EditExamNotificationPage({ params }: { params: { id: str
           setMonth(data.month);
           setApplyLastDate(data.applyLastDate);
           setApplyLink(data.applyLink);
+          // set category if present
+          if (data.category) {
+            setCategory(data.category);
+          }
         } else {
           alert("Failed to fetch notification.");
           router.push("/admin/exam-notifications");
@@ -62,7 +77,7 @@ export default function EditExamNotificationPage({ params }: { params: { id: str
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title, description, year, month, applyLastDate, applyLink }),
+        body: JSON.stringify({ title, description, year, month, applyLastDate, applyLink, category }),
       });
       if (res.ok) {
         router.push("/admin/exam-notifications");
@@ -144,6 +159,17 @@ export default function EditExamNotificationPage({ params }: { params: { id: str
             className="w-full p-2 border rounded"
             required
           />
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Category</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full p-2 border rounded"
+          >
+            <option value="">Select category</option>
+            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
         <button
           type="submit"

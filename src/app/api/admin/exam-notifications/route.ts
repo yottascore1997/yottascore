@@ -54,6 +54,7 @@ export async function POST(req: Request) {
     const year = formData.get("year") as string;
     const month = formData.get("month") as string;
     const applyLastDate = formData.get("applyLastDate") as string;
+    const category = formData.get("category") as string | null;
     const applyLink = formData.get("applyLink") as string;
     const logoFile = formData.get("logo") as File | null;
 
@@ -127,6 +128,7 @@ export async function POST(req: Request) {
         month: parseInt(month),
         applyLastDate: new Date(applyLastDate),
         applyLink,
+        category: category || null,
         logoUrl,
       },
     });

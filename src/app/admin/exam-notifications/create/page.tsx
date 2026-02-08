@@ -8,6 +8,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, FileText, Globe, CalendarDays, AlertCircle, CheckCircle2, Image } from "lucide-react";
+// Reuse categories used by Live Exam create
+const CATEGORIES = [
+  'Mathematics','Physics','Chemistry','Biology','English','Hindi','History','Geography','Economics','Computer Science',
+  'General Knowledge','Reasoning','Current Affairs','Literature','Science','JEE Main','JEE Advanced','NEET','UPSC',
+  'Banking','SSC','CAT','GATE','CLAT','AIIMS','BITSAT','VITEEE','COMEDK','Class 6','Class 7','Class 8','Class 9',
+  'Class 10','Class 11','Class 12','Practice Test','Mock Exam','Competitive Exam','Quiz Competition','Olympiad',
+  'Scholarship Test','Entrance Exam','Assessment Test','Daily Quiz','Weekly Test','Monthly Assessment','Aptitude',
+  'Logical Reasoning','Verbal Ability','Quantitative Aptitude','Data Interpretation','Programming','Digital Marketing',
+  'Finance','Business','Other'
+];
 
 export default function CreateExamNotificationPage() {
   const router = useRouter();
@@ -20,6 +30,7 @@ export default function CreateExamNotificationPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [category, setCategory] = useState<string>("");
 
   const months = [
     { value: 1, label: "January" },
@@ -65,6 +76,7 @@ export default function CreateExamNotificationPage() {
       formData.append("month", month.toString());
       formData.append("applyLastDate", applyLastDate);
       formData.append("applyLink", applyLink);
+      formData.append("category", category);
       
       if (logoFile) {
         formData.append("logo", logoFile);
@@ -256,6 +268,26 @@ export default function CreateExamNotificationPage() {
                   Upload a logo or image to help students identify the exam type. Recommended size: 200x200px or similar.
                 </p>
               </div>
+            
+            {/* Category Field */}
+            <div className="space-y-2">
+              <Label htmlFor="category" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Category
+              </Label>
+              <select
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                required
+              >
+                <option value="">Select category</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">

@@ -423,6 +423,7 @@ model GovtExamNotification {
   month         Int
   applyLastDate DateTime
   applyLink     String
+  category      String?  // Category (matches LiveExam categories)
   logoUrl       String?  // URL for exam logo/image
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
