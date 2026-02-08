@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { FaTrophy, FaClock, FaCheckCircle, FaTimesCircle, FaQuestionCircle, FaRupeeSign, FaMedal, FaStar, FaChartLine, FaAward } from 'react-icons/fa'
+import { FaTrophy, FaClock, FaCheckCircle, FaTimesCircle, FaQuestionCircle, FaRupeeSign, FaMedal, FaStar, FaChartLine, FaAward, FaCertificate } from 'react-icons/fa'
 import { GiTrophyCup, GiLaurelCrown, GiTargetArrows } from 'react-icons/gi'
 import { MdEmojiEvents, MdSpeed, MdCheckCircle } from 'react-icons/md'
 
@@ -383,7 +383,14 @@ export default function LiveExamResultPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center flex-wrap">
+          <Link 
+            href={`/student/live-exams/${examId}/certificate`}
+            className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center"
+          >
+            <FaCertificate className="mr-2" />
+            View Certificate
+          </Link>
           <Link 
             href={`/student/live-exams/${examId}`}
             className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center"

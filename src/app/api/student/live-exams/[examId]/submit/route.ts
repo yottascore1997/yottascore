@@ -75,8 +75,8 @@ export async function POST(
     const timeTakenSeconds = Math.round((endTime - startTime) / 1000);
     const timeTakenMinutes = Math.round(timeTakenSeconds / 60);
 
-    // Save the result
-    await prisma.liveExamParticipant.update({
+    // Save the result and get participant id for certificate
+    const updatedParticipant = await prisma.liveExamParticipant.update({
       where: {
         examId_userId: {
           examId: params.examId,
@@ -144,6 +144,9 @@ export async function POST(
       }
     };
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.yottascore.com';
+    const verificationUrl = `${baseUrl}/verify/certificate/${updatedParticipant.id}`;
+
     return NextResponse.json({
       // Basic Results
       score: Math.round(score * 100) / 100, // Round to 2 decimal places
@@ -162,6 +165,11 @@ export async function POST(
       currentRank,
       prizeAmount,
       
+      // Certificate (for live exam completion)
+      certificateUrl: `/student/live-exams/${params.examId}/certificate`,
+      verificationId: updatedParticipant.id,
+      verificationUrl,
+
       // Additional Details
       examTitle: exam.title,
       completedAt: new Date().toISOString(),

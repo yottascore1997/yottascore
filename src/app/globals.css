@@ -283,4 +283,10 @@ body {
 }
 .animate-gradient-glow {
   animation: gradient-glow 3s ease-in-out infinite;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
 } 
