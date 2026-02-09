@@ -353,6 +353,7 @@ model Transaction {
   type      String
   status    String
   description String?
+  requestId String?   @unique
   razorpayOrderId String?
   razorpayPaymentId String?
   razorpaySignature String?

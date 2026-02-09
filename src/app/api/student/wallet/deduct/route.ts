@@ -4,6 +4,9 @@ import { verifyToken } from '@/lib/auth';
 import { withCORS } from '@/lib/cors';
 
 export const POST = withCORS(async (req: Request) => {
+  let requestId: string | undefined;
+  let decodedUserId: string | undefined;
+  let examIdValue: string | undefined;
   try {
     const token = req.headers.get('authorization')?.split(' ')[1];
     if (!token) {
@@ -13,8 +16,12 @@ export const POST = withCORS(async (req: Request) => {
     if (!decoded) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
+    decodedUserId = decoded.userId;
 
-    const { amount, examId, description } = await req.json();
+    const body = await req.json();
+    const { amount, examId, description } = body;
+    requestId = body.requestId;
+    examIdValue = examId;
     
     // Validate required fields
     if (!amount || typeof amount !== 'number' || amount <= 0) {
@@ -25,32 +32,42 @@ export const POST = withCORS(async (req: Request) => {
       return NextResponse.json({ message: 'Description is required' }, { status: 400 });
     }
 
-    // Get user's current wallet balance
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: { wallet: true }
-    });
-
-    if (!user) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
-    }
-
-    // Check if user has sufficient balance
-    if (user.wallet < amount) {
-      return NextResponse.json({ 
-        message: 'Insufficient wallet balance',
-        currentBalance: user.wallet,
-        requiredAmount: amount
-      }, { status: 400 });
+    if (!requestId || typeof requestId !== 'string') {
+      return NextResponse.json({ message: 'requestId is required' }, { status: 400 });
     }
 
     // Use a transaction to ensure data consistency
     const result = await prisma.$transaction(
       async (tx) => {
+        // Idempotency: if requestId already processed, return existing transaction
+        const existing = await tx.transaction.findUnique({
+          where: { requestId }
+        });
+
+        if (existing) {
+          const currentUser = await tx.user.findUnique({
+            where: { id: decoded.userId },
+            select: { wallet: true }
+          });
+
+          return { existingTransaction: existing, currentWallet: currentUser?.wallet ?? null };
+        }
+
         // Deduct amount from wallet
-        const updatedUser = await tx.user.update({
+        const walletUpdate = await tx.user.updateMany({
+          where: {
+            id: decoded.userId,
+            wallet: { gte: amount }
+          },
+          data: { wallet: { decrement: amount } }
+        });
+
+        if (walletUpdate.count === 0) {
+          throw new Error('INSUFFICIENT_WALLET');
+        }
+
+        const updatedUser = await tx.user.findUnique({
           where: { id: decoded.userId },
-          data: { wallet: { decrement: amount } },
           select: { wallet: true }
         });
 
@@ -61,7 +78,8 @@ export const POST = withCORS(async (req: Request) => {
             amount: -amount, // Negative amount for deduction
             type: 'DEDUCTION',
             status: 'SUCCESS',
-            description: examId ? `${description || 'Wallet deduction'} (Exam: ${examId})` : description || null
+            description: examId ? `${description || 'Wallet deduction'} (Exam: ${examId})` : description || null,
+            requestId
           }
         });
 
@@ -73,17 +91,59 @@ export const POST = withCORS(async (req: Request) => {
       }
     );
 
+    if ('existingTransaction' in result && result.existingTransaction) {
+      return NextResponse.json({
+        message: 'Deduction already processed',
+        deductedAmount: amount,
+        newBalance: result.currentWallet,
+        description: description,
+        examId: examId || null,
+        transactionId: result.existingTransaction.id,
+        requestId
+      });
+    }
+
     return NextResponse.json({
       message: 'Deduction successful',
       deductedAmount: amount,
-      newBalance: result.updatedUser.wallet,
+      newBalance: result.updatedUser?.wallet ?? null,
       description: description,
       examId: examId || null,
-      transactionId: result.transaction.id
+      transactionId: result.transaction.id,
+      requestId
     });
 
   } catch (error) {
     console.error('Error in wallet deduction:', error);
+
+    if (error instanceof Error && error.message === 'INSUFFICIENT_WALLET') {
+      return NextResponse.json({
+        message: 'Insufficient wallet balance'
+      }, { status: 400 });
+    }
+
+    if (error instanceof Error && 'code' in error && error.code === 'P2002' && requestId) {
+      const existing = await prisma.transaction.findUnique({
+        where: { requestId }
+      });
+
+      if (existing && decodedUserId) {
+        const user = await prisma.user.findUnique({
+          where: { id: decodedUserId },
+          select: { wallet: true }
+        });
+
+        return NextResponse.json({
+          message: 'Deduction already processed',
+          deductedAmount: Math.abs(existing.amount),
+          newBalance: user?.wallet ?? null,
+          description: existing.description,
+          examId: examIdValue || null,
+          transactionId: existing.id,
+          requestId
+        });
+      }
+    }
 
     if (error instanceof Error && 'code' in error && error.code === 'P2028') {
       return NextResponse.json({
