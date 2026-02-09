@@ -61,6 +61,7 @@ export default function LiveExams() {
   const [now, setNow] = useState(Date.now());
   const [selectedExam, setSelectedExam] = useState<LiveExam | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [joiningExamId, setJoiningExamId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchExams = async () => {
@@ -105,6 +106,8 @@ export default function LiveExams() {
   }, []);
 
   const handleJoinExam = async (examId: string) => {
+    if (joiningExamId === examId) return;
+    setJoiningExamId(examId);
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -135,6 +138,8 @@ export default function LiveExams() {
     } catch (error) {
       console.error('Error joining exam:', error);
       alert(error instanceof Error ? error.message : 'Failed to join exam');
+    } finally {
+      setJoiningExamId(null);
     }
   };
 
@@ -349,7 +354,7 @@ export default function LiveExams() {
                     
                     <Button
                       onClick={() => handleJoinExam(exam.id)}
-                      disabled={!exam.isLive || spotsLeft === 0 || exam.attempted}
+                      disabled={!exam.isLive || spotsLeft === 0 || exam.attempted || joiningExamId === exam.id}
                       className={`w-full rounded-xl font-semibold text-base h-10 transition-all duration-200 ${
                         exam.attempted 
                           ? 'bg-gray-400 text-white' 
@@ -360,6 +365,10 @@ export default function LiveExams() {
                         <div className="flex items-center">
                           <CheckCircle className="w-4 h-4 mr-2" />
                           Already Attempted
+                        </div>
+                      ) : joiningExamId === exam.id ? (
+                        <div className="flex items-center">
+                          <span>Joining...</span>
                         </div>
                       ) : (
                         <div className="flex items-center">
@@ -541,10 +550,10 @@ export default function LiveExams() {
                       setShowDetails(false);
                       handleJoinExam(selectedExam.id);
                     }}
-                    disabled={!selectedExam.isLive || selectedExam.spotsLeft === 0 || selectedExam.attempted}
+                    disabled={!selectedExam.isLive || selectedExam.spotsLeft === 0 || selectedExam.attempted || joiningExamId === selectedExam.id}
                     className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-xl h-12 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {selectedExam.attempted ? 'Already Attempted' : 'Join Exam'}
+                    {selectedExam.attempted ? 'Already Attempted' : joiningExamId === selectedExam.id ? 'Joining...' : 'Join Exam'}
                   </Button>
                 </div>
               </div>

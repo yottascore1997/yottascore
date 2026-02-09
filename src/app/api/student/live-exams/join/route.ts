@@ -59,23 +59,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if user has already joined
-    const existingParticipant = await prisma.liveExamParticipant.findUnique({
-      where: {
-        examId_userId: {
-          examId: examId,
-          userId: decoded.userId
-        }
-      }
-    });
-
-    if (existingParticipant) {
-      return NextResponse.json(
-        { error: 'Already joined this exam' },
-        { status: 400 }
-      );
-    }
-
     // Get user's wallet balance
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -95,11 +78,32 @@ export async function POST(req: Request) {
     // 3. Update spots left
     const result = await prisma.$transaction(
       async (tx) => {
-        // Deduct entry fee
-        await tx.user.update({
-          where: { id: decoded.userId },
+        // Idempotency: if already joined, return existing participant
+        const existingParticipant = await tx.liveExamParticipant.findUnique({
+          where: {
+            examId_userId: {
+              examId: examId,
+              userId: decoded.userId
+            }
+          }
+        });
+
+        if (existingParticipant) {
+          return existingParticipant;
+        }
+
+        // Deduct entry fee only if wallet has enough balance
+        const walletUpdate = await tx.user.updateMany({
+          where: {
+            id: decoded.userId,
+            wallet: { gte: exam.entryFee }
+          },
           data: { wallet: { decrement: exam.entryFee } }
         });
+
+        if (walletUpdate.count === 0) {
+          throw new Error('INSUFFICIENT_WALLET');
+        }
 
         // Create transaction record
         await tx.transaction.create({
@@ -141,6 +145,13 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error joining exam:', error);
+
+    if (error instanceof Error && error.message === 'INSUFFICIENT_WALLET') {
+      return NextResponse.json(
+        { error: 'Insufficient wallet balance' },
+        { status: 400 }
+      );
+    }
 
     if (error instanceof Error && 'code' in error && error.code === 'P2028') {
       return NextResponse.json(
