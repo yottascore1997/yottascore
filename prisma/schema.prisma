@@ -482,6 +482,7 @@ model TimetableSlot {
   day         Int       // 0-6 for Sunday-Saturday
   startTime   DateTime
   endTime     DateTime
+  slotDate    DateTime?
   subject     String
   topic       String?
   notes       String?   @db.Text

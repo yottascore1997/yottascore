@@ -62,31 +62,82 @@ export async function POST(req: Request) {
       return new NextResponse('Missing required fields', { status: 400 })
     }
 
+    const isWeeklyFlag = isWeekly === true || isWeekly === 'true'
+
+    const getStartOfWeek = (date: Date) => {
+      const start = new Date(date)
+      const day = start.getDay()
+      start.setDate(start.getDate() - day)
+      start.setHours(0, 0, 0, 0)
+      return start
+    }
+
+    const getDateForWeekday = (weekday: number) => {
+      const startOfWeek = getStartOfWeek(new Date())
+      const target = new Date(startOfWeek)
+      target.setDate(startOfWeek.getDate() + weekday)
+      return target
+    }
+
     // Helper function to create a Date object from time string
-    const createDateTime = (timeStr: string) => {
+    const createDateTime = (timeStr: string, baseDate?: Date) => {
       const [hours, minutes] = timeStr.split(':').map(Number)
-      const date = new Date()
+      const date = baseDate ? new Date(baseDate) : new Date()
       date.setHours(hours, minutes, 0, 0)
       return date
+    }
+
+    const buildSlots = () => {
+      if (!isWeeklyFlag) {
+        return slots.map((slot: any) => ({
+          day: parseInt(slot.day),
+          slotDate: null,
+          startTime: createDateTime(slot.startTime),
+          endTime: createDateTime(slot.endTime),
+          subject: slot.subject,
+          topic: slot.topic,
+          notes: slot.notes,
+          reminder: slot.reminder === true || slot.reminder === 'true',
+          userId: decoded.userId
+        }))
+      }
+
+      // Weekly = apply to all days of current week with same time/details
+      return slots.flatMap((slot: any) => {
+        const base = {
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          subject: slot.subject,
+          topic: slot.topic,
+          notes: slot.notes,
+          reminder: slot.reminder
+        }
+
+        return Array.from({ length: 7 }, (_, weekday) => {
+          const dateForDay = getDateForWeekday(weekday)
+          return {
+            day: weekday,
+            slotDate: dateForDay,
+            startTime: createDateTime(base.startTime, dateForDay),
+            endTime: createDateTime(base.endTime, dateForDay),
+            subject: base.subject,
+            topic: base.topic,
+            notes: base.notes,
+            reminder: base.reminder === true || base.reminder === 'true',
+            userId: decoded.userId
+          }
+        })
+      })
     }
 
     const timetable = await prisma.timetable.create({
       data: {
         name,
         description,
-        isWeekly: isWeekly === 'true',
+        isWeekly: isWeeklyFlag,
         userId: decoded.userId,
         slots: {
-          create: slots.map((slot: any) => ({
-            day: parseInt(slot.day),
-            startTime: createDateTime(slot.startTime),
-            endTime: createDateTime(slot.endTime),
-            subject: slot.subject,
-            topic: slot.topic,
-            notes: slot.notes,
-            reminder: slot.reminder === 'true',
-            userId: decoded.userId
-          }))
+          create: buildSlots()
         }
       },
       include: {

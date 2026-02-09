@@ -13,6 +13,7 @@ interface TimetableSlot {
   day: number
   startTime: string
   endTime: string
+  slotDate?: string | null
   subject: string
   topic?: string
   notes?: string
@@ -208,7 +209,12 @@ export default function TimetablePage() {
   const getSlotsForDay = (date: Date) => {
     const day = date.getDay()
     return timetables.flatMap(timetable =>
-      timetable.slots.filter(slot => slot.day === day)
+      timetable.slots.filter(slot => {
+        if (slot.slotDate) {
+          return isSameDay(new Date(slot.slotDate), date)
+        }
+        return slot.day === day
+      })
     ).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
   }
 
