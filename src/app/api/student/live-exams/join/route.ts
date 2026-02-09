@@ -4,7 +4,8 @@ import { verifyToken } from '@/lib/auth';
 import { z } from 'zod';
 
 const joinExamSchema = z.object({
-  examId: z.string()
+  examId: z.string(),
+  requestId: z.string().optional()
 });
 
 export async function POST(req: Request) {
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { examId } = validatedFields.data;
+    const { examId, requestId } = validatedFields.data;
 
     // Get exam details
     const exam = await prisma.liveExam.findUnique({
@@ -92,29 +93,47 @@ export async function POST(req: Request) {
           return existingParticipant;
         }
 
-        // Deduct entry fee only if wallet has enough balance
-        const walletUpdate = await tx.user.updateMany({
-          where: {
-            id: decoded.userId,
-            wallet: { gte: exam.entryFee }
-          },
-          data: { wallet: { decrement: exam.entryFee } }
-        });
+        if (requestId) {
+          const existingPayment = await tx.transaction.findUnique({
+            where: { requestId }
+          });
 
-        if (walletUpdate.count === 0) {
-          throw new Error('INSUFFICIENT_WALLET');
-        }
-
-        // Create transaction record
-        await tx.transaction.create({
-          data: {
-            userId: decoded.userId,
-            amount: -exam.entryFee,
-            type: 'EXAM_ENTRY',
-            status: 'COMPLETED',
-            description: `Joined live exam ${exam.title || examId}`
+          if (!existingPayment) {
+            throw new Error('PAYMENT_NOT_FOUND');
           }
-        });
+
+          if (existingPayment.userId !== decoded.userId) {
+            throw new Error('PAYMENT_USER_MISMATCH');
+          }
+
+          if (Math.abs(existingPayment.amount) !== exam.entryFee) {
+            throw new Error('PAYMENT_AMOUNT_MISMATCH');
+          }
+        } else {
+          // Deduct entry fee only if wallet has enough balance
+          const walletUpdate = await tx.user.updateMany({
+            where: {
+              id: decoded.userId,
+              wallet: { gte: exam.entryFee }
+            },
+            data: { wallet: { decrement: exam.entryFee } }
+          });
+
+          if (walletUpdate.count === 0) {
+            throw new Error('INSUFFICIENT_WALLET');
+          }
+
+          // Create transaction record
+          await tx.transaction.create({
+            data: {
+              userId: decoded.userId,
+              amount: -exam.entryFee,
+              type: 'EXAM_ENTRY',
+              status: 'COMPLETED',
+              description: `Joined live exam ${exam.title || examId}`
+            }
+          });
+        }
 
         // Add participant
         const participant = await tx.liveExamParticipant.create({
@@ -149,6 +168,27 @@ export async function POST(req: Request) {
     if (error instanceof Error && error.message === 'INSUFFICIENT_WALLET') {
       return NextResponse.json(
         { error: 'Insufficient wallet balance' },
+        { status: 400 }
+      );
+    }
+
+    if (error instanceof Error && error.message === 'PAYMENT_NOT_FOUND') {
+      return NextResponse.json(
+        { error: 'Payment not found for this requestId' },
+        { status: 400 }
+      );
+    }
+
+    if (error instanceof Error && error.message === 'PAYMENT_USER_MISMATCH') {
+      return NextResponse.json(
+        { error: 'Payment does not belong to this user' },
+        { status: 400 }
+      );
+    }
+
+    if (error instanceof Error && error.message === 'PAYMENT_AMOUNT_MISMATCH') {
+      return NextResponse.json(
+        { error: 'Payment amount does not match exam entry fee' },
         { status: 400 }
       );
     }
