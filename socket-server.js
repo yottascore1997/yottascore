@@ -13,13 +13,17 @@ let redisConnected = false;
 // Initialize Redis with fallback
 async function initializeRedis() {
   try {
-    redis = Redis.createClient({
-      host: 'localhost',
-      port: 6379,
-      retryDelayOnFailover: 100,
-      enableReadyCheck: false,
-      maxRetriesPerRequest: null
-    });
+    // REDIS_URL = internal (Railway same project), REDIS_PUBLIC_URL = external (local→cloud)
+    const redisUrl = process.env.REDIS_URL || process.env.REDIS_PUBLIC_URL;
+    const redisConfig = redisUrl
+      ? { url: redisUrl }
+      : {
+          socket: { host: 'localhost', port: 6379 },
+          retryDelayOnFailover: 100,
+          enableReadyCheck: false,
+          maxRetriesPerRequest: null
+        };
+    redis = Redis.createClient(redisConfig);
 
     redis.on('connect', () => {
       console.log('✅ Redis connected successfully');
@@ -93,6 +97,9 @@ const liveExamAutoEndIntervals = new Map(); // examId -> interval
 const waitingPlayers = new Map(); // quizId -> array of waiting players
 const activeMatches = new Map(); // matchId -> match data
 const privateRooms = new Map(); // roomCode -> room data
+
+// Matchmaking lock per queue - prevents race when 100+ users join at once
+const matchmakingLocks = new Map(); // quizId -> boolean (true = locked)
 
 
 // Redis Queue Management with fallback
@@ -504,6 +511,7 @@ io.on('connection', (socket) => {
     console.log(`Player added to queue. Queue size for ${queueId}:`, queueLength);
     
     socket.join(`quiz_${queueId}`);
+    socket.joinedQueueId = queueId; // Store for correct cleanup on cancel/disconnect
     
     // Send matchmaking update
     socket.emit('matchmaking_update', {
@@ -523,16 +531,15 @@ io.on('connection', (socket) => {
   socket.on('cancel_matchmaking', async () => {
     console.log(`User ${socket.id} cancelled matchmaking`);
     
-    // Remove from all waiting queues using QueueManager
-    const allQueues = ['general']; // Add more quiz IDs as needed
-    for (const quizId of allQueues) {
-      const players = await queueManager.getQueue(quizId);
-      const playerToRemove = players.find(p => p.socketId === socket.id);
-      if (playerToRemove) {
-        await queueManager.removeFromQueue(quizId, playerToRemove);
-        console.log(`Removed player from quiz ${quizId}`);
-      }
+    // Remove from the correct queue (stored when joining)
+    const queueId = socket.joinedQueueId || 'general';
+    const players = await queueManager.getQueue(queueId);
+    const playerToRemove = players.find(p => p.socketId === socket.id);
+    if (playerToRemove) {
+      await queueManager.removeFromQueue(queueId, playerToRemove);
+      console.log(`Removed player from quiz ${queueId}`);
     }
+    socket.joinedQueueId = null;
     
     socket.emit('matchmaking_cancelled');
   });
@@ -942,11 +949,19 @@ io.on('connection', (socket) => {
           const player1Socket = io.sockets.sockets.get(match.player1SocketId);
           const player2Socket = io.sockets.sockets.get(match.player2SocketId);
           
+          const { player1Score, player2Score } = calculateScoresUpTo(match, questionIndex);
+          const timeLimit = (match.timePerQuestion ?? 15);
           if (player1Socket && player1Socket.connected) {
             console.log('Sending next_question to player 1:', match.player1SocketId);
             player1Socket.emit('next_question', {
               questionIndex: match.currentQuestion,
-              question: nextQuestion
+              question: nextQuestion,
+              player1Score,
+              player2Score,
+              myScore: player1Score,
+              opponentScore: player2Score,
+              myPosition: 'player1',
+              timeLimit
             });
           } else {
             console.log('Player 1 socket not found or disconnected:', match.player1SocketId);
@@ -956,14 +971,20 @@ io.on('connection', (socket) => {
             console.log('Sending next_question to player 2:', match.player2SocketId);
             player2Socket.emit('next_question', {
               questionIndex: match.currentQuestion,
-              question: nextQuestion
+              question: nextQuestion,
+              player1Score,
+              player2Score,
+              myScore: player2Score,
+              opponentScore: player1Score,
+              myPosition: 'player2',
+              timeLimit
             });
           } else {
             console.log('Player 2 socket not found or disconnected:', match.player2SocketId);
           }
           
           // Start timer for next question
-          startQuestionTimer(matchId, match.currentQuestion, 15);
+          startQuestionTimer(matchId, match.currentQuestion, timeLimit);
           
         } else {
           console.log('🏁 All questions answered, ending match');
@@ -1417,8 +1438,20 @@ io.on('connection', (socket) => {
     console.log('   - Time:', new Date().toISOString());
     console.log('   - Total connections:', io.engine.clientsCount);
     
-    // Remove user from mapping
+    // Get userId BEFORE removing from mapping (needed for forfeit check)
     const userId = Object.keys(userSockets).find(key => userSockets[key] === socket.id);
+    
+    // FORFEIT: If user was in an active match, opponent wins
+    if (userId) {
+      const match = getActiveMatchForPlayer(userId);
+      if (match && typeof match === 'object') {
+        const matchId = match.id;
+        const opponentId = match.player1Id === userId ? match.player2Id : match.player1Id;
+        console.log(`🏴 Player ${userId} disconnected during match - forfeit. Opponent ${opponentId} wins`);
+        endMatch(matchId, { forfeitWinner: opponentId });
+      }
+    }
+    
     if (userId) {
       delete userSockets[userId];
       console.log(`User ${userId} disconnected`);
@@ -1431,15 +1464,13 @@ io.on('connection', (socket) => {
       }
     }
     
-    // Remove from waiting queues using QueueManager
-    const allQueues = ['general']; // Add more quiz IDs as needed
-    for (const quizId of allQueues) {
-      const players = await queueManager.getQueue(quizId);
-      const playerToRemove = players.find(p => p.socketId === socket.id);
-      if (playerToRemove) {
-        await queueManager.removeFromQueue(quizId, playerToRemove);
-        console.log(`Removed disconnected player from quiz ${quizId}`);
-      }
+    // Remove from correct queue (stored when joining)
+    const queueId = socket.joinedQueueId || 'general';
+    const players = await queueManager.getQueue(queueId);
+    const playerToRemove = players.find(p => p.socketId === socket.id);
+    if (playerToRemove) {
+      await queueManager.removeFromQueue(queueId, playerToRemove);
+      console.log(`Removed disconnected player from quiz ${queueId}`);
     }
   });
 
@@ -2903,16 +2934,23 @@ async function generateQuestions(quizData) {
 }
 
 async function tryMatchPlayers(quizId) {
-  const players = await queueManager.getQueue(quizId);
-  console.log(`Trying to match players for quizId: ${quizId}`);
-  console.log('Players in queue:', players);
-  
-  if (!players || players.length < 2) {
-    console.log(`Not enough players to match. Players: ${players?.length || 0}`);
-    return;
+  // Lock to prevent race when 100+ users join at once
+  if (matchmakingLocks.get(quizId)) {
+    return; // Another tryMatchPlayers is running for this queue
   }
+  matchmakingLocks.set(quizId, true);
   
-  // Sort by join time (FIFO)
+  try {
+    const players = await queueManager.getQueue(quizId);
+    console.log(`Trying to match players for quizId: ${quizId}`);
+    console.log('Players in queue:', players);
+    
+    if (!players || players.length < 2) {
+      console.log(`Not enough players to match. Players: ${players?.length || 0}`);
+      return;
+    }
+    
+    // Sort by join time (FIFO)
   players.sort((a, b) => a.joinedAt - b.joinedAt);
   console.log('Sorted players:', players.map(p => ({ userId: p.userId, joinedAt: p.joinedAt })));
   
@@ -3165,6 +3203,9 @@ async function tryMatchPlayers(quizId) {
       }, 3000);
     }, 2000);
   }
+  } finally {
+    matchmakingLocks.set(quizId, false);
+  }
 }
 
 function startMatch(matchId) {
@@ -3189,7 +3230,11 @@ function startMatch(matchId) {
     matchId,
     questionIndex: 0,
     question: firstQuestion,
-    timeLimit: 15
+    timeLimit: 15,
+    player1Score: 0,
+    player2Score: 0,
+    myScore: 0,
+    opponentScore: 0
   };
   
   console.log('Sending match_started event with data:', matchStartedData);
@@ -3292,7 +3337,8 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
         console.log('🔄 Moving to next question after timeout:', match.currentQuestion);
         console.log('Next question:', nextQuestion);
         
-        // Get the actual socket objects
+        const { player1Score, player2Score } = calculateScoresUpTo(match, questionIndex);
+        const nextTimeLimit = match.timePerQuestion ?? 15;
         const player1Socket = io.sockets.sockets.get(match.player1SocketId);
         const player2Socket = io.sockets.sockets.get(match.player2SocketId);
         
@@ -3300,7 +3346,13 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
           console.log('Sending next_question to player 1 after timeout');
           player1Socket.emit('next_question', {
             questionIndex: match.currentQuestion,
-            question: nextQuestion
+            question: nextQuestion,
+            player1Score,
+            player2Score,
+            myScore: player1Score,
+            opponentScore: player2Score,
+            myPosition: 'player1',
+            timeLimit: nextTimeLimit
           });
         } else {
           console.log('Player 1 socket not found or disconnected after timeout');
@@ -3310,14 +3362,19 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
           console.log('Sending next_question to player 2 after timeout');
           player2Socket.emit('next_question', {
             questionIndex: match.currentQuestion,
-            question: nextQuestion
+            question: nextQuestion,
+            player1Score,
+            player2Score,
+            myScore: player2Score,
+            opponentScore: player1Score,
+            myPosition: 'player2',
+            timeLimit: nextTimeLimit
           });
         } else {
           console.log('Player 2 socket not found or disconnected after timeout');
         }
         
-        // Start timer for next question
-        startQuestionTimer(matchId, match.currentQuestion, 15);
+        startQuestionTimer(matchId, match.currentQuestion, nextTimeLimit);
         
       } else {
         console.log('🏁 All questions completed after timeout, ending match');
@@ -3361,15 +3418,52 @@ async function startPrivateRoomGame(roomCode) {
   console.log(`Private room game started: ${roomCode}`);
 }
 
+// Helper: calculate scores from answers up to (and including) questionIndex
+function calculateScoresUpTo(match, upToIndex) {
+  let player1Score = 0;
+  let player2Score = 0;
+  for (let i = 0; i <= upToIndex && i < match.totalQuestions; i++) {
+    const p1Answer = match.player1Answers?.[i];
+    const p2Answer = match.player2Answers?.[i];
+    const question = match.questions?.[i];
+    if (!question) continue;
+    if (p1Answer && !p1Answer.timedOut) {
+      let p1Correct = false;
+      if (typeof p1Answer.answer === 'number') p1Correct = p1Answer.answer === question.correct;
+      else if (typeof p1Answer.answer === 'string') {
+        const idx = question.options?.findIndex(opt => opt?.toLowerCase() === String(p1Answer.answer).toLowerCase());
+        p1Correct = idx === question.correct;
+      } else if (typeof p1Answer.answer === 'string' && !isNaN(parseInt(p1Answer.answer))) {
+        p1Correct = parseInt(p1Answer.answer) === question.correct;
+      }
+      if (p1Correct) player1Score += 10;
+    }
+    if (p2Answer && !p2Answer.timedOut) {
+      let p2Correct = false;
+      if (typeof p2Answer.answer === 'number') p2Correct = p2Answer.answer === question.correct;
+      else if (typeof p2Answer.answer === 'string') {
+        const idx = question.options?.findIndex(opt => opt?.toLowerCase() === String(p2Answer.answer).toLowerCase());
+        p2Correct = idx === question.correct;
+      } else if (typeof p2Answer.answer === 'string' && !isNaN(parseInt(p2Answer.answer))) {
+        p2Correct = parseInt(p2Answer.answer) === question.correct;
+      }
+      if (p2Correct) player2Score += 10;
+    }
+  }
+  return { player1Score, player2Score };
+}
+
 // Function to end a match and calculate results
-async function endMatch(matchId) {
+// options: { forfeitWinner: userId } - when set, that player wins (e.g. opponent disconnected)
+async function endMatch(matchId, options = {}) {
   const match = activeMatches.get(matchId);
   if (!match) {
     console.log('❌ Match not found for ending:', matchId);
     return;
   }
   
-  console.log(`🏁 Ending match ${matchId}`);
+  const { forfeitWinner } = options;
+  console.log(`🏁 Ending match ${matchId}${forfeitWinner ? ' (forfeit)' : ''}`);
   
   // Calculate scores
   let player1Score = 0;
@@ -3448,13 +3542,14 @@ async function endMatch(matchId) {
   console.log(`   - Player 1 (${match.player1Id}): ${player1Score}`);
   console.log(`   - Player 2 (${match.player2Id}): ${player2Score}`);
   
-  const winner = player1Score > player2Score ? match.player1Id : 
-                player2Score > player1Score ? match.player2Id : null;
+  // Forfeit overrides: disconnected player's opponent wins
+  const winner = forfeitWinner || (player1Score > player2Score ? match.player1Id : 
+                player2Score > player1Score ? match.player2Id : null);
   
-  console.log(`   - Winner: ${winner || 'Draw'}`);
+  console.log(`   - Winner: ${winner || 'Draw'}${forfeitWinner ? ' (forfeit)' : ''}`);
   
-  // Update wallet for winner (if not a draw)
-  if (winner && player1Score !== player2Score) {
+  // Update wallet for winner (if not a draw, or forfeit)
+  if (winner && (player1Score !== player2Score || forfeitWinner)) {
     const totalPrizePool = (match.entryFee || 10) * 2; // Both players' entry fees
     const winnerPrize = Math.floor(totalPrizePool * 0.8); // Winner gets 80%
     const appCommission = totalPrizePool - winnerPrize; // App gets 20%
@@ -3494,7 +3589,7 @@ async function endMatch(matchId) {
     } catch (error) {
       console.error('❌ Error updating winner wallet:', error);
     }
-  } else if (player1Score === player2Score) {
+  } else if (player1Score === player2Score && !forfeitWinner) {
     console.log(`🤝 Draw - refunding entry fees to both players`);
     
     try {
@@ -3547,7 +3642,8 @@ async function endMatch(matchId) {
     player1Score,
     player2Score,
     winner,
-    isDraw: player1Score === player2Score
+    isDraw: player1Score === player2Score && !forfeitWinner,
+    isForfeit: !!forfeitWinner
   };
   
   if (player1Socket && player1Socket.connected) {
@@ -3574,34 +3670,19 @@ async function endMatch(matchId) {
     console.log('❌ Player 2 socket not found or disconnected:', match.player2SocketId);
   }
   
-  // Clean up the match and remove players from active matches tracking
+  // Full cleanup: clear timer, leave room, remove from tracking
+  if (match.questionTimer) {
+    clearTimeout(match.questionTimer);
+    match.questionTimer = null;
+  }
+  try {
+    io.in(`match_${matchId}`).socketsLeave(`match_${matchId}`);
+  } catch (e) {}
+  activeMatches.delete(match.player1Id);
+  activeMatches.delete(match.player2Id);
   const deleted = activeMatches.delete(matchId);
-  console.log(`🗑️ Match ${matchId} ${deleted ? 'successfully deleted' : 'NOT FOUND in activeMatches'} from activeMatches`);
-  console.log(`📊 Active matches after cleanup: ${activeMatches.size}`);
+  console.log(`🗑️ Match ${matchId} fully cleaned. Active matches: ${activeMatches.size}`);
   
-  // Log all remaining active matches for debugging
-  if (activeMatches.size > 0) {
-    console.log('📋 Remaining active matches:');
-    activeMatches.forEach((m, id) => {
-      console.log(`   - ${id}: Player1=${m.player1Id}, Player2=${m.player2Id}, Status=${m.status || 'unknown'}`);
-    });
-  }
-  
-  // Check if players are still in any other active matches
-  const player1StillInMatch = isPlayerInActiveMatch(match.player1Id);
-  const player2StillInMatch = isPlayerInActiveMatch(match.player2Id);
-  
-  if (!player1StillInMatch) {
-    console.log(`✅ Player 1 (${match.player1Id}) is now free to join new matches`);
-  } else {
-    console.log(`⚠️ Player 1 (${match.player1Id}) is still in another active match`);
-  }
-  
-  if (!player2StillInMatch) {
-    console.log(`✅ Player 2 (${match.player2Id}) is now free to join new matches`);
-  } else {
-    console.log(`⚠️ Player 2 (${match.player2Id}) is still in another active match`);
-  }
 }
 
 // Start HTTP server

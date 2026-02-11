@@ -120,37 +120,39 @@ export default function BattlePage() {
       matchId: string; 
       questionIndex: number; 
       question: Question; 
-      timeLimit: number 
+      timeLimit: number;
+      player1Score?: number;
+      player2Score?: number;
+      myScore?: number;
+      opponentScore?: number;
     }) => {
       console.log('🎮 Match started event received:', data);
-      console.log('   - Match ID:', data.matchId);
-      console.log('   - Question index:', data.questionIndex);
-      console.log('   - Question text:', data.question?.text?.substring(0, 50) + '...');
-      console.log('   - Time limit:', data.timeLimit);
-      
       setBattleState(prev => ({
         ...prev,
         status: 'playing',
         currentQuestion: data.questionIndex,
         question: data.question,
-        timeLeft: data.timeLimit
+        timeLeft: data.timeLimit ?? 10,
+        player1Score: typeof data.myScore === 'number' ? data.myScore : (data.player1Score ?? 0),
+        player2Score: typeof data.opponentScore === 'number' ? data.opponentScore : (data.player2Score ?? 0)
       }));
-      startQuestionTimer(data.timeLimit);
-      
-      console.log('✅ Match started state updated');
+      startQuestionTimer(data.timeLimit ?? 10);
     };
 
     // Next question event
     const handleNextQuestion = (data: { 
       questionIndex: number; 
-      question: Question 
+      question: Question;
+      player1Score?: number;
+      player2Score?: number;
+      myScore?: number;
+      opponentScore?: number;
+      myPosition?: 'player1' | 'player2';
+      timeLimit?: number;
     }) => {
       console.log('🎯 Next question event received:', data);
       console.log('   - Question index:', data.questionIndex);
-      console.log('   - Question text:', data.question?.text?.substring(0, 50) + '...');
-      console.log('   - Question options:', data.question?.options);
-      console.log('   - Last processed question:', lastQuestionIndexRef.current);
-      console.log('   - Is React Native:', isReactNative);
+      console.log('   - Scores:', data.myScore, data.opponentScore);
       
       // Prevent duplicate processing
       if (data.questionIndex === lastQuestionIndexRef.current) {
@@ -159,30 +161,20 @@ export default function BattlePage() {
       }
       
       lastQuestionIndexRef.current = data.questionIndex;
+      const timeLimit = data.timeLimit ?? 10;
       
-      // Force state update with setTimeout for React Native compatibility
       setTimeout(() => {
-        console.log('🔄 Updating battle state for next question...');
-        setBattleState(prev => {
-          const newState = {
-            ...prev,
-            currentQuestion: data.questionIndex,
-            question: data.question,
-            timeLeft: 10 // Default time limit
-          };
-          console.log('🔄 New battle state:', newState);
-          return newState;
-        });
+        setBattleState(prev => ({
+          ...prev,
+          currentQuestion: data.questionIndex,
+          question: data.question,
+          timeLeft: timeLimit,
+          player1Score: typeof data.myScore === 'number' ? data.myScore : (data.player1Score ?? prev.player1Score),
+          player2Score: typeof data.opponentScore === 'number' ? data.opponentScore : (data.player2Score ?? prev.player2Score)
+        }));
         
-        // Start timer after state update
-        setTimeout(() => {
-          console.log('⏰ Starting question timer...');
-          startQuestionTimer(10);
-          console.log('✅ Next question timer started');
-        }, 100);
-      }, isReactNative ? 100 : 50); // Longer delay for React Native
-      
-      console.log('✅ Next question state update triggered');
+        setTimeout(() => startQuestionTimer(timeLimit), 100);
+      }, isReactNative ? 100 : 50);
     };
 
     // Match ended event
