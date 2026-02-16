@@ -95,7 +95,8 @@ const liveExamAutoEndIntervals = new Map(); // examId -> interval
 
 // Battle Quiz Matchmaking - Keep existing memory system as fallback
 const waitingPlayers = new Map(); // quizId -> array of waiting players
-const activeMatches = new Map(); // matchId -> match data
+const activeMatches = new Map(); // matchId -> match object only
+const playerToMatchId = new Map(); // userId -> matchId (clean separation)
 const privateRooms = new Map(); // roomCode -> room data
 
 // Matchmaking lock per queue - prevents race when 100+ users join at once
@@ -108,7 +109,7 @@ class QueueManager {
     try {
       if (redisConnected && redis) {
         // Use Redis
-        await redis.lpush(`queue:${quizId}`, JSON.stringify(playerData));
+        await redis.lPush(`queue:${quizId}`, JSON.stringify(playerData));
         await redis.expire(`queue:${quizId}`, 300); // 5 minutes TTL
         console.log(`✅ Player ${userId} added to Redis queue for quiz ${quizId}`);
       } else {
@@ -133,7 +134,7 @@ class QueueManager {
     try {
       if (redisConnected && redis) {
         // Get from Redis
-        const queueData = await redis.lrange(`queue:${quizId}`, 0, -1);
+        const queueData = await redis.lRange(`queue:${quizId}`, 0, -1);
         return queueData.map(item => JSON.parse(item));
       } else {
         // Fallback to memory
@@ -148,8 +149,19 @@ class QueueManager {
   async removeFromQueue(quizId, playerData) {
     try {
       if (redisConnected && redis) {
-        // Remove from Redis
-        await redis.lrem(`queue:${quizId}`, 1, JSON.stringify(playerData));
+        // Remove by socketId - use exact Redis string for reliable LREM
+        const queueKey = `queue:${quizId}`;
+        const allItems = await redis.lRange(queueKey, 0, -1);
+        const targetSocketId = playerData.socketId;
+        for (let i = 0; i < allItems.length; i++) {
+          try {
+            const parsed = JSON.parse(allItems[i]);
+            if (parsed.socketId === targetSocketId) {
+              await redis.lRem(queueKey, 1, allItems[i]);
+              break;
+            }
+          } catch (e) { /* skip invalid JSON */ }
+        }
       } else {
         // Fallback to memory
         const players = waitingPlayers.get(quizId);
@@ -176,7 +188,7 @@ class QueueManager {
   async getQueueLength(quizId) {
     try {
       if (redisConnected && redis) {
-        return await redis.llen(`queue:${quizId}`);
+        return await redis.lLen(`queue:${quizId}`);
       } else {
         return (waitingPlayers.get(quizId) || []).length;
       }
@@ -191,16 +203,13 @@ const queueManager = new QueueManager();
 
 // Helper function to check if a player is in any active match
 function isPlayerInActiveMatch(userId) {
-  return Array.from(activeMatches.values()).some(match => 
-    match.player1Id === userId || match.player2Id === userId
-  );
+  return playerToMatchId.has(userId);
 }
 
 // Helper function to get active match for a player
 function getActiveMatchForPlayer(userId) {
-  return Array.from(activeMatches.values()).find(match => 
-    match.player1Id === userId || match.player2Id === userId
-  );
+  const matchId = playerToMatchId.get(userId);
+  return matchId ? activeMatches.get(matchId) : null;
 }
 
 // Memory cleanup function
@@ -221,25 +230,23 @@ function cleanupMemory() {
       const now = Date.now();
       const matchesToDelete = [];
       activeMatches.forEach((match, matchId) => {
+        if (typeof match !== 'object' || !match.player1Id) return;
         const matchStartTime = match.startTime || match.createdAt || now;
         const matchAge = now - matchStartTime;
         const isOld = matchAge > 600000; // 10 minutes
-        // Check for stuck matches - if status is PLAYING and match is older than 5 minutes, it might be stuck
-        const isStuck = match.status === 'PLAYING' && matchAge > 300000; // 5 minutes for stuck playing matches
+        const isStuck = match.status === 'PLAYING' && matchAge > 300000; // 5 minutes for stuck
         
         if (isOld || isStuck) {
-          matchesToDelete.push({ matchId, reason: isOld ? 'old' : 'stuck', age: Math.round(matchAge/1000) });
+          matchesToDelete.push({ matchId, match, reason: isOld ? 'old' : 'stuck', age: Math.round(matchAge/1000) });
         }
       });
       
-      // Delete matches
-      matchesToDelete.forEach(({ matchId, reason, age }) => {
-        const match = activeMatches.get(matchId);
-        if (match) {
-          console.log(`🧹 Cleaning up ${reason} match: ${matchId} (age: ${age}s)`);
-          console.log(`   - Player1: ${match.player1Id}, Player2: ${match.player2Id}, Status: ${match.status || 'unknown'}`);
-          activeMatches.delete(matchId);
-        }
+      matchesToDelete.forEach(({ matchId, match, reason, age }) => {
+        console.log(`🧹 Cleaning up ${reason} match: ${matchId} (age: ${age}s)`);
+        console.log(`   - Player1: ${match.player1Id}, Player2: ${match.player2Id}, Status: ${match.status || 'unknown'}`);
+        playerToMatchId.delete(match.player1Id);
+        playerToMatchId.delete(match.player2Id);
+        activeMatches.delete(matchId);
       });
 
       // Clean up old private rooms (older than 30 minutes)
@@ -282,6 +289,7 @@ function clearAllActiveMatches() {
   
   const clearedCount = activeMatches.size;
   activeMatches.clear();
+  playerToMatchId.clear();
   
   console.log(`   - Cleared ${clearedCount} active matches`);
   console.log('   - After clearing:', Array.from(activeMatches.keys()));
@@ -436,9 +444,6 @@ io.on('connection', (socket) => {
           entryFee = battleQuiz.entryAmount;
           console.log(`✅ Created new battle quiz: ${battleQuiz.title}`);
           console.log(`   - Entry fee: ₹${entryFee}`);
-
-          // Add questions to the quiz
-          await addQuestionsToQuiz(battleQuiz.id, categoryId, 5);
         } else {
           console.log(`⚠️ No active battle quiz found for category: ${categoryId}, using default`);
         }
@@ -488,6 +493,17 @@ io.on('connection', (socket) => {
     // Use quizId or categoryId for queue
     const queueId = battleQuiz?.id || categoryId || 'general';
     console.log('Using queueId:', queueId);
+    
+    // Remove from previous queue if user joined different category earlier (prevents ghost entries)
+    const prevQueueId = socket.joinedQueueId;
+    if (prevQueueId && prevQueueId !== queueId) {
+      const prevPlayers = await queueManager.getQueue(prevQueueId);
+      const prevPlayer = prevPlayers.find(p => p.socketId === socket.id);
+      if (prevPlayer) {
+        await queueManager.removeFromQueue(prevQueueId, prevPlayer);
+        console.log(`Removed from previous queue ${prevQueueId} before joining ${queueId}`);
+      }
+    }
     
     const player = {
       userId: userId,
@@ -827,7 +843,13 @@ io.on('connection', (socket) => {
     console.log('   - Event data:', data);
     console.log('   - Full data object:', JSON.stringify(data, null, 2));
     
-    const { matchId, userId, questionIndex, answer, timeSpent } = data;
+    // SECURITY: Use socket.userId - never trust userId from client
+    const userId = socket.userId;
+    const { matchId, questionIndex, answer, timeSpent } = data;
+    if (!userId) {
+      console.log('❌ answer_question rejected - user not registered');
+      return;
+    }
     console.log(`User ${userId} answered question ${questionIndex} in match ${matchId}`);
     console.log('Answer data:', { answer, timeSpent });
     console.log('Answer type:', typeof answer);
@@ -872,6 +894,10 @@ io.on('connection', (socket) => {
     console.log('   - Is Player 2?', match.player2Id === userId);
     
     if (match.player1Id === userId) {
+      if (match.player1Answers[questionIndex]) {
+        console.log('⚠️ Player 1 already answered question', questionIndex, '- ignoring duplicate');
+        return;
+      }
       match.player1Answers[questionIndex] = { answer, timeSpent, timestamp: Date.now() };
       console.log('✅ Player 1 answer recorded for question', questionIndex);
       console.log('   - Answer:', answer);
@@ -879,6 +905,10 @@ io.on('connection', (socket) => {
       console.log('   - Answer type:', typeof answer);
       console.log('   - All player 1 answers now:', match.player1Answers);
     } else if (match.player2Id === userId) {
+      if (match.player2Answers[questionIndex]) {
+        console.log('⚠️ Player 2 already answered question', questionIndex, '- ignoring duplicate');
+        return;
+      }
       match.player2Answers[questionIndex] = { answer, timeSpent, timestamp: Date.now() };
       console.log('✅ Player 2 answer recorded for question', questionIndex);
       console.log('   - Answer:', answer);
@@ -1438,8 +1468,9 @@ io.on('connection', (socket) => {
     console.log('   - Time:', new Date().toISOString());
     console.log('   - Total connections:', io.engine.clientsCount);
     
-    // Get userId BEFORE removing from mapping (needed for forfeit check)
-    const userId = Object.keys(userSockets).find(key => userSockets[key] === socket.id);
+    // Get userId - from mapping or socket (socket.userId set by register_user)
+    let userId = Object.keys(userSockets).find(key => userSockets[key] === socket.id);
+    if (!userId && socket.userId) userId = socket.userId;
     
     // FORFEIT: If user was in an active match, opponent wins
     if (userId) {
@@ -1485,12 +1516,14 @@ io.on('connection', (socket) => {
     console.log(`🧪 DEBUG: Clearing matches for user ${userId}`);
     const matchesToDelete = [];
     activeMatches.forEach((match, matchId) => {
-      if (match.player1Id === userId || match.player2Id === userId) {
-        matchesToDelete.push(matchId);
+      if (typeof match === 'object' && (match.player1Id === userId || match.player2Id === userId)) {
+        matchesToDelete.push({ matchId, match });
       }
     });
     
-    matchesToDelete.forEach(matchId => {
+    matchesToDelete.forEach(({ matchId, match }) => {
+      playerToMatchId.delete(match.player1Id);
+      playerToMatchId.delete(match.player2Id);
       activeMatches.delete(matchId);
       console.log(`🗑️ Deleted match ${matchId} for user ${userId}`);
     });
@@ -2981,14 +3014,11 @@ async function tryMatchPlayers(quizId) {
       console.log(`   - Player 1 (${player1.userId}) in match: ${player1InMatch}`);
       console.log(`   - Player 2 (${player2.userId}) in match: ${player2InMatch}`);
       
-      // Log which matches they're in
       if (player1InMatch) {
-        const match1 = getActiveMatchForPlayer(player1.userId);
-        console.log(`   - Player 1's match: ${match1 ? Object.keys(activeMatches).find(k => activeMatches.get(k) === match1) : 'unknown'}`);
+        console.log(`   - Player 1's match: ${playerToMatchId.get(player1.userId)}`);
       }
       if (player2InMatch) {
-        const match2 = getActiveMatchForPlayer(player2.userId);
-        console.log(`   - Player 2's match: ${match2 ? Object.keys(activeMatches).find(k => activeMatches.get(k) === match2) : 'unknown'}`);
+        console.log(`   - Player 2's match: ${playerToMatchId.get(player2.userId)}`);
       }
       
       // Remove active match players from queue instead of putting them back
@@ -3131,10 +3161,8 @@ async function tryMatchPlayers(quizId) {
     } : 'No questions');
     
     activeMatches.set(matchId, match);
-    
-    // Track active players to prevent multiple matches
-    activeMatches.set(player1.userId, matchId);
-    activeMatches.set(player2.userId, matchId);
+    playerToMatchId.set(player1.userId, matchId);
+    playerToMatchId.set(player2.userId, matchId);
     
     console.log('Match created:', matchId);
     console.log('Match details:', {
@@ -3275,7 +3303,16 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
   
   // Set timeout for this question
   match.questionTimer = setTimeout(() => {
+    // Clear timer ref immediately - callback is running
+    match.questionTimer = null;
+    
     console.log(`⏰ Time's up for question ${questionIndex} in match ${matchId}`);
+    
+    // Re-validate match still exists (could have ended via disconnect/forfeit)
+    if (!activeMatches.has(matchId)) {
+      console.log('⏰ Match no longer active, skipping timeout handling');
+      return;
+    }
     
     // Check if both players have answered
     const p1Answered = match.player1Answers[questionIndex];
@@ -3329,30 +3366,42 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
       }
     }
     
-    // Move to next question or end game
+    // Move to next question or end game (shorter delay so frontend gets next question sooner)
     setTimeout(() => {
+      if (!activeMatches.has(matchId)) return;
+      
       if (questionIndex < match.totalQuestions - 1) {
         match.currentQuestion = questionIndex + 1;
-        const nextQuestion = match.questions[match.currentQuestion];
+        const nextQuestion = match.questions?.[match.currentQuestion];
+        if (!nextQuestion) {
+          console.log('❌ Next question not found, ending match');
+          endMatch(matchId);
+          return;
+        }
+        
         console.log('🔄 Moving to next question after timeout:', match.currentQuestion);
-        console.log('Next question:', nextQuestion);
         
         const { player1Score, player2Score } = calculateScoresUpTo(match, questionIndex);
         const nextTimeLimit = match.timePerQuestion ?? 15;
         const player1Socket = io.sockets.sockets.get(match.player1SocketId);
         const player2Socket = io.sockets.sockets.get(match.player2SocketId);
         
+        const nextQuestionPayload = {
+          questionIndex: match.currentQuestion,
+          question: nextQuestion,
+          player1Score,
+          player2Score,
+          timeLimit: nextTimeLimit,
+          fromTimeout: true
+        };
+        
         if (player1Socket && player1Socket.connected) {
           console.log('Sending next_question to player 1 after timeout');
           player1Socket.emit('next_question', {
-            questionIndex: match.currentQuestion,
-            question: nextQuestion,
-            player1Score,
-            player2Score,
+            ...nextQuestionPayload,
             myScore: player1Score,
             opponentScore: player2Score,
-            myPosition: 'player1',
-            timeLimit: nextTimeLimit
+            myPosition: 'player1'
           });
         } else {
           console.log('Player 1 socket not found or disconnected after timeout');
@@ -3361,14 +3410,10 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
         if (player2Socket && player2Socket.connected) {
           console.log('Sending next_question to player 2 after timeout');
           player2Socket.emit('next_question', {
-            questionIndex: match.currentQuestion,
-            question: nextQuestion,
-            player1Score,
-            player2Score,
+            ...nextQuestionPayload,
             myScore: player2Score,
             opponentScore: player1Score,
-            myPosition: 'player2',
-            timeLimit: nextTimeLimit
+            myPosition: 'player2'
           });
         } else {
           console.log('Player 2 socket not found or disconnected after timeout');
@@ -3380,7 +3425,7 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
         console.log('🏁 All questions completed after timeout, ending match');
         endMatch(matchId);
       }
-    }, 1000); // 1 second delay after timeout
+    }, 500); // 500ms delay - faster transition to next question
     
   }, timeLimit * 1000); // Convert seconds to milliseconds
   
@@ -3678,8 +3723,8 @@ async function endMatch(matchId, options = {}) {
   try {
     io.in(`match_${matchId}`).socketsLeave(`match_${matchId}`);
   } catch (e) {}
-  activeMatches.delete(match.player1Id);
-  activeMatches.delete(match.player2Id);
+  playerToMatchId.delete(match.player1Id);
+  playerToMatchId.delete(match.player2Id);
   const deleted = activeMatches.delete(matchId);
   console.log(`🗑️ Match ${matchId} fully cleaned. Active matches: ${activeMatches.size}`);
   

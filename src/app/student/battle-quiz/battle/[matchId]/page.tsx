@@ -34,7 +34,7 @@ interface BattleState {
     name: string;
   };
   answers: { [key: number]: number };
-  opponentAnswers: { [key: number]: number }; // Store actual answer indices
+  opponentAnswers: { [key: number]: number | 'timed_out' }; // Store answer index or 'timed_out'
 }
 
 export default function BattlePage() {
@@ -149,13 +149,15 @@ export default function BattlePage() {
       opponentScore?: number;
       myPosition?: 'player1' | 'player2';
       timeLimit?: number;
+      fromTimeout?: boolean;
     }) => {
       console.log('🎯 Next question event received:', data);
       console.log('   - Question index:', data.questionIndex);
       console.log('   - Scores:', data.myScore, data.opponentScore);
       
-      // Prevent duplicate processing
-      if (data.questionIndex === lastQuestionIndexRef.current) {
+      // Prevent duplicate processing (except when fromTimeout - always process)
+      const fromTimeout = data.fromTimeout;
+      if (!fromTimeout && data.questionIndex === lastQuestionIndexRef.current) {
         console.log('⚠️ Duplicate next_question event, ignoring');
         return;
       }
@@ -163,7 +165,10 @@ export default function BattlePage() {
       lastQuestionIndexRef.current = data.questionIndex;
       const timeLimit = data.timeLimit ?? 10;
       
-      setTimeout(() => {
+      console.log('🎯 Applying next question - index:', data.questionIndex, 'fromTimeout:', fromTimeout);
+      
+      // Use requestAnimationFrame or shorter delay to ensure UI updates (fixes timeout case not updating)
+      const applyUpdate = () => {
         setBattleState(prev => ({
           ...prev,
           currentQuestion: data.questionIndex,
@@ -172,9 +177,14 @@ export default function BattlePage() {
           player1Score: typeof data.myScore === 'number' ? data.myScore : (data.player1Score ?? prev.player1Score),
           player2Score: typeof data.opponentScore === 'number' ? data.opponentScore : (data.player2Score ?? prev.player2Score)
         }));
-        
         setTimeout(() => startQuestionTimer(timeLimit), 100);
-      }, isReactNative ? 100 : 50);
+      };
+      
+      if (fromTimeout) {
+        applyUpdate();
+      } else {
+        setTimeout(applyUpdate, isReactNative ? 100 : 50);
+      }
     };
 
     // Match ended event
@@ -228,11 +238,11 @@ export default function BattlePage() {
       }));
     };
 
-    // Opponent answered event
-    const handleOpponentAnswered = (data: { questionIndex: number; answer: number }) => {
+    // Opponent answered event (answer can be null when opponent timed out)
+    const handleOpponentAnswered = (data: { questionIndex: number; answer?: number | null; timedOut?: boolean }) => {
       console.log('👥 Opponent answered event received:', data);
       console.log('   - Question index:', data.questionIndex);
-      console.log('   - Opponent answer:', data.answer);
+      console.log('   - Opponent answer:', data.answer, 'timedOut:', data.timedOut);
       console.log('   - Current question:', battleState.currentQuestion);
       console.log('   - Is React Native:', isReactNative);
       
@@ -240,11 +250,11 @@ export default function BattlePage() {
         ...prev,
         opponentAnswers: {
           ...prev.opponentAnswers,
-          [data.questionIndex]: data.answer // Store the specific answer
+          [data.questionIndex]: data.timedOut ? 'timed_out' : data.answer
         }
       }));
       
-      console.log('✅ Opponent answered state updated with answer:', data.answer);
+      console.log('✅ Opponent answered state updated');
     };
 
     // Match not found event
@@ -573,7 +583,11 @@ export default function BattlePage() {
           <div className="text-center text-sm text-gray-600">
             {battleState.answers[battleState.currentQuestion] !== undefined && 
              battleState.opponentAnswers[battleState.currentQuestion] !== undefined ? (
-              <span className="text-green-600">✅ Both players answered</span>
+              battleState.opponentAnswers[battleState.currentQuestion] === 'timed_out' ? (
+                <span className="text-orange-600">⏰ Opponent ran out of time</span>
+              ) : (
+                <span className="text-green-600">✅ Both players answered</span>
+              )
             ) : battleState.answers[battleState.currentQuestion] !== undefined ? (
               <span className="text-blue-600">⏳ Waiting for opponent...</span>
             ) : battleState.opponentAnswers[battleState.currentQuestion] !== undefined ? (
@@ -634,7 +648,11 @@ export default function BattlePage() {
               <div className="text-center text-sm text-gray-600">
                 {battleState.answers[battleState.currentQuestion] !== undefined && 
                  battleState.opponentAnswers[battleState.currentQuestion] !== undefined ? (
-                  <span className="text-green-600 font-medium">✅ Both players answered!</span>
+                  battleState.opponentAnswers[battleState.currentQuestion] === 'timed_out' ? (
+                    <span className="text-orange-600 font-medium">⏰ Opponent ran out of time!</span>
+                  ) : (
+                    <span className="text-green-600 font-medium">✅ Both players answered!</span>
+                  )
                 ) : battleState.answers[battleState.currentQuestion] !== undefined ? (
                   <span className="text-blue-600">⏳ Waiting for opponent to answer...</span>
                 ) : battleState.opponentAnswers[battleState.currentQuestion] !== undefined ? (
@@ -674,26 +692,30 @@ export default function BattlePage() {
               <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium text-yellow-800">Opponent's Answer</span>
-                  <div className="w-6 h-6 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                    {String.fromCharCode(65 + battleState.opponentAnswers[battleState.currentQuestion])}
-                  </div>
+                  {battleState.opponentAnswers[battleState.currentQuestion] === 'timed_out' ? (
+                    <span className="text-orange-600 text-sm font-medium">⏰</span>
+                  ) : (
+                    <div className="w-6 h-6 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                      {String.fromCharCode(65 + (battleState.opponentAnswers[battleState.currentQuestion] as number))}
+                    </div>
+                  )}
                 </div>
                 <div className="text-yellow-900 font-medium">
-                  {battleState.question.options[battleState.opponentAnswers[battleState.currentQuestion]]}
+                  {battleState.opponentAnswers[battleState.currentQuestion] === 'timed_out'
+                    ? '⏰ Ran out of time'
+                    : battleState.question.options[battleState.opponentAnswers[battleState.currentQuestion] as number]}
                 </div>
               </div>
             </div>
 
             {/* Answer Status */}
             <div className="mt-4 text-center">
-              {battleState.answers[battleState.currentQuestion] === battleState.opponentAnswers[battleState.currentQuestion] ? (
-                <div className="text-green-600 font-medium">
-                  🤝 Both players selected the same answer!
-                </div>
+              {battleState.opponentAnswers[battleState.currentQuestion] === 'timed_out' ? (
+                <div className="text-orange-600 font-medium">⏰ Opponent ran out of time</div>
+              ) : battleState.answers[battleState.currentQuestion] === battleState.opponentAnswers[battleState.currentQuestion] ? (
+                <div className="text-green-600 font-medium">🤝 Both players selected the same answer!</div>
               ) : (
-                <div className="text-gray-600 font-medium">
-                  📊 Different answers selected
-                </div>
+                <div className="text-gray-600 font-medium">📊 Different answers selected</div>
               )}
             </div>
           </div>
