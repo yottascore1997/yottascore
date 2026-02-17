@@ -59,6 +59,14 @@ const handler = async (req: Request) => {
       )
     }
 
+    if (!user.emailVerified) {
+      logAuthEvent('login_failed', { ip, identifier, reason: 'email_not_verified' })
+      return NextResponse.json(
+        { error: 'Please verify your email before signing in. Check your inbox for the verification link.' },
+        { status: 403 }
+      )
+    }
+
     logAuthEvent('login_success', { ip, identifier, userId: user.id })
 
     const accessToken = await signAccessToken({ userId: user.id, role: user.role })

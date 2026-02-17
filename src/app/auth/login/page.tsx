@@ -11,6 +11,7 @@ export default function Login() {
     password: '',
   })
   const [error, setError] = useState('')
+  const [showResendLink, setShowResendLink] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -18,6 +19,7 @@ export default function Login() {
     e.preventDefault()
     setIsLoading(true)
     setError('')
+    setShowResendLink(false)
     
     try {
       const response = await fetch('/api/auth/login', {
@@ -40,6 +42,7 @@ export default function Login() {
         }
       } else {
         setError(data.message || data.error || 'Login failed')
+        setShowResendLink(response.status === 403 && /verify/i.test(String(data.error || data.message || '')))
       }
     } catch (err) {
       setError('An error occurred. Please try again.')
@@ -79,11 +82,22 @@ export default function Login() {
           {/* Form */}
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center space-x-2 animate-slide-in-right">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                <span className="text-sm font-medium">{error}</span>
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl animate-slide-in-right">
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <span className="text-sm font-medium">{error}</span>
+                    {showResendLink && (
+                      <p className="mt-2">
+                        <Link href="/auth/resend-verification" className="text-blue-600 hover:underline font-medium text-sm">
+                          Resend verification email
+                        </Link>
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -148,6 +162,11 @@ export default function Login() {
                     </svg>
                   )}
                 </button>
+              </div>
+              <div className="flex justify-end">
+                <Link href="/auth/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                  Forgot password?
+                </Link>
               </div>
             </div>
 

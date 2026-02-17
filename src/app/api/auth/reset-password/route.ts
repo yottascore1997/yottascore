@@ -6,11 +6,11 @@ import { withCORS } from '@/lib/cors'
 const handler = async (req: Request) => {
   try {
     const body = await req.json()
-    const { email, newPassword } = body
+    const { token, newPassword } = body
 
-    if (!email || !newPassword) {
+    if (!token || !newPassword) {
       return NextResponse.json(
-        { message: 'Email and new password are required' },
+        { message: 'Token and new password are required' },
         { status: 400 }
       )
     }
@@ -22,46 +22,50 @@ const handler = async (req: Request) => {
       )
     }
 
-    // Find user
-    const user = await prisma.user.findFirst({
-      where: { email },
+    const resetRecord = await prisma.passwordResetToken.findUnique({
+      where: { token },
+      include: { user: true },
     })
 
-    if (!user) {
+    if (!resetRecord) {
       return NextResponse.json(
-        { message: 'User not found' },
-        { status: 404 }
+        { message: 'Invalid or expired reset link. Please request a new one.' },
+        { status: 400 }
       )
     }
 
-    // Hash new password
+    if (resetRecord.usedAt) {
+      return NextResponse.json(
+        { message: 'This reset link has already been used. Please request a new one.' },
+        { status: 400 }
+      )
+    }
+
+    if (resetRecord.expiresAt < new Date()) {
+      return NextResponse.json(
+        { message: 'This reset link has expired. Please request a new one.' },
+        { status: 400 }
+      )
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
-    // Update password
-    const updatedUser = await prisma.user.update({
-      where: { id: user.id },
-      data: { hashedPassword },
-    })
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: resetRecord.userId },
+        data: { hashedPassword },
+      }),
+      prisma.passwordResetToken.update({
+        where: { id: resetRecord.id },
+        data: { usedAt: new Date() },
+      }),
+    ])
 
-    console.log('[PASSWORD_RESET] Password updated successfully:', {
-      userId: updatedUser.id,
-      email: updatedUser.email,
-      role: updatedUser.role,
-      newHashLength: hashedPassword.length
-    })
-
-    return NextResponse.json({
-      message: 'Password reset successfully',
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        role: updatedUser.role,
-      },
-    })
-  } catch (error: any) {
+    return NextResponse.json({ message: 'Password reset successfully. You can now sign in.' })
+  } catch (error: unknown) {
     console.error('[PASSWORD_RESET] Error:', error)
     return NextResponse.json(
-      { message: 'Internal server error', error: error.message },
+      { message: 'Something went wrong. Please try again.' },
       { status: 500 }
     )
   }
@@ -69,4 +73,3 @@ const handler = async (req: Request) => {
 
 export const POST = withCORS(handler)
 export const OPTIONS = withCORS(() => new Response(null, { status: 204 }))
-

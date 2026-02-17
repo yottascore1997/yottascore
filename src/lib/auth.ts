@@ -91,6 +91,7 @@ export async function findUserForLogin(identifier: string) {
       hashedPassword: true,
       failedLoginAttempts: true,
       lockedUntil: true,
+      emailVerified: true,
     },
   });
 }

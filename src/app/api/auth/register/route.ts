@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { Resend } from 'resend'
 import { withCORS } from '@/lib/cors'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { logAuthEvent } from '@/lib/auth-logger'
 import { validatePasswordStrength } from '@/lib/auth'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 const handler = async (req: Request) => {
   try {
@@ -312,17 +313,44 @@ const handler = async (req: Request) => {
 
     logAuthEvent('register_success', { ip, identifier: emailTrimmed, userId: user.id })
 
-    // Generate JWT token (same as before for backward compatibility; consider access+refresh later)
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    // Send verification email
+    const verifyToken = randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
+    await prisma.emailVerificationToken.create({
+      data: { userId: user.id, token: verifyToken, expiresAt },
+    })
+
+    if (process.env.RESEND_API_KEY) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL
+        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+      const verifyUrl = `${appUrl.replace(/\/$/, '')}/auth/verify-email?token=${verifyToken}`
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+
+      const { error } = await resend.emails.send({
+        from: fromEmail,
+        to: user.email!,
+        subject: 'Verify your Yottascore email',
+        html: `
+          <p>Welcome to Yottascore!</p>
+          <p>Please verify your email by clicking the link below:</p>
+          <p><a href="${verifyUrl}">${verifyUrl}</a></p>
+          <p>This link expires in 24 hours. If you didn't create an account, you can ignore this email.</p>
+          <p>— Yottascore</p>
+        `,
+      })
+
+      if (error) {
+        console.error('[REGISTER] Resend verification email error:', error)
+        // Don't fail registration - user exists, they can use resend-verification
+      }
+    } else {
+      console.warn('[REGISTER] RESEND_API_KEY not set - verification email not sent')
+    }
 
     return NextResponse.json({
-      token,
-      role: user.role,
-      message: 'Registration successful',
+      message: 'Registration successful. Please check your email to verify your account before signing in.',
+      email: emailTrimmed,
     })
   } catch (error) {
     console.error('Registration error details:', error)

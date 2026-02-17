@@ -57,6 +57,36 @@ model RefreshToken {
   @@map("RefreshToken")
 }
 
+// Password reset token - for forgot password flow
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("PasswordResetToken")
+}
+
+// Email verification token - for signup email verification
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("EmailVerificationToken")
+}
+
 model Blog {
   id          String   @id @default(cuid())
   title       String
@@ -118,6 +148,8 @@ model User {
   accounts        Account[]
   sessions        Session[]
   refreshTokens   RefreshToken[]
+  passwordResetTokens   PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
   participatedExams LiveExamParticipant[]
   wonExams         LiveExamWinner[]
   createdLiveExams LiveExam[]
