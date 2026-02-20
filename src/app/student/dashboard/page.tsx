@@ -525,6 +525,67 @@ function QuestionOfTheDay() {
   )
 }
 
+function DailyQuoteCard() {
+  const [quote, setQuote] = useState<{ text: string; author: string | null } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setLoading(false)
+      return
+    }
+    fetch('/api/student/quotes/today', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setQuote({ text: data.text, author: data.author ?? null }))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="mt-8">
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mb-4" />
+          <div className="h-3 bg-gray-100 rounded w-full mb-2" />
+          <div className="h-3 bg-gray-100 rounded w-2/3" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!quote) return null
+
+  return (
+    <div className="mt-8">
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Quote of the Day</h2>
+              <p className="text-indigo-100">Stay motivated</p>
+            </div>
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="p-6">
+          <p className="text-gray-800 text-lg italic">&ldquo;{quote.text}&rdquo;</p>
+          {quote.author && (
+            <p className="text-gray-500 mt-3">— {quote.author}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function StudentDashboard() {
   const router = useRouter()
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
@@ -823,6 +884,9 @@ export default function StudentDashboard() {
             </div>
           </div>
         )}
+
+        {/* Quote of the Day */}
+        <DailyQuoteCard />
 
         {/* Battle Quizzes Section */}
         <BattleQuizList />

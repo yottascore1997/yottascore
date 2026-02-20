@@ -13,6 +13,8 @@ const studentLinks = [
   { name: 'My Book Listings', href: '/books/my-listings', icon: BookOpen },
   { name: 'Live Exams', href: '/student/live-exams', icon: BookOpen },
   { name: 'Practice Exams', href: '/student/practice-exams', icon: Trophy },
+  { name: 'PYQ (Previous Year)', href: '/student/pyq', icon: FileText },
+  { name: 'Current Affairs', href: '/student/current-affairs', icon: FileText },
   { name: 'Battle Quiz', href: '/student/battle-quiz', icon: Zap },
   { name: 'Spy Game', href: '/spy-game', icon: Eye },
   { name: 'Weekly Leaderboard', href: '/student/weekly-leaderboard', icon: Trophy },

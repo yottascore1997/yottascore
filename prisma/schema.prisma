@@ -180,6 +180,8 @@ model User {
   // Question Bank Relations
   createdQuestionCategories QuestionCategory[]
   createdQuestionBankItems QuestionBankItem[]
+  createdPYQExams          PYQExam[]
+  pyqAttempts              PYQAttempt[]
   
   // Social Media Features
   profilePhoto    String?
@@ -448,6 +450,68 @@ model PracticeExamQuestion {
   @@map("PracticeExamQuestion")
 }
 
+// Previous Year Questions (PYQ)
+model PYQExam {
+  id          String   @id @default(cuid())
+  title       String
+  examType    String   // UPSC, SSC, JEE, NEET, Banking, etc.
+  year        Int
+  subject     String?
+  paperType   String?  // Prelims, Mains, Sectional
+  duration    Int      @default(60) // minutes
+  totalMarks  Int      @default(100)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  questions   PYQQuestion[]
+  attempts    PYQAttempt[]
+
+  @@index([examType])
+  @@index([year])
+  @@index([examType, year])
+  @@map("PYQExam")
+}
+
+model PYQQuestion {
+  id          String   @id @default(cuid())
+  exam        PYQExam  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examId      String
+  text        String   @db.Text
+  options     Json?
+  correct     Int?
+  marks       Int      @default(1)
+  topic       String?
+  difficulty  String?
+  explanation String?  @db.Text
+  orderIndex  Int      @default(0)
+
+  @@index([examId])
+  @@map("PYQQuestion")
+}
+
+model PYQAttempt {
+  id               String   @id @default(cuid())
+  exam             PYQExam  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  score            Int      @default(0)
+  totalMarks       Int      @default(0)
+  correctCount     Int      @default(0)
+  wrongCount       Int      @default(0)
+  unattemptedCount Int      @default(0)
+  timeTakenSeconds Int?
+  answers          Json?    // { questionId: selectedOptionIndex }
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([userId])
+  @@index([examId])
+  @@map("PYQAttempt")
+}
+
 model GovtExamNotification {
   id            String   @id @default(cuid())
   title         String
@@ -493,6 +557,33 @@ model QuestionOfTheDayAttempt {
 
   @@unique([questionId, userId])
   @@map("QuestionOfTheDayAttempt")
+}
+
+// Daily quotes pool – admin adds via panel/Excel; app picks one per day automatically
+model DailyQuote {
+  id        String   @id @default(cuid())
+  text      String   @db.Text
+  author    String?  // Optional author/source
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("DailyQuote")
+}
+
+// Monthly Current Affairs – month + category wise; student sees notes format
+model CurrentAffairsEntry {
+  id        String   @id @default(cuid())
+  month     String   // "2025-02" (YYYY-MM)
+  category  String   // NATIONAL, INTERNATIONAL, ECONOMY, SPORTS, SCIENCE_TECH, SCHEMES_REPORTS, AWARDS, MISCELLANEOUS
+  title     String   @db.Text
+  content   String   @db.Text // Notes format – points, paragraphs
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([month])
+  @@index([month, category])
+  @@map("CurrentAffairsEntry")
 }
 
 model Timetable {
