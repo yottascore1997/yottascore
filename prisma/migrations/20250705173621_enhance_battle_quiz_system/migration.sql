@@ -5,24 +5,24 @@
 
 */
 -- AlterTable
-ALTER TABLE `battlequiz` ADD COLUMN `isPrivate` BOOLEAN NOT NULL DEFAULT false,
+ALTER TABLE `BattleQuiz` ADD COLUMN `isPrivate` BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN `maxPlayers` INTEGER NOT NULL DEFAULT 2,
     ADD COLUMN `roomCode` VARCHAR(191) NULL,
     ADD COLUMN `timePerQuestion` INTEGER NOT NULL DEFAULT 15;
 
 -- AlterTable
-ALTER TABLE `battlequizmatch` ADD COLUMN `isPrivate` BOOLEAN NOT NULL DEFAULT false,
+ALTER TABLE `BattleQuizMatch` ADD COLUMN `isPrivate` BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN `player1Answers` JSON NULL,
     ADD COLUMN `player2Answers` JSON NULL,
     ADD COLUMN `roomCode` VARCHAR(191) NULL,
     MODIFY `status` ENUM('WAITING', 'STARTING', 'PLAYING', 'FINISHED', 'CANCELLED', 'TIMEOUT') NOT NULL DEFAULT 'WAITING';
 
 -- AlterTable
-ALTER TABLE `battlequizparticipant` ADD COLUMN `responseTimes` JSON NULL,
+ALTER TABLE `BattleQuizParticipant` ADD COLUMN `responseTimes` JSON NULL,
     MODIFY `status` ENUM('WAITING', 'READY', 'PLAYING', 'FINISHED', 'DISCONNECTED') NOT NULL DEFAULT 'WAITING';
 
 -- AlterTable
-ALTER TABLE `battlequizquestion` ADD COLUMN `difficulty` ENUM('EASY', 'MEDIUM', 'HARD') NOT NULL DEFAULT 'MEDIUM',
+ALTER TABLE `BattleQuizQuestion` ADD COLUMN `difficulty` ENUM('EASY', 'MEDIUM', 'HARD') NOT NULL DEFAULT 'MEDIUM',
     ADD COLUMN `explanation` TEXT NULL;
 
 -- CreateTable

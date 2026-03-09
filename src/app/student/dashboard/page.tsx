@@ -268,10 +268,6 @@ function QuestionOfTheDay() {
       }
 
       const data = await response.json()
-      console.log('Question data received:', data);
-      console.log('Selected option:', data.selectedOption);
-      console.log('Correct answer:', data.correctAnswer);
-      console.log('Is correct:', data.isCorrect);
       setQuestion(data)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to fetch question')
@@ -321,9 +317,9 @@ function QuestionOfTheDay() {
   if (loading) {
     return (
       <div className="mt-8">
-        <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading question of the day...</p>
+        <div className="bg-white rounded-2xl p-10 text-center border border-gray-100 shadow-lg">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-amber-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-500 font-medium">Question of the Day load ho raha hai...</p>
         </div>
       </div>
     )
@@ -332,14 +328,14 @@ function QuestionOfTheDay() {
   if (error || !question) {
     return (
       <div className="mt-8">
-        <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white rounded-2xl p-10 text-center border border-gray-100 shadow-lg">
+          <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Question Available</h3>
-          <p className="text-gray-500">Check back tomorrow for a new question</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Aaj ka question abhi nahi hai</h3>
+          <p className="text-gray-500">Kal dobara check karein</p>
         </div>
       </div>
     )
@@ -347,175 +343,170 @@ function QuestionOfTheDay() {
 
   return (
     <div className="mt-8">
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold mb-1">Question of the Day</h2>
-              <p className="text-yellow-100">Test your knowledge daily</p>
-            </div>
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-6">
-          {question.hasAttempted ? (
-            <div className="text-center">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                question.isCorrect ? 'bg-green-100' : 'bg-red-100'
-              }`}>
-                <svg className={`w-8 h-8 ${question.isCorrect ? 'text-green-500' : 'text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={question.isCorrect ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M6 18L18 6M6 6l12 12"} />
+      <div className="group relative overflow-hidden bg-white rounded-2xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300">
+        {/* Enhanced header */}
+        <div className="relative bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 p-6">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.08\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-60" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/25 backdrop-blur rounded-2xl flex items-center justify-center shadow-lg">
+                <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {question.isCorrect ? 'Correct Answer!' : 'Incorrect Answer!'}
-              </h3>
-              <p className="text-gray-500 mb-4">You've already answered today's question. Come back tomorrow!</p>
-              
-              {/* Show question and answers */}
-              <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                <p className="text-gray-700 mb-4 text-left">{question.question}</p>
-                
+              <div>
+                <h2 className="text-2xl font-bold text-white drop-shadow-sm">Question of the Day</h2>
+                <p className="text-amber-100 text-sm font-medium mt-0.5">Roz ek naya sawal — apna knowledge test karein</p>
+              </div>
+            </div>
+            {question.hasAttempted ? (
+              <span className="px-4 py-2 bg-white/20 backdrop-blur rounded-xl text-white text-sm font-semibold">
+                ✓ Answer de diya
+              </span>
+            ) : (
+              <span className="px-4 py-2 bg-white text-amber-600 rounded-xl text-sm font-bold shadow-lg">
+                Abhi karein
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="p-6">
+          {question.hasAttempted ? (
+            <div className="space-y-4">
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl ${question.isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <svg className={`w-5 h-5 ${question.isCorrect ? 'text-green-600' : 'text-red-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={question.isCorrect ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M6 18L18 6M6 6l12 12"} />
+                </svg>
+                <span className="font-semibold">{question.isCorrect ? 'Sahi jawab!' : 'Galat jawab'}</span>
+              </div>
+              <p className="text-gray-600 text-sm">Aapne aaj ka question de diya. Kal naya question aayega.</p>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <p className="text-gray-800 font-medium mb-3">{question.question}</p>
                 <div className="space-y-2">
                   {question.options.map((option: string, index: number) => (
                     <div
                       key={index}
-                      className={`p-3 rounded-lg border-2 text-left ${
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition ${
                         index === question.selectedOption
                           ? question.isCorrect
                             ? 'bg-green-50 border-green-200 text-green-800'
                             : 'bg-red-50 border-red-200 text-red-800'
                           : index === question.correctAnswer
                           ? 'bg-green-50 border-green-200 text-green-800'
-                          : 'bg-white border-gray-200 text-gray-700'
+                          : 'bg-white border-gray-100 text-gray-600'
                       }`}
                     >
-                      <div className="flex items-center">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${
-                          index === question.selectedOption
-                            ? question.isCorrect
-                              ? 'bg-green-500 text-white'
-                              : 'bg-red-500 text-white'
-                            : index === question.correctAnswer
-                            ? 'bg-green-500 text-white'
-                            : 'bg-gray-300 text-gray-600'
-                        }`}>
-                          {String.fromCharCode(65 + index)}
-                        </div>
-                        <span>{option}</span>
-                        {index === question.selectedOption && (
-                          <span className="ml-auto text-sm font-medium">
-                            {question.isCorrect ? '✅ Your Answer (Correct)' : '❌ Your Answer'}
-                          </span>
-                        )}
-                        {index === question.correctAnswer && index !== question.selectedOption && (
-                          <span className="ml-auto text-sm font-medium text-green-600">✅ Correct Answer</span>
-                        )}
-                      </div>
+                      <span className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
+                        index === question.selectedOption
+                          ? question.isCorrect ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                          : index === question.correctAnswer
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        {String.fromCharCode(65 + index)}
+                      </span>
+                      <span className="flex-1">{option}</span>
+                      {index === question.selectedOption && (
+                        <span className="text-xs font-semibold">
+                          {question.isCorrect ? '✓ Aapka (Sahi)' : '✗ Aapka'}
+                        </span>
+                      )}
+                      {index === question.correctAnswer && index !== question.selectedOption && (
+                        <span className="text-xs font-semibold text-green-600">Sahi jawab</span>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             </div>
           ) : (
-            <div>
-              <p className="text-gray-700 mb-6 text-lg">{question.question}</p>
+            <div className="space-y-5">
+              <p className="text-gray-700 text-lg leading-relaxed font-medium">{question.question}</p>
               <button
                 onClick={handleViewQuestion}
-                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-xl font-medium hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 flex items-center justify-center space-x-2"
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-4 rounded-xl font-semibold hover:from-amber-600 hover:to-orange-600 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Answer Question</span>
+                <span>Answer karein</span>
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Question Modal */}
+      {/* Question Modal - enhanced */}
       {showModal && question && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
+            <div className="sticky top-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-4 rounded-t-2xl z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">Question of the Day</h2>
-                  <p className="text-gray-500">Time remaining: {timeLeft}s</p>
+                  <h2 className="text-xl font-bold">Question of the Day</h2>
+                  <p className="text-amber-100 text-sm mt-0.5">Time: <span className="font-mono font-bold text-white">{timeLeft}s</span></p>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors"
                 >
-                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
-              <p className="text-lg text-gray-800 mb-6">{question.question}</p>
-              
-              <div className="space-y-3 mb-6">
+              <p className="text-lg text-gray-800 font-medium mb-6 leading-relaxed">{question.question}</p>
+
+              <div className="space-y-3">
                 {question.options.map((option: string, index: number) => (
                   <button
                     key={index}
                     onClick={() => handleSelectOption(index)}
                     disabled={isAnswered}
-                    className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                    className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left flex items-center gap-3 ${
                       selectedOption === index
                         ? isCorrect
-                          ? 'bg-green-50 border-green-200 text-green-800'
-                          : 'bg-red-50 border-red-200 text-red-800'
-                        : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                          ? 'bg-green-50 border-green-400 text-green-800'
+                          : 'bg-red-50 border-red-400 text-red-800'
+                        : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-amber-300'
                     }`}
                   >
-                    <div className="flex items-center">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${
-                        selectedOption === index
-                          ? isCorrect
-                            ? 'bg-green-500 text-white'
-                            : 'bg-red-500 text-white'
-                          : 'bg-gray-300 text-gray-600'
-                      }`}>
-                        {String.fromCharCode(65 + index)}
-                      </div>
-                      <span>{option}</span>
-                      {selectedOption === index && (
-                        <svg className={`w-5 h-5 ml-auto ${isCorrect ? 'text-green-500' : 'text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isCorrect ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12"} />
-                        </svg>
-                      )}
-                    </div>
+                    <span className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${
+                      selectedOption === index
+                        ? isCorrect ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                        : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                    <span className="flex-1">{option}</span>
+                    {selectedOption === index && (
+                      <svg className={`w-6 h-6 flex-shrink-0 ${isCorrect ? 'text-green-500' : 'text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isCorrect ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12"} />
+                      </svg>
+                    )}
                   </button>
                 ))}
               </div>
-              
+
               {isAnswered && (
-                <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                  <p className={`font-semibold ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
-                    {isCorrect ? '✅ Correct!' : '❌ Incorrect!'}
-                  </p>
-                  <p className="text-gray-600 mt-1">
-                    The correct answer was: {question.options[question.correct]}
+                <div className={`mt-6 p-4 rounded-xl ${isCorrect ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                  <p className={`font-semibold ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                    {isCorrect ? '✅ Sahi jawab!' : '❌ Galat — sahi option: ' + (question.options[question.correct ?? question.correctAnswer] ?? '')}
                   </p>
                 </div>
               )}
             </div>
-            
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-2xl">
+
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-6 py-4 rounded-b-2xl">
               <button
                 onClick={() => setShowModal(false)}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all"
               >
-                Close
+                Band karein
               </button>
             </div>
           </div>
@@ -888,11 +879,11 @@ export default function StudentDashboard() {
         {/* Quote of the Day */}
         <DailyQuoteCard />
 
-        {/* Battle Quizzes Section */}
-        <BattleQuizList />
-
-        {/* Question of the Day Section */}
+        {/* Question of the Day - above More Games */}
         <QuestionOfTheDay />
+
+        {/* Battle Quizzes / More Games */}
+        <BattleQuizList />
       </div>
     </div>
   )

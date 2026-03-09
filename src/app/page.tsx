@@ -112,6 +112,109 @@ export default function HomePage() {
     },
   ];
 
+  // Exams directory state & data (for icon grid + sidebar filtering)
+  const [selectedExamCategory, setSelectedExamCategory] = useState<string>('');
+
+  const EXAM_SIDEBAR = [
+    { id: 'upsc', label: 'UPSC Exams', emoji: '🏛️' },
+    { id: 'banking', label: 'Banking and Insurance', emoji: '🏦' },
+    { id: 'ssc', label: 'SSC and Railways', emoji: '🚆' },
+    { id: 'police_defence', label: 'Police & Defence', emoji: '🚔' },
+    { id: 'teaching', label: 'Teaching Exams', emoji: '🎓' },
+    { id: 'state_pcs', label: 'State PCS', emoji: '🏛️' },
+    { id: 'eng_med', label: 'Engineering/Medical', emoji: '🧪' },
+  ];
+
+  const EXAM_ICON_ITEMS = [
+    // UPSC-related exams
+    { title: 'Civil Services (IAS/IPS/IFS)', icon: '🎖️', category: 'upsc' },
+    { title: 'Indian Forest Service (IFoS)', icon: '🌲', category: 'upsc' },
+    { title: 'Engineering Services Exam (ESE)', icon: '⚙️', category: 'upsc' },
+    { title: 'Combined Defence Services (CDS)', icon: '🪖', category: 'upsc' },
+    { title: 'NDA / NA Exam', icon: '🎖️', category: 'upsc' },
+    { title: 'CAPF (Assistant Commandant)', icon: '🛡️', category: 'upsc' },
+    { title: 'Combined Medical Services (CMS)', icon: '🩺', category: 'upsc' },
+    { title: 'IES / ISS', icon: '🏢', category: 'upsc' },
+    { title: 'IBPS PO', icon: '🏦', category: 'banking' },
+    { title: 'IBPS Clerk', icon: '👩‍💼', category: 'banking' },
+    { title: 'SBI PO', icon: '🏦', category: 'banking' },
+    { title: 'SBI Clerk', icon: '🏢', category: 'banking' },
+    { title: 'RBI Assistant', icon: '🏛️', category: 'banking' },
+    { title: 'RBI Officer - Grade B', icon: '💼', category: 'banking' },
+    { title: 'NABARD Grade A', icon: '💰', category: 'banking' },
+    { title: 'SSC CGL', icon: '📝', category: 'ssc' },
+    { title: 'SSC CHSL', icon: '📝', category: 'ssc' },
+    { title: 'SSC CPO (SI in Delhi Police, CAPF)', icon: '🚓', category: 'ssc' },
+    { title: 'SSC GD Constable', icon: '🛡️', category: 'ssc' },
+    { title: 'SSC MTS', icon: '📄', category: 'ssc' },
+    { title: 'SSC JE (Junior Engineer)', icon: '🔧', category: 'ssc' },
+    { title: 'Stenographer Exam', icon: '✍️', category: 'ssc' },
+    { title: 'RRB NTPC', icon: '🚆', category: 'ssc' },
+    { title: 'RRB Group D', icon: '🚆', category: 'ssc' },
+    { title: 'RRB JE', icon: '🚆', category: 'ssc' },
+    { title: 'RRB ALP', icon: '🚆', category: 'ssc' },
+    { title: 'RPF Constable / SI', icon: '🛡️', category: 'ssc' },
+    // Police & Defence exams
+    { title: 'UP Police Constable', icon: '👮', category: 'police_defence' },
+    { title: 'UP Police SI', icon: '👮‍♂️', category: 'police_defence' },
+    { title: 'Jail Warder', icon: '🔐', category: 'police_defence' },
+    { title: 'Fireman', icon: '🔥', category: 'police_defence' },
+    { title: 'Defence', icon: '🪖', category: 'police_defence' },
+    { title: 'NDA (UPSC)', icon: '🎖️', category: 'police_defence' },
+    { title: 'CDS (UPSC)', icon: '🪖', category: 'police_defence' },
+    { title: 'AFCAT (Air Force)', icon: '✈️', category: 'police_defence' },
+    { title: 'Agniveer (Army, Navy, Air Force)', icon: '⚔️', category: 'police_defence' },
+    { title: 'CTET', icon: '📝', category: 'teaching' },
+    { title: 'UPTET', icon: '📝', category: 'teaching' },
+    { title: 'KVS Exam', icon: '🏫', category: 'teaching' },
+    { title: 'DSSSB', icon: '🏫', category: 'teaching' },
+    { title: 'State TETs', icon: '📚', category: 'teaching' },
+
+    { title: 'JEE Main/Advanced', icon: '🔬', category: 'eng_med' },
+    { title: 'BITSAT', icon: '🏛️', category: 'eng_med' },
+    { title: 'VITEEE', icon: '🏫', category: 'eng_med' },
+    { title: 'State CET Exams', icon: '📐', category: 'eng_med' },
+    { title: 'GATE', icon: '⚙️', category: 'eng_med' },
+
+    { title: 'NEET-UG', icon: '🩺', category: 'eng_med' },
+    { title: 'NEET-PG', icon: '🩺', category: 'eng_med' },
+    { title: 'AIIMS Nursing', icon: '🩺', category: 'eng_med' },
+    { title: 'INI-CET', icon: '🩺', category: 'eng_med' },
+
+    { title: 'UPPCS', icon: '🏛️', category: 'state_pcs' },
+    { title: 'BPSC', icon: '🏛️', category: 'state_pcs' },
+    { title: 'MPPSC', icon: '🏛️', category: 'state_pcs' },
+    { title: 'RPSC', icon: '🏛️', category: 'state_pcs' },
+    { title: 'HPSC', icon: '🏛️', category: 'state_pcs' },
+
+    { title: 'EPFO', icon: '📄', category: 'other' },
+    { title: 'LIC AAO / ADO', icon: '🛡️', category: 'other' },
+    { title: 'FCI', icon: '📦', category: 'other' },
+    { title: 'ESIC', icon: '🏥', category: 'other' },
+    { title: 'DRDO', icon: '🔬', category: 'other' },
+    { title: 'ISRO Recruitment', icon: '🚀', category: 'other' },
+    { title: 'State High Court Exams', icon: '⚖️', category: 'other' },
+    { title: 'Patwari / Lekhpal', icon: '📋', category: 'other' },
+  ];
+
+  // Public blogs (published) — show on index without login
+  const [publicBlogs, setPublicBlogs] = useState<Array<any>>([]);
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/blogs?limit=3')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!mounted || !data) return;
+        setPublicBlogs(Array.isArray(data.blogs) ? data.blogs : []);
+      })
+      .catch(() => {
+        if (mounted) setPublicBlogs([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const features = [
     {
       icon: FaClock,
@@ -283,11 +386,11 @@ const upcomingExams = [
         <div className="container mx-auto px-3 py-3">
           <div className="flex items-center justify-between">
             {/* Logo - Mobile Optimized */}
-            <Link href="/" className="flex items-center space-x-2 group">
+            <Link href="/" className="flex items-center space-x-2">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg blur-sm group-hover:blur-md transition-all"></div>
-                <div className="relative w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-all duration-300 shadow-lg">
-                  <FaGraduationCap className="text-white text-lg sm:text-xl" />
+                {/* Logo placeholder — background removed so you can place your logo image */}
+                <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center">
+                  {/* put your logo image here */}
                 </div>
               </div>
               <div>
@@ -303,22 +406,8 @@ const upcomingExams = [
               {/* Navigation removed - focusing on CTA buttons */}
             </nav>
 
-            {/* CTA Buttons - Desktop */}
-            <div className="hidden lg:flex items-center space-x-4">
-              <Link 
-                href="/login" 
-                className="px-6 py-2.5 bg-white border-2 border-blue-600 text-blue-600 rounded-full font-bold hover:bg-blue-50 transition-all duration-300"
-              >
-                Login
-              </Link>
-              <Link 
-                href="/register" 
-                className="relative px-6 py-2.5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white rounded-full font-bold hover:shadow-lg hover:scale-105 transition-all duration-300 overflow-hidden group"
-              >
-                <span className="relative z-10">Sign Up Free</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </Link>
-            </div>
+            {/* CTA Buttons - Desktop (hidden on index) */}
+            <div className="hidden" />
 
             {/* Mobile Menu Button */}
             <button 
@@ -333,20 +422,7 @@ const upcomingExams = [
           {isMobileMenuOpen && (
             <div className="lg:hidden mt-4 pb-4 border-t border-gray-100 pt-4 animate-slideDown">
               <div className="flex flex-col space-y-3">
-                <Link 
-                  href="/login" 
-                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-bold text-center text-lg"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Login
-                </Link>
-                <Link 
-                  href="/register" 
-                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full font-bold text-center text-lg"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Sign Up Free
-                </Link>
+                {/* Login/Register hidden on index page */}
               </div>
             </div>
           )}
@@ -482,7 +558,9 @@ const upcomingExams = [
 
 
 
-{/* Upcoming Exams Section - Professional & Clean */}
+    
+
+      {/* Upcoming Exams Section - Professional & Clean */}
       <section className="bg-slate-50 py-12 sm:py-16">
         <div className="w-full px-4 sm:px-6 lg:px-10">
           <div className="w-full">
@@ -566,8 +644,8 @@ const upcomingExams = [
         </div>
       </section>
 
-{/* Achievements Showcase - Professional & Clean */}
-      <section className="py-12 sm:py-16 bg-white">
+      {/* Achievements Showcase - Professional & Clean */}
+      <section className="py-12 sm:py-16 bg-indigo-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">
@@ -592,6 +670,108 @@ const upcomingExams = [
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Exams Directory - Icon grid like the reference (premium look) */}
+      <section className="py-12 sm:py-16 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-1">Choose Your Exam</h2>
+            <p className="text-sm text-slate-600 max-w-2xl mx-auto">Popular government & entrance exams — demo icons (click does nothing).</p>
+          </div>
+
+          <div className="flex gap-6 mt-6">
+            {/* Left sidebar - categories (visible on md+) */}
+            <aside className="hidden md:block w-48">
+              <div className="rounded-2xl p-4 sticky top-24 bg-gradient-to-b from-white/60 to-white/20 backdrop-blur-sm border border-white/10 shadow-lg">
+                <ul className="space-y-4">
+                  {EXAM_SIDEBAR.map((c) => (
+                    <li
+                      key={c.id}
+                      onClick={() => setSelectedExamCategory(c.id)}
+                      className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${
+                        selectedExamCategory === c.id
+                          ? 'bg-gradient-to-r from-indigo-600/10 to-purple-600/8 text-indigo-700 shadow-sm'
+                          : 'hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-white/80 flex items-center justify-center text-lg shadow-sm">
+                        {c.emoji}
+                      </div>
+                      <div className="text-sm font-semibold">{c.label}</div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </aside>
+
+            {/* Icon grid */}
+            <div className="flex-1">
+              <div className="rounded-2xl p-6 bg-gradient-to-br from-white/70 to-white/30 backdrop-blur-sm border border-white/10 shadow-2xl">
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-6 lg:grid-cols-8 gap-6">
+                  {EXAM_ICON_ITEMS.filter((it) => selectedExamCategory === '' || it.category === selectedExamCategory).map((item, idx) => (
+                    <button
+                      key={idx}
+                      onClick={(e) => e.preventDefault()}
+                      className="flex flex-col items-center gap-2 text-center group"
+                      aria-label={item.title}
+                    >
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center text-2xl shadow-lg transform transition-transform group-hover:scale-105">
+                        <span>{item.icon}</span>
+                      </div>
+                      <div className="text-xs text-slate-800 font-semibold">{item.title}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Public Blogs (latest published) */}
+      <section className="py-12 sm:py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Latest from Our Blog</h2>
+            <p className="text-sm text-gray-600 max-w-2xl mx-auto">Read the latest updates, tips and announcements from our team.</p>
+          </div>
+
+          {publicBlogs.length === 0 ? (
+            <div className="rounded-2xl p-8 border border-gray-100 text-center shadow-sm">
+              <p className="text-gray-600 mb-3">No blog posts available yet.</p>
+              <a href="/blogs" className="text-sm font-semibold text-indigo-600">View all blog posts</a>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-6 md:grid-cols-3">
+                {publicBlogs.map((b) => (
+                  <article key={b.id} className="group rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg transition">
+                    <div className="mb-4 h-40 rounded-lg overflow-hidden bg-gray-100">
+                      {b.imageUrl ? (
+                        <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-indigo-200 to-purple-200 flex items-center justify-center text-3xl">📝</div>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{b.title}</h3>
+                    {b.excerpt && <p className="text-sm text-gray-600 mb-4 line-clamp-3">{b.excerpt}</p>}
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div>By {b.author || 'Admin'}</div>
+                      <div>{b.publishedAt ? new Date(b.publishedAt).toLocaleDateString() : ''}</div>
+                    </div>
+                    <div className="mt-4">
+                      <a href={`/blogs/${b.id}`} className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600">Read article →</a>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="mt-6 text-center">
+                <a href="/blogs" className="text-sm font-semibold text-indigo-600">View all blog posts</a>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

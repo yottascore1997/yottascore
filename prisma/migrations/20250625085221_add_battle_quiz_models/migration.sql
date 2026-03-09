@@ -1,18 +1,18 @@
 /*
   Warnings:
 
-  - You are about to drop the column `completedAt` on the `battlequizparticipant` table. All the data in the column will be lost.
-  - You are about to drop the column `createdAt` on the `battlequizparticipant` table. All the data in the column will be lost.
-  - You are about to drop the column `paid` on the `battlequizparticipant` table. All the data in the column will be lost.
-  - You are about to drop the column `paymentId` on the `battlequizparticipant` table. All the data in the column will be lost.
-  - You are about to drop the column `startedAt` on the `battlequizparticipant` table. All the data in the column will be lost.
-  - You are about to drop the column `updatedAt` on the `battlequizparticipant` table. All the data in the column will be lost.
-  - Made the column `score` on table `battlequizparticipant` required. This step will fail if there are existing NULL values in that column.
-  - Made the column `answers` on table `battlequizparticipant` required. This step will fail if there are existing NULL values in that column.
+  - You are about to drop the column `completedAt` on the `BattleQuizParticipant` table. All the data in the column will be lost.
+  - You are about to drop the column `createdAt` on the `BattleQuizParticipant` table. All the data in the column will be lost.
+  - You are about to drop the column `paid` on the `BattleQuizParticipant` table. All the data in the column will be lost.
+  - You are about to drop the column `paymentId` on the `BattleQuizParticipant` table. All the data in the column will be lost.
+  - You are about to drop the column `startedAt` on the `BattleQuizParticipant` table. All the data in the column will be lost.
+  - You are about to drop the column `updatedAt` on the `BattleQuizParticipant` table. All the data in the column will be lost.
+  - Made the column `score` on table `BattleQuizParticipant` required. This step will fail if there are existing NULL values in that column.
+  - Made the column `answers` on table `BattleQuizParticipant` required. This step will fail if there are existing NULL values in that column.
 
 */
 -- AlterTable
-ALTER TABLE `battlequizparticipant` DROP COLUMN `completedAt`,
+ALTER TABLE `BattleQuizParticipant` DROP COLUMN `completedAt`,
     DROP COLUMN `createdAt`,
     DROP COLUMN `paid`,
     DROP COLUMN `paymentId`,

@@ -100,9 +100,12 @@ export default function BlogsPage() {
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
                   <span className="text-white text-xl">📚</span>
                 </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  YottaScore
-                </h1>
+                <div>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    YottaScore
+                  </h1>
+                  <div className="text-sm text-indigo-600 font-semibold -mt-1">Our Blog</div>
+                </div>
               </Link>
             </div>
             <div className="flex items-center space-x-4">

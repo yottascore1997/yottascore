@@ -5,7 +5,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `user` ADD COLUMN `referralCode` VARCHAR(191) NULL,
+ALTER TABLE `User` ADD COLUMN `referralCode` VARCHAR(191) NULL,
     ADD COLUMN `referralCount` INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN `referredBy` VARCHAR(191) NULL,
     ADD COLUMN `totalReferralEarnings` DOUBLE NOT NULL DEFAULT 0;

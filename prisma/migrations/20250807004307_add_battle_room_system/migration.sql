@@ -5,7 +5,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `question` DROP COLUMN `correct`,
+ALTER TABLE `Question` DROP COLUMN `correct`,
     ADD COLUMN `categoryId` VARCHAR(191) NULL,
     ADD COLUMN `correctAnswer` INTEGER NULL;
 

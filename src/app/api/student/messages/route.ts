@@ -63,6 +63,21 @@ export async function GET(req: Request) {
       }
     }
 
+    // 2b. Add Study Partner matches with no conversation yet (so they show at top)
+    const matches = await prisma.studyPartnerMatch.findMany({
+      where: {
+        OR: [{ user1Id: currentUserId }, { user2Id: currentUserId }],
+        unmatchedAt: null,
+      },
+      select: { user1Id: true, user2Id: true },
+    })
+    for (const m of matches) {
+      const otherUserId = m.user1Id === currentUserId ? m.user2Id : m.user1Id
+      if (!conversationPartners.has(otherUserId)) {
+        conversationPartners.set(otherUserId, { latestMessage: null, unreadCount: 0 })
+      }
+    }
+
     // 3. Get user details for each conversation partner (batch query for efficiency)
     const partnerIds = Array.from(conversationPartners.keys())
     if (partnerIds.length === 0) {
@@ -80,7 +95,7 @@ export async function GET(req: Request) {
       },
     })
 
-    // 4. Combine partner details with conversation data
+    // 4. Combine partner details with conversation data; sort: no chat first (matches), then by latest message time
     const conversations = partners.map((partner: any) => {
       const convoData = conversationPartners.get(partner.id)!
       return {
@@ -88,7 +103,14 @@ export async function GET(req: Request) {
         latestMessage: convoData.latestMessage,
         unreadCount: convoData.unreadCount,
       }
-    }).sort((a: any, b: any) => new Date(b.latestMessage.createdAt).getTime() - new Date(a.latestMessage.createdAt).getTime())
+    }).sort((a: any, b: any) => {
+      const aNoChat = !a.latestMessage
+      const bNoChat = !b.latestMessage
+      if (aNoChat && !bNoChat) return -1
+      if (!aNoChat && bNoChat) return 1
+      if (aNoChat && bNoChat) return 0
+      return new Date(b.latestMessage.createdAt).getTime() - new Date(a.latestMessage.createdAt).getTime()
+    })
 
     // Add cache headers for better performance
     const response = NextResponse.json(conversations)
@@ -127,8 +149,7 @@ export async function POST(req: Request) {
       return new NextResponse('Receiver ID and content are required', { status: 400 })
     }
 
-    // Check if sender follows the receiver (actual follow, not just request)
-    console.log(`🔍 Checking follow relationship: ${decoded.userId} -> ${receiverId}`);
+    // Check if sender follows the receiver OR they are study partner match
     const iFollowThem = await prisma.follow.findUnique({
       where: {
         followerId_followingId: {
@@ -138,9 +159,18 @@ export async function POST(req: Request) {
       },
     });
 
-    console.log(`📊 Follow relationship found:`, iFollowThem);
+    const [u1, u2] = [decoded.userId, receiverId].sort();
+    const studyPartnerMatch = await prisma.studyPartnerMatch.findFirst({
+      where: {
+        user1Id: u1,
+        user2Id: u2,
+        unmatchedAt: null,
+      },
+    });
 
-    if (!iFollowThem) {
+    const canMessage = !!iFollowThem || !!studyPartnerMatch;
+
+    if (!canMessage) {
       // Check if there's a pending follow request
       const pendingRequest = await prisma.followRequest.findUnique({
         where: {
@@ -163,13 +193,13 @@ export async function POST(req: Request) {
         );
       } else {
         return new NextResponse(
-          'You need to follow this user before you can message them. Please send a follow request first.',
+          'You need to follow this user or match with them as study partner before you can message them.',
           { status: 403 }
         );
       }
     }
 
-    // If you follow them, you can send direct message (regardless of whether they follow you back)
+    // If you follow them or are study partner match, you can send direct message
     console.log(`💾 Creating message: ${decoded.userId} -> ${receiverId}: "${content}"`);
     const message = await prisma.directMessage.create({
       data: {

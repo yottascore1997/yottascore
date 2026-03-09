@@ -5,7 +5,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `battlequizparticipant` MODIFY `status` ENUM('WAITING', 'READY', 'PLAYING', 'FINISHED') NOT NULL DEFAULT 'WAITING';
+ALTER TABLE `BattleQuizParticipant` MODIFY `status` ENUM('WAITING', 'READY', 'PLAYING', 'FINISHED') NOT NULL DEFAULT 'WAITING';
 
 -- CreateTable
 CREATE TABLE `Story` (

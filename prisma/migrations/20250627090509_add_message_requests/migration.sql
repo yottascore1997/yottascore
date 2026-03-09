@@ -5,7 +5,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `groupeventparticipant` MODIFY `status` ENUM('ATTENDING', 'NOT_ATTENDING', 'MAYBE') NOT NULL DEFAULT 'ATTENDING';
+ALTER TABLE `GroupEventParticipant` MODIFY `status` ENUM('ATTENDING', 'NOT_ATTENDING', 'MAYBE') NOT NULL DEFAULT 'ATTENDING';
 
 -- CreateTable
 CREATE TABLE `MessageRequest` (

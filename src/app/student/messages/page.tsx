@@ -150,40 +150,50 @@ function MessagesPageContent() {
   useEffect(() => {
     if (!socket || !isConnected) return
 
-    const handleNewMessage = (newMessage: Message) => {
-      if (selectedUser && 
-          (newMessage.sender.id === selectedUser.id || 
-           newMessage.receiver.id === selectedUser.id)) {
+    const handleNewMessage = (payload: Message | { type: string; message: Message }) => {
+      const newMessage: Message = 'message' in payload ? payload.message : payload
+      const senderId = typeof newMessage.sender === 'object' ? newMessage.sender?.id : newMessage.sender
+      const receiverId = typeof newMessage.receiver === 'object' ? newMessage.receiver?.id : (newMessage as any).receiverId
+      const otherUserId = senderId === currentUser?.id ? receiverId : senderId
+
+      if (selectedUser && otherUserId === selectedUser.id) {
         setMessages(prev => {
-          const exists = prev.some(msg => msg.id === newMessage.id);
-          if (!exists) {
-            return [...prev, newMessage];
-          }
-          return prev;
-        });
-        fetchConversations();
-      } else {
-        fetchConversations();
+          const exists = prev.some(msg => msg.id === newMessage.id)
+          if (!exists) return [...prev, newMessage]
+          return prev
+        })
       }
+      fetchConversations()
       setIsTyping(false)
+    }
+
+    const handleMessageNotification = (data: { type?: string; message?: Message }) => {
+      if (data.type === 'new_message' && data.message) handleNewMessage(data)
+      else fetchConversations()
     }
 
     const handleMessagesRead = ({ readerId }: { readerId: string }) => {
       if (selectedUser && selectedUser.id === readerId) {
         setMessages(prev =>
-          prev.map(msg => 
+          prev.map(msg =>
             msg.sender.id === currentUser?.id ? { ...msg, isRead: true } : msg
           )
         )
       }
     }
-    
+
     socket.on('new_message', handleNewMessage)
+    socket.on('message_notification', handleMessageNotification)
     socket.on('messages_were_read', handleMessagesRead)
+    socket.on('user_typing', () => setIsTyping(true))
+    socket.on('user_stopped_typing', () => setIsTyping(false))
 
     return () => {
       socket.off('new_message', handleNewMessage)
+      socket.off('message_notification', handleMessageNotification)
       socket.off('messages_were_read', handleMessagesRead)
+      socket.off('user_typing')
+      socket.off('user_stopped_typing')
     }
   }, [socket, isConnected, selectedUser, currentUser])
 
@@ -711,6 +721,11 @@ function MessagesPageContent() {
     conv.user.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  // Matched profiles with no chat yet – show only above search bar
+  const matchesWithNoChat = conversations.filter(conv => !conv.latestMessage)
+  // Conversations that have at least one message – show below search bar
+  const conversationsWithMessages = filteredConversations.filter(conv => !!conv.latestMessage)
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -1020,6 +1035,38 @@ function MessagesPageContent() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Matched profiles (no chat yet) – only above search bar */}
+      {matchesWithNoChat.length > 0 && (
+        <div className="pt-4 pb-2 border-b border-gray-100">
+          <p className="text-sm font-medium text-gray-600 px-4 mb-3">New matches</p>
+          <div className="flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide">
+            {matchesWithNoChat.map((conv) => (
+              <button
+                key={conv.user.id}
+                type="button"
+                onClick={() => setSelectedUser(conv.user)}
+                className="flex flex-col items-center shrink-0"
+              >
+                <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold ring-2 ring-blue-200">
+                  {conv.user.profilePhoto ? (
+                    <img
+                      src={conv.user.profilePhoto}
+                      alt={conv.user.name}
+                      className="w-14 h-14 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xl">{conv.user.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <span className="mt-1.5 text-xs font-medium text-gray-700 truncate max-w-[72px]">
+                  {conv.user.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Search Bar */}
       <div className="p-4 border-b border-gray-200">
         <div className="relative">
@@ -1152,7 +1199,7 @@ function MessagesPageContent() {
 
       {/* Conversations */}
       <div className="flex-1">
-        {filteredConversations.length === 0 ? (
+        {conversationsWithMessages.length === 0 ? (
           <div className="text-center py-12 px-4">
             <MessageCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Your messages</h3>
@@ -1168,7 +1215,7 @@ function MessagesPageContent() {
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-                         {filteredConversations.map((conversation) => (
+                         {conversationsWithMessages.map((conversation) => (
                <div
                  key={conversation.user.id}
                  onClick={() => {

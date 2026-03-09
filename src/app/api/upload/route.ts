@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
+import { normalizeUploadUrl, getUploadEndpointUrl } from '@/lib/upload';
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_TYPES = [
@@ -13,9 +14,7 @@ const ALLOWED_TYPES = [
   'application/vnd.oasis.opendocument.spreadsheet',
 ];
 
-// Get PHP endpoint URL from environment variable
-// Update this with your GoDaddy domain
-const PHP_UPLOAD_URL = process.env.PHP_UPLOAD_URL || 'https://score.yottascore.com/upload.php';
+const PHP_UPLOAD_URL = getUploadEndpointUrl();
 const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN;
 
 export async function POST(request: NextRequest) {
@@ -171,9 +170,10 @@ export async function POST(request: NextRequest) {
         const phpResult = await phpResponse.json();
         console.log('[Upload] PHP upload successful:', phpResult);
 
+        const imageUrl = normalizeUploadUrl(phpResult.url) || phpResult.url;
         return NextResponse.json({
           success: true,
-          url: phpResult.url,
+          url: imageUrl,
           fileName: phpResult.fileName,
           fileSize: phpResult.fileSize,
           type: file.type,

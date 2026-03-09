@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
+import { getUploadEndpointUrl, normalizeUploadUrl } from '@/lib/upload';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
     // Helper function to upload a file
     const uploadFile = async (file: File): Promise<string | null> => {
       try {
-        const PHP_UPLOAD_URL = process.env.PHP_UPLOAD_URL || 'https://score.yottascore.com/upload.php';
+        const PHP_UPLOAD_URL = getUploadEndpointUrl();
         const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN;
         
         // Validate file size (max 5MB)
@@ -126,14 +127,7 @@ export async function POST(req: Request) {
             const uploadData = await uploadResponse.json();
             const returnedUrl = uploadData.url;
             if (!returnedUrl || typeof returnedUrl !== 'string') return null;
-            // Normalize URL: use same origin as PHP_UPLOAD_URL so DB always has correct domain (e.g. yottascore.com)
-            try {
-              const origin = new URL(PHP_UPLOAD_URL).origin;
-              const pathname = new URL(returnedUrl).pathname;
-              return origin + pathname;
-            } catch {
-              return returnedUrl;
-            }
+            return normalizeUploadUrl(returnedUrl) ?? returnedUrl;
           } else {
             const errorData = await uploadResponse.json().catch(() => ({ error: 'Upload failed' }));
             console.error('Error uploading file via PHP endpoint:', errorData);

@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `battlequiz` ADD COLUMN `categoryId` VARCHAR(191) NULL,
+ALTER TABLE `BattleQuiz` ADD COLUMN `categoryId` VARCHAR(191) NULL,
     ADD COLUMN `questionCount` INTEGER NOT NULL DEFAULT 10;
 
 -- CreateTable

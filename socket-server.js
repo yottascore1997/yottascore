@@ -87,6 +87,9 @@ const io = new Server(httpServer, {
 // Store user socket mappings
 const userSockets = {};
 
+// Spy game state (used by typing/stop_typing handlers – empty if feature unused)
+const spyGames = new Map();
+
 // Timetable reminder intervals
 const timetableReminderIntervals = new Map(); // userId -> interval
 
@@ -101,6 +104,267 @@ const privateRooms = new Map(); // roomCode -> room data
 
 // Matchmaking lock per queue - prevents race when 100+ users join at once
 const matchmakingLocks = new Map(); // quizId -> boolean (true = locked)
+
+// ---------------- Live Quiz (Always-on, join anytime) ----------------
+const LIVE_QUIZ_DEFAULT_QUESTION_COUNT = 10;
+/** Max questions per round; 0 = use all questions in category. */
+const LIVE_QUIZ_MAX_QUESTIONS_PER_ROUND = 0;
+const LIVE_QUIZ_ACTIVE_WINDOW_MS = 45_000;
+const LIVE_QUIZ_TOP_LEADERBOARD_COUNT = 6;
+const LIVE_QUIZ_REFRESH_DEBOUNCE_MS = 1500;
+const liveQuizCategoryLoops = new Map(); // categoryId -> { timeout, sessionId }
+const liveQuizRefreshDebounce = new Map(); // sessionId -> { timeoutId, categoryId }
+
+async function pickLiveQuizQuestionIds(categoryId, questionCount) {
+  const items = await prisma.questionBankItem.findMany({
+    where: { categoryId, isActive: true },
+    select: { id: true },
+    take: questionCount * 3
+  });
+  const shuffled = items.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, questionCount).map((q) => q.id);
+}
+
+async function getOrCreatePlayingLiveQuizSession(categoryId) {
+  let session = await prisma.liveQuizSession.findFirst({
+    where: { categoryId, status: 'PLAYING' },
+    orderBy: { startedAt: 'desc' }
+  });
+  if (session) return session;
+
+  const category = await prisma.questionCategory.findFirst({
+    where: { id: categoryId, isActive: true },
+    select: { id: true, name: true }
+  });
+  if (!category) throw new Error(`Category not found: ${categoryId}`);
+
+  // Use actual QuestionBankItem count (same source as pickLiveQuizQuestionIds) so round length matches available questions
+  const availableCount = await prisma.questionBankItem.count({
+    where: { categoryId, isActive: true }
+  });
+  const questionCount =
+    LIVE_QUIZ_MAX_QUESTIONS_PER_ROUND > 0
+      ? Math.min(LIVE_QUIZ_MAX_QUESTIONS_PER_ROUND, availableCount || LIVE_QUIZ_DEFAULT_QUESTION_COUNT)
+      : (availableCount || LIVE_QUIZ_DEFAULT_QUESTION_COUNT);
+  const questionIds = await pickLiveQuizQuestionIds(categoryId, questionCount);
+  if (!questionIds.length) throw new Error(`No questions available for category: ${categoryId}`);
+
+  session = await prisma.liveQuizSession.create({
+    data: {
+      categoryId,
+      title: category.name,
+      status: 'PLAYING',
+      currentQuestionIndex: 0,
+      totalQuestions: questionIds.length,
+      timePerQuestion: 10,
+      questionIds: questionIds,
+      startedAt: new Date()
+    }
+  });
+  return session;
+}
+
+async function getLiveQuizQuestion(session, questionIndex) {
+  const questionIds = (session.questionIds || []);
+  const qid = questionIds?.[questionIndex];
+  if (!qid) return null;
+  const q = await prisma.questionBankItem.findUnique({ where: { id: qid } });
+  if (!q) return null;
+  return {
+    id: q.id,
+    text: q.text,
+    options: q.options || [],
+    correct: q.correct ?? 0,
+    questionIndex
+  };
+}
+
+async function getLiveQuizLeaderboard(sessionId) {
+  const activeSince = new Date(Date.now() - LIVE_QUIZ_ACTIVE_WINDOW_MS);
+  const participants = await prisma.liveQuizSessionParticipant.findMany({
+    where: { sessionId, status: 'PLAYING', lastSeenAt: { gte: activeSince } },
+    include: { user: { select: { id: true, name: true } } },
+    orderBy: [{ score: 'desc' }, { correctCount: 'desc' }, { totalTimeMs: 'asc' }]
+  });
+  return participants.map((p, i) => ({
+    rank: i + 1,
+    userId: p.userId,
+    name: p.user?.name || 'Unknown',
+    correctCount: p.correctCount,
+    wrongCount: p.wrongCount,
+    score: p.score,
+    totalTimeMs: p.totalTimeMs
+  }));
+}
+
+function computeLiveQuizQuestionEndsAt(session) {
+  const startedAtMs = session.startedAt ? new Date(session.startedAt).getTime() : Date.now();
+  const t = (session.timePerQuestion || 10) * 1000;
+  return startedAtMs + (session.currentQuestionIndex + 1) * t;
+}
+
+async function ensureLiveQuizCategoryLoop(categoryId, io) {
+  if (liveQuizCategoryLoops.has(categoryId)) return;
+  liveQuizCategoryLoops.set(categoryId, { timeout: null, sessionId: null });
+  scheduleLiveQuizTick(categoryId, io).catch((e) => console.error('[LiveQuiz] schedule error:', e));
+}
+
+async function scheduleLiveQuizTick(categoryId, io) {
+  const state = liveQuizCategoryLoops.get(categoryId);
+  if (!state) return;
+
+  const room = `live_quiz_cat_${categoryId}`;
+  const roomSet = io.sockets.adapter.rooms.get(room);
+  const playingCount = roomSet ? roomSet.size : 0;
+
+  // Stop loop when nobody is in the room
+  if (!playingCount) {
+    if (state.timeout) clearTimeout(state.timeout);
+    liveQuizCategoryLoops.delete(categoryId);
+    return;
+  }
+
+  let session;
+  try {
+    session = await getOrCreatePlayingLiveQuizSession(categoryId);
+  } catch (e) {
+    console.error('[LiveQuiz] failed to get/create session:', e?.message || e);
+    // try again later
+    state.timeout = setTimeout(() => scheduleLiveQuizTick(categoryId, io), 5000);
+    return;
+  }
+
+  state.sessionId = session.id;
+  const now = Date.now();
+  const endsAt = computeLiveQuizQuestionEndsAt(session);
+  const delayMs = Math.max(500, endsAt - now);
+
+  state.timeout = setTimeout(async () => {
+    try {
+      await advanceLiveQuiz(categoryId, io);
+    } catch (e) {
+      console.error('[LiveQuiz] advance error:', e?.message || e);
+    } finally {
+      scheduleLiveQuizTick(categoryId, io).catch((e) => console.error('[LiveQuiz] reschedule error:', e));
+    }
+  }, delayMs);
+}
+
+async function advanceLiveQuiz(categoryId, io) {
+  const room = `live_quiz_cat_${categoryId}`;
+  const session = await prisma.liveQuizSession.findFirst({
+    where: { categoryId, status: 'PLAYING' },
+    orderBy: { startedAt: 'desc' }
+  });
+  if (!session) return;
+
+  const nextIndex = session.currentQuestionIndex + 1;
+  if (nextIndex >= session.totalQuestions) {
+    // Finish current session
+    await prisma.liveQuizSession.update({
+      where: { id: session.id },
+      data: { status: 'FINISHED', currentQuestionIndex: nextIndex }
+    });
+
+    // Start a new round/session
+    const category = await prisma.questionCategory.findFirst({
+      where: { id: categoryId, isActive: true },
+      select: { id: true, name: true }
+    });
+    if (!category) return;
+    const availableCount = await prisma.questionBankItem.count({
+      where: { categoryId, isActive: true }
+    });
+    const questionCount =
+      LIVE_QUIZ_MAX_QUESTIONS_PER_ROUND > 0
+        ? Math.min(LIVE_QUIZ_MAX_QUESTIONS_PER_ROUND, availableCount || LIVE_QUIZ_DEFAULT_QUESTION_COUNT)
+        : (availableCount || LIVE_QUIZ_DEFAULT_QUESTION_COUNT);
+    const questionIds = await pickLiveQuizQuestionIds(categoryId, questionCount);
+    if (!questionIds.length) return;
+
+    const newSession = await prisma.liveQuizSession.create({
+      data: {
+        categoryId,
+        title: category.name,
+        status: 'PLAYING',
+        currentQuestionIndex: 0,
+        totalQuestions: questionIds.length,
+        timePerQuestion: session.timePerQuestion || 10,
+        questionIds,
+        startedAt: new Date()
+      }
+    });
+
+    // Auto-join all currently connected sockets (so they appear in leaderboard)
+    try {
+      const sockets = await io.in(room).fetchSockets();
+      await Promise.all(
+        sockets
+          .filter((s) => s.userId)
+          .map((s) =>
+            prisma.liveQuizSessionParticipant.upsert({
+              where: { sessionId_userId: { sessionId: newSession.id, userId: s.userId } },
+              create: { sessionId: newSession.id, userId: s.userId, status: 'PLAYING', lastSeenAt: new Date() },
+              update: { status: 'PLAYING', lastSeenAt: new Date() }
+            }).then(() => {
+              s.liveQuizSessionId = newSession.id;
+            })
+          )
+      );
+    } catch (e) {
+      console.error('[LiveQuiz] failed to upsert participants for new round:', e?.message || e);
+    }
+
+    const question = await getLiveQuizQuestion(newSession, 0);
+    const fullLeaderboard = await getLiveQuizLeaderboard(newSession.id);
+    const playingCount = fullLeaderboard.length;
+    const topLeaderboard = fullLeaderboard.slice(0, LIVE_QUIZ_TOP_LEADERBOARD_COUNT);
+    const allRanks = Object.fromEntries(fullLeaderboard.map((e, i) => [e.userId, i + 1]));
+    io.to(room).emit('live_quiz_round_started', {
+      categoryId,
+      session: {
+        id: newSession.id,
+        title: newSession.title,
+        categoryId: newSession.categoryId,
+        status: newSession.status,
+        currentQuestionIndex: newSession.currentQuestionIndex,
+        totalQuestions: newSession.totalQuestions,
+        timePerQuestion: newSession.timePerQuestion,
+        startedAt: newSession.startedAt
+      },
+      currentQuestion: question,
+      questionEndsAt: computeLiveQuizQuestionEndsAt(newSession),
+      leaderboard: topLeaderboard,
+      playingCount,
+      allRanks
+    });
+    return;
+  }
+
+  const updated = await prisma.liveQuizSession.update({
+    where: { id: session.id },
+    data: { currentQuestionIndex: nextIndex }
+  });
+  const question = await getLiveQuizQuestion(updated, nextIndex);
+  const leaderboard = await getLiveQuizLeaderboard(updated.id);
+  const playingCount = leaderboard.length;
+  io.to(room).emit('live_quiz_next_question', {
+    categoryId,
+    session: {
+      id: updated.id,
+      title: updated.title,
+      categoryId: updated.categoryId,
+      status: updated.status,
+      currentQuestionIndex: updated.currentQuestionIndex,
+      totalQuestions: updated.totalQuestions,
+      timePerQuestion: updated.timePerQuestion,
+      startedAt: updated.startedAt
+    },
+    currentQuestion: question,
+    questionEndsAt: computeLiveQuizQuestionEndsAt(updated),
+    playingCount
+  });
+}
 
 
 // Redis Queue Management with fallback
@@ -1038,6 +1302,159 @@ io.on('connection', (socket) => {
     socket.leave(`quiz_${quizId}`);
   });
 
+  // ----- Live Quiz (separate from Battle Quiz - all events live_quiz_*) -----
+  // Backwards compatible session-room prefix (old flow)
+  const LIVE_QUIZ_PREFIX = 'live_quiz_';
+  // Always-on category room prefix (new flow)
+  const LIVE_QUIZ_CAT_PREFIX = 'live_quiz_cat_';
+  socket.on('live_quiz_join', (data) => {
+    const { sessionId } = data || {};
+    if (!sessionId) return;
+    const room = LIVE_QUIZ_PREFIX + sessionId;
+    socket.join(room);
+    socket.liveQuizSessionId = sessionId;
+    const roomSet = io.sockets.adapter.rooms.get(room);
+    const playingCount = roomSet ? roomSet.size : 0;
+    io.to(room).emit('live_quiz_playing_count', { sessionId, playingCount });
+    console.log(`📺 Live Quiz: socket ${socket.id} joined session ${sessionId}, playingCount=${playingCount}`);
+  });
+  socket.on('live_quiz_leave', (data) => {
+    const sessionId = data?.sessionId || socket.liveQuizSessionId;
+    if (sessionId) {
+      const room = LIVE_QUIZ_PREFIX + sessionId;
+      socket.leave(room);
+      socket.liveQuizSessionId = null;
+      const roomSet = io.sockets.adapter.rooms.get(room);
+      const playingCount = roomSet ? roomSet.size : 0;
+      io.to(room).emit('live_quiz_playing_count', { sessionId, playingCount });
+      console.log(`📺 Live Quiz: socket ${socket.id} left session ${sessionId}, playingCount=${playingCount}`);
+    }
+  });
+  socket.on('live_quiz_broadcast_leaderboard', (data) => {
+    const { sessionId, leaderboard, playingCount } = data || {};
+    if (!sessionId) return;
+    const room = LIVE_QUIZ_PREFIX + sessionId;
+    io.to(room).emit('live_quiz_leaderboard', { sessionId, leaderboard, playingCount });
+    console.log(`📺 Live Quiz: broadcast leaderboard to session ${sessionId}`);
+  });
+  socket.on('live_quiz_broadcast_next_question', (data) => {
+    const { sessionId, currentQuestion, session } = data || {};
+    if (!sessionId) return;
+    const room = LIVE_QUIZ_PREFIX + sessionId;
+    io.to(room).emit('live_quiz_next_question', { sessionId, currentQuestion, session });
+    console.log(`📺 Live Quiz: broadcast next question to session ${sessionId}, index=${currentQuestion?.questionIndex ?? '?'}`);
+  });
+
+  // Always-on: join category room, server pushes questions/timer
+  socket.on('live_quiz_join_category', async (data) => {
+    const { categoryId } = data || {};
+    if (!categoryId) return;
+    const room = LIVE_QUIZ_CAT_PREFIX + categoryId;
+    socket.join(room);
+    socket.liveQuizCategoryId = categoryId;
+    console.log(`📺 Live Quiz: socket ${socket.id} joined category ${categoryId}`);
+
+    try {
+      const session = await getOrCreatePlayingLiveQuizSession(categoryId);
+      socket.liveQuizSessionId = session.id;
+
+      if (socket.userId) {
+        await prisma.liveQuizSessionParticipant.upsert({
+          where: { sessionId_userId: { sessionId: session.id, userId: socket.userId } },
+          create: { sessionId: session.id, userId: socket.userId, status: 'PLAYING', lastSeenAt: new Date() },
+          update: { status: 'PLAYING', lastSeenAt: new Date() }
+        });
+      }
+
+      const currentQuestion = await getLiveQuizQuestion(session, session.currentQuestionIndex);
+      const fullLeaderboard = await getLiveQuizLeaderboard(session.id);
+      const playingCount = fullLeaderboard.length;
+      const topLeaderboard = fullLeaderboard.slice(0, LIVE_QUIZ_TOP_LEADERBOARD_COUNT);
+      const allRanks = Object.fromEntries(fullLeaderboard.map((e, i) => [e.userId, i + 1]));
+
+      socket.emit('live_quiz_state', {
+        categoryId,
+        session: {
+          id: session.id,
+          title: session.title,
+          categoryId: session.categoryId,
+          status: session.status,
+          currentQuestionIndex: session.currentQuestionIndex,
+          totalQuestions: session.totalQuestions,
+          timePerQuestion: session.timePerQuestion,
+          startedAt: session.startedAt
+        },
+        currentQuestion,
+        questionEndsAt: computeLiveQuizQuestionEndsAt(session),
+        leaderboard: topLeaderboard,
+        playingCount,
+        allRanks
+      });
+
+      io.to(room).emit('live_quiz_playing_count', { categoryId, playingCount });
+      await ensureLiveQuizCategoryLoop(categoryId, io);
+    } catch (e) {
+      console.error('[LiveQuiz] join_category failed:', e?.message || e);
+      socket.emit('room_error', { message: 'Failed to join live quiz' });
+    }
+  });
+
+  socket.on('live_quiz_leave_category', async (data) => {
+    const categoryId = data?.categoryId || socket.liveQuizCategoryId;
+    if (!categoryId) return;
+    const room = LIVE_QUIZ_CAT_PREFIX + categoryId;
+    socket.leave(room);
+    socket.liveQuizCategoryId = null;
+
+    // Mark participant inactive quickly (so they drop from leaderboard)
+    try {
+      if (socket.userId && socket.liveQuizSessionId) {
+        await prisma.liveQuizSessionParticipant.update({
+          where: { sessionId_userId: { sessionId: socket.liveQuizSessionId, userId: socket.userId } },
+          data: { lastSeenAt: new Date(0) }
+        });
+      }
+    } catch (_) {}
+
+    const leaderboard = await getLiveQuizLeaderboard(socket.liveQuizSessionId).catch(() => []);
+    const playingCount = leaderboard.length;
+    io.to(room).emit('live_quiz_playing_count', { categoryId, playingCount });
+    console.log(`📺 Live Quiz: socket ${socket.id} left category ${categoryId}, playingCount=${playingCount}`);
+  });
+
+  socket.on('live_quiz_refresh_leaderboard', async (data) => {
+    const { categoryId, sessionId } = data || {};
+    const cid = categoryId || socket.liveQuizCategoryId;
+    const sid = sessionId || socket.liveQuizSessionId;
+    if (!cid || !sid) return;
+    const room = LIVE_QUIZ_CAT_PREFIX + cid;
+
+    const debounceKey = sid;
+    const existing = liveQuizRefreshDebounce.get(debounceKey);
+    if (existing && existing.timeoutId) clearTimeout(existing.timeoutId);
+
+    const timeoutId = setTimeout(async () => {
+      liveQuizRefreshDebounce.delete(debounceKey);
+      try {
+        const fullLeaderboard = await getLiveQuizLeaderboard(sid);
+        const topLeaderboard = fullLeaderboard.slice(0, LIVE_QUIZ_TOP_LEADERBOARD_COUNT);
+        const playingCount = fullLeaderboard.length;
+        const allRanks = Object.fromEntries(fullLeaderboard.map((e, i) => [e.userId, i + 1]));
+        io.to(room).emit('live_quiz_leaderboard', {
+          sessionId: sid,
+          leaderboard: topLeaderboard,
+          playingCount,
+          categoryId: cid,
+          allRanks
+        });
+      } catch (e) {
+        console.error('[LiveQuiz] refresh leaderboard failed:', e?.message || e);
+      }
+    }, LIVE_QUIZ_REFRESH_DEBOUNCE_MS);
+
+    liveQuizRefreshDebounce.set(debounceKey, { timeoutId, categoryId: cid });
+  });
+
   // Chat Events
   socket.on('join_chat', (chatId) => {
     socket.join(chatId);
@@ -1467,6 +1884,33 @@ io.on('connection', (socket) => {
     console.log('🔌 Client disconnected:', socket.id);
     console.log('   - Time:', new Date().toISOString());
     console.log('   - Total connections:', io.engine.clientsCount);
+
+    // Live Quiz: leave rooms and update playing count
+    if (socket.liveQuizSessionId) {
+      const room = LIVE_QUIZ_PREFIX + socket.liveQuizSessionId;
+      socket.leave(room);
+      const roomSet = io.sockets.adapter.rooms.get(room);
+      const playingCount = roomSet ? roomSet.size : 0;
+      io.to(room).emit('live_quiz_playing_count', { sessionId: socket.liveQuizSessionId, playingCount });
+      console.log(`📺 Live Quiz: socket left session ${socket.liveQuizSessionId}, playingCount=${playingCount}`);
+    }
+    if (socket.liveQuizCategoryId) {
+      const catRoom = LIVE_QUIZ_CAT_PREFIX + socket.liveQuizCategoryId;
+      socket.leave(catRoom);
+      const roomSet = io.sockets.adapter.rooms.get(catRoom);
+      const playingCount = roomSet ? roomSet.size : 0;
+      io.to(catRoom).emit('live_quiz_playing_count', { categoryId: socket.liveQuizCategoryId, playingCount });
+      console.log(`📺 Live Quiz: socket left category ${socket.liveQuizCategoryId}, playingCount=${playingCount}`);
+    }
+    // Mark inactive quickly for leaderboard purposes
+    try {
+      if (socket.userId && socket.liveQuizSessionId) {
+        await prisma.liveQuizSessionParticipant.update({
+          where: { sessionId_userId: { sessionId: socket.liveQuizSessionId, userId: socket.userId } },
+          data: { lastSeenAt: new Date(0) }
+        });
+      }
+    } catch (_) {}
     
     // Get userId - from mapping or socket (socket.userId set by register_user)
     let userId = Object.keys(userSockets).find(key => userSockets[key] === socket.id);

@@ -14,7 +14,7 @@
 
 */
 -- DropForeignKey
-ALTER TABLE `account` DROP FOREIGN KEY `Account_userId_fkey`;
+ALTER TABLE `Account` DROP FOREIGN KEY `Account_userId_fkey`;
 
 -- DropForeignKey
 ALTER TABLE `battle_answers` DROP FOREIGN KEY `battle_answers_userId_fkey`;
@@ -26,133 +26,133 @@ ALTER TABLE `battle_players` DROP FOREIGN KEY `battle_players_userId_fkey`;
 ALTER TABLE `battle_rooms` DROP FOREIGN KEY `battle_rooms_createdById_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `battlequiz` DROP FOREIGN KEY `BattleQuiz_createdById_fkey`;
+ALTER TABLE `BattleQuiz` DROP FOREIGN KEY `BattleQuiz_createdById_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `battlequizleaderboard` DROP FOREIGN KEY `BattleQuizLeaderboard_userId_fkey`;
+ALTER TABLE `BattleQuizLeaderboard` DROP FOREIGN KEY `BattleQuizLeaderboard_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `battlequizmatch` DROP FOREIGN KEY `BattleQuizMatch_player1Id_fkey`;
+ALTER TABLE `BattleQuizMatch` DROP FOREIGN KEY `BattleQuizMatch_player1Id_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `battlequizmatch` DROP FOREIGN KEY `BattleQuizMatch_player2Id_fkey`;
+ALTER TABLE `BattleQuizMatch` DROP FOREIGN KEY `BattleQuizMatch_player2Id_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `battlequizmatch` DROP FOREIGN KEY `BattleQuizMatch_winnerId_fkey`;
+ALTER TABLE `BattleQuizMatch` DROP FOREIGN KEY `BattleQuizMatch_winnerId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `battlequizparticipant` DROP FOREIGN KEY `BattleQuizParticipant_userId_fkey`;
+ALTER TABLE `BattleQuizParticipant` DROP FOREIGN KEY `BattleQuizParticipant_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `battlequizwinner` DROP FOREIGN KEY `BattleQuizWinner_userId_fkey`;
+ALTER TABLE `BattleQuizWinner` DROP FOREIGN KEY `BattleQuizWinner_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `comment` DROP FOREIGN KEY `Comment_userId_fkey`;
+ALTER TABLE `Comment` DROP FOREIGN KEY `Comment_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `directmessage` DROP FOREIGN KEY `DirectMessage_receiverId_fkey`;
+ALTER TABLE `DirectMessage` DROP FOREIGN KEY `DirectMessage_receiverId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `directmessage` DROP FOREIGN KEY `DirectMessage_senderId_fkey`;
+ALTER TABLE `DirectMessage` DROP FOREIGN KEY `DirectMessage_senderId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `follow` DROP FOREIGN KEY `Follow_followerId_fkey`;
+ALTER TABLE `Follow` DROP FOREIGN KEY `Follow_followerId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `follow` DROP FOREIGN KEY `Follow_followingId_fkey`;
+ALTER TABLE `Follow` DROP FOREIGN KEY `Follow_followingId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `followrequest` DROP FOREIGN KEY `FollowRequest_receiverId_fkey`;
+ALTER TABLE `FollowRequest` DROP FOREIGN KEY `FollowRequest_receiverId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `followrequest` DROP FOREIGN KEY `FollowRequest_senderId_fkey`;
+ALTER TABLE `FollowRequest` DROP FOREIGN KEY `FollowRequest_senderId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `group` DROP FOREIGN KEY `Group_creatorId_fkey`;
+ALTER TABLE `Group` DROP FOREIGN KEY `Group_creatorId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `groupevent` DROP FOREIGN KEY `GroupEvent_creatorId_fkey`;
+ALTER TABLE `GroupEvent` DROP FOREIGN KEY `GroupEvent_creatorId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `groupeventparticipant` DROP FOREIGN KEY `GroupEventParticipant_userId_fkey`;
+ALTER TABLE `GroupEventParticipant` DROP FOREIGN KEY `GroupEventParticipant_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `groupmember` DROP FOREIGN KEY `GroupMember_userId_fkey`;
+ALTER TABLE `GroupMember` DROP FOREIGN KEY `GroupMember_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `groupmessage` DROP FOREIGN KEY `GroupMessage_senderId_fkey`;
+ALTER TABLE `GroupMessage` DROP FOREIGN KEY `GroupMessage_senderId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `grouppoll` DROP FOREIGN KEY `GroupPoll_creatorId_fkey`;
+ALTER TABLE `GroupPoll` DROP FOREIGN KEY `GroupPoll_creatorId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `grouppollvote` DROP FOREIGN KEY `GroupPollVote_userId_fkey`;
+ALTER TABLE `GroupPollVote` DROP FOREIGN KEY `GroupPollVote_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `grouppost` DROP FOREIGN KEY `GroupPost_authorId_fkey`;
+ALTER TABLE `GroupPost` DROP FOREIGN KEY `GroupPost_authorId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `grouppostcomment` DROP FOREIGN KEY `GroupPostComment_userId_fkey`;
+ALTER TABLE `GroupPostComment` DROP FOREIGN KEY `GroupPostComment_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `grouppostlike` DROP FOREIGN KEY `GroupPostLike_userId_fkey`;
+ALTER TABLE `GroupPostLike` DROP FOREIGN KEY `GroupPostLike_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `groupquiz` DROP FOREIGN KEY `GroupQuiz_creatorId_fkey`;
+ALTER TABLE `GroupQuiz` DROP FOREIGN KEY `GroupQuiz_creatorId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `groupquizattempt` DROP FOREIGN KEY `GroupQuizAttempt_userId_fkey`;
+ALTER TABLE `GroupQuizAttempt` DROP FOREIGN KEY `GroupQuizAttempt_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `like` DROP FOREIGN KEY `Like_userId_fkey`;
+ALTER TABLE `Like` DROP FOREIGN KEY `Like_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `liveexam` DROP FOREIGN KEY `LiveExam_createdById_fkey`;
+ALTER TABLE `LiveExam` DROP FOREIGN KEY `LiveExam_createdById_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `liveexamparticipant` DROP FOREIGN KEY `LiveExamParticipant_userId_fkey`;
+ALTER TABLE `LiveExamParticipant` DROP FOREIGN KEY `LiveExamParticipant_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `liveexamwinner` DROP FOREIGN KEY `LiveExamWinner_userId_fkey`;
+ALTER TABLE `LiveExamWinner` DROP FOREIGN KEY `LiveExamWinner_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `messagerequest` DROP FOREIGN KEY `MessageRequest_receiverId_fkey`;
+ALTER TABLE `MessageRequest` DROP FOREIGN KEY `MessageRequest_receiverId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `messagerequest` DROP FOREIGN KEY `MessageRequest_senderId_fkey`;
+ALTER TABLE `MessageRequest` DROP FOREIGN KEY `MessageRequest_senderId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `post` DROP FOREIGN KEY `Post_authorId_fkey`;
+ALTER TABLE `Post` DROP FOREIGN KEY `Post_authorId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `practiceexam` DROP FOREIGN KEY `PracticeExam_createdById_fkey`;
+ALTER TABLE `PracticeExam` DROP FOREIGN KEY `PracticeExam_createdById_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `practiceexamparticipant` DROP FOREIGN KEY `PracticeExamParticipant_userId_fkey`;
+ALTER TABLE `PracticeExamParticipant` DROP FOREIGN KEY `PracticeExamParticipant_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `questionbankitem` DROP FOREIGN KEY `QuestionBankItem_createdById_fkey`;
+ALTER TABLE `QuestionBankItem` DROP FOREIGN KEY `QuestionBankItem_createdById_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `questioncategory` DROP FOREIGN KEY `QuestionCategory_createdById_fkey`;
+ALTER TABLE `QuestionCategory` DROP FOREIGN KEY `QuestionCategory_createdById_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `questionoftheday` DROP FOREIGN KEY `QuestionOfTheDay_createdById_fkey`;
+ALTER TABLE `QuestionOfTheDay` DROP FOREIGN KEY `QuestionOfTheDay_createdById_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `questionofthedayattempt` DROP FOREIGN KEY `QuestionOfTheDayAttempt_userId_fkey`;
+ALTER TABLE `QuestionOfTheDayAttempt` DROP FOREIGN KEY `QuestionOfTheDayAttempt_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `referral` DROP FOREIGN KEY `Referral_referredId_fkey`;
+ALTER TABLE `Referral` DROP FOREIGN KEY `Referral_referredId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `referral` DROP FOREIGN KEY `Referral_referrerId_fkey`;
+ALTER TABLE `Referral` DROP FOREIGN KEY `Referral_referrerId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `savedpost` DROP FOREIGN KEY `SavedPost_userId_fkey`;
+ALTER TABLE `SavedPost` DROP FOREIGN KEY `SavedPost_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `session` DROP FOREIGN KEY `Session_userId_fkey`;
+ALTER TABLE `Session` DROP FOREIGN KEY `Session_userId_fkey`;
 
 -- DropForeignKey
 ALTER TABLE `spy_game_players` DROP FOREIGN KEY `spy_game_players_gameId_fkey`;
@@ -176,37 +176,37 @@ ALTER TABLE `spy_game_words` DROP FOREIGN KEY `spy_game_words_gameId_fkey`;
 ALTER TABLE `spy_games` DROP FOREIGN KEY `spy_games_hostId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `story` DROP FOREIGN KEY `Story_authorId_fkey`;
+ALTER TABLE `Story` DROP FOREIGN KEY `Story_authorId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `storylike` DROP FOREIGN KEY `StoryLike_userId_fkey`;
+ALTER TABLE `StoryLike` DROP FOREIGN KEY `StoryLike_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `storyview` DROP FOREIGN KEY `StoryView_viewerId_fkey`;
+ALTER TABLE `StoryView` DROP FOREIGN KEY `StoryView_viewerId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `supportticket` DROP FOREIGN KEY `SupportTicket_assignedToId_fkey`;
+ALTER TABLE `SupportTicket` DROP FOREIGN KEY `SupportTicket_assignedToId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `supportticket` DROP FOREIGN KEY `SupportTicket_userId_fkey`;
+ALTER TABLE `SupportTicket` DROP FOREIGN KEY `SupportTicket_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `supportticketreply` DROP FOREIGN KEY `SupportTicketReply_userId_fkey`;
+ALTER TABLE `SupportTicketReply` DROP FOREIGN KEY `SupportTicketReply_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `timetable` DROP FOREIGN KEY `Timetable_userId_fkey`;
+ALTER TABLE `Timetable` DROP FOREIGN KEY `Timetable_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `timetableslot` DROP FOREIGN KEY `TimetableSlot_userId_fkey`;
+ALTER TABLE `TimetableSlot` DROP FOREIGN KEY `TimetableSlot_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `transaction` DROP FOREIGN KEY `Transaction_userId_fkey`;
+ALTER TABLE `Transaction` DROP FOREIGN KEY `Transaction_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `userbattlestats` DROP FOREIGN KEY `UserBattleStats_userId_fkey`;
+ALTER TABLE `UserBattleStats` DROP FOREIGN KEY `UserBattleStats_userId_fkey`;
 
 -- DropIndex
-DROP INDEX `Account_userId_fkey` ON `account`;
+DROP INDEX `Account_userId_fkey` ON `Account`;
 
 -- DropIndex
 DROP INDEX `battle_answers_userId_fkey` ON `battle_answers`;
@@ -218,115 +218,115 @@ DROP INDEX `battle_players_userId_fkey` ON `battle_players`;
 DROP INDEX `battle_rooms_createdById_fkey` ON `battle_rooms`;
 
 -- DropIndex
-DROP INDEX `BattleQuiz_createdById_fkey` ON `battlequiz`;
+DROP INDEX `BattleQuiz_createdById_fkey` ON `BattleQuiz`;
 
 -- DropIndex
-DROP INDEX `BattleQuizMatch_player1Id_fkey` ON `battlequizmatch`;
+DROP INDEX `BattleQuizMatch_player1Id_fkey` ON `BattleQuizMatch`;
 
 -- DropIndex
-DROP INDEX `BattleQuizMatch_player2Id_fkey` ON `battlequizmatch`;
+DROP INDEX `BattleQuizMatch_player2Id_fkey` ON `BattleQuizMatch`;
 
 -- DropIndex
-DROP INDEX `BattleQuizMatch_winnerId_fkey` ON `battlequizmatch`;
+DROP INDEX `BattleQuizMatch_winnerId_fkey` ON `BattleQuizMatch`;
 
 -- DropIndex
-DROP INDEX `BattleQuizParticipant_userId_fkey` ON `battlequizparticipant`;
+DROP INDEX `BattleQuizParticipant_userId_fkey` ON `BattleQuizParticipant`;
 
 -- DropIndex
-DROP INDEX `BattleQuizWinner_userId_fkey` ON `battlequizwinner`;
+DROP INDEX `BattleQuizWinner_userId_fkey` ON `BattleQuizWinner`;
 
 -- DropIndex
-DROP INDEX `Comment_userId_fkey` ON `comment`;
+DROP INDEX `Comment_userId_fkey` ON `Comment`;
 
 -- DropIndex
-DROP INDEX `Follow_followingId_fkey` ON `follow`;
+DROP INDEX `Follow_followingId_fkey` ON `Follow`;
 
 -- DropIndex
-DROP INDEX `FollowRequest_receiverId_fkey` ON `followrequest`;
+DROP INDEX `FollowRequest_receiverId_fkey` ON `FollowRequest`;
 
 -- DropIndex
-DROP INDEX `Group_creatorId_fkey` ON `group`;
+DROP INDEX `Group_creatorId_fkey` ON `Group`;
 
 -- DropIndex
-DROP INDEX `GroupEvent_creatorId_fkey` ON `groupevent`;
+DROP INDEX `GroupEvent_creatorId_fkey` ON `GroupEvent`;
 
 -- DropIndex
-DROP INDEX `GroupMessage_senderId_fkey` ON `groupmessage`;
+DROP INDEX `GroupMessage_senderId_fkey` ON `GroupMessage`;
 
 -- DropIndex
-DROP INDEX `GroupPoll_creatorId_fkey` ON `grouppoll`;
+DROP INDEX `GroupPoll_creatorId_fkey` ON `GroupPoll`;
 
 -- DropIndex
-DROP INDEX `GroupPost_authorId_fkey` ON `grouppost`;
+DROP INDEX `GroupPost_authorId_fkey` ON `GroupPost`;
 
 -- DropIndex
-DROP INDEX `GroupPostComment_userId_fkey` ON `grouppostcomment`;
+DROP INDEX `GroupPostComment_userId_fkey` ON `GroupPostComment`;
 
 -- DropIndex
-DROP INDEX `GroupQuiz_creatorId_fkey` ON `groupquiz`;
+DROP INDEX `GroupQuiz_creatorId_fkey` ON `GroupQuiz`;
 
 -- DropIndex
-DROP INDEX `LiveExam_createdById_fkey` ON `liveexam`;
+DROP INDEX `LiveExam_createdById_fkey` ON `LiveExam`;
 
 -- DropIndex
-DROP INDEX `LiveExamParticipant_userId_fkey` ON `liveexamparticipant`;
+DROP INDEX `LiveExamParticipant_userId_fkey` ON `LiveExamParticipant`;
 
 -- DropIndex
-DROP INDEX `LiveExamWinner_userId_fkey` ON `liveexamwinner`;
+DROP INDEX `LiveExamWinner_userId_fkey` ON `LiveExamWinner`;
 
 -- DropIndex
-DROP INDEX `PracticeExam_createdById_fkey` ON `practiceexam`;
+DROP INDEX `PracticeExam_createdById_fkey` ON `PracticeExam`;
 
 -- DropIndex
-DROP INDEX `PracticeExamParticipant_userId_fkey` ON `practiceexamparticipant`;
+DROP INDEX `PracticeExamParticipant_userId_fkey` ON `PracticeExamParticipant`;
 
 -- DropIndex
-DROP INDEX `QuestionBankItem_createdById_fkey` ON `questionbankitem`;
+DROP INDEX `QuestionBankItem_createdById_fkey` ON `QuestionBankItem`;
 
 -- DropIndex
-DROP INDEX `QuestionCategory_createdById_fkey` ON `questioncategory`;
+DROP INDEX `QuestionCategory_createdById_fkey` ON `QuestionCategory`;
 
 -- DropIndex
-DROP INDEX `QuestionOfTheDay_createdById_fkey` ON `questionoftheday`;
+DROP INDEX `QuestionOfTheDay_createdById_fkey` ON `QuestionOfTheDay`;
 
 -- DropIndex
-DROP INDEX `QuestionOfTheDayAttempt_userId_fkey` ON `questionofthedayattempt`;
+DROP INDEX `QuestionOfTheDayAttempt_userId_fkey` ON `QuestionOfTheDayAttempt`;
 
 -- DropIndex
-DROP INDEX `Session_userId_fkey` ON `session`;
+DROP INDEX `Session_userId_fkey` ON `Session`;
 
 -- DropIndex
-DROP INDEX `StoryLike_userId_fkey` ON `storylike`;
+DROP INDEX `StoryLike_userId_fkey` ON `StoryLike`;
 
 -- DropIndex
-DROP INDEX `StoryView_viewerId_fkey` ON `storyview`;
+DROP INDEX `StoryView_viewerId_fkey` ON `StoryView`;
 
 -- DropIndex
-DROP INDEX `SupportTicket_assignedToId_idx` ON `supportticket`;
+DROP INDEX `SupportTicket_assignedToId_idx` ON `SupportTicket`;
 
 -- DropIndex
-DROP INDEX `SupportTicketReply_userId_fkey` ON `supportticketreply`;
+DROP INDEX `SupportTicketReply_userId_fkey` ON `SupportTicketReply`;
 
 -- DropIndex
-DROP INDEX `Timetable_userId_fkey` ON `timetable`;
+DROP INDEX `Timetable_userId_fkey` ON `Timetable`;
 
 -- DropIndex
-DROP INDEX `Transaction_userId_fkey` ON `transaction`;
+DROP INDEX `Transaction_userId_fkey` ON `Transaction`;
 
 -- AlterTable
 ALTER TABLE `battle_rooms` MODIFY `status` ENUM('WAITING', 'PLAYING', 'FINISHED') NOT NULL DEFAULT 'WAITING';
 
 -- AlterTable
-ALTER TABLE `supportticket` DROP COLUMN `assignedToId`;
+ALTER TABLE `SupportTicket` DROP COLUMN `assignedToId`;
 
 -- DropTable
-DROP TABLE `directmessage`;
+DROP TABLE `DirectMessage`;
 
 -- DropTable
-DROP TABLE `messagerequest`;
+DROP TABLE `MessageRequest`;
 
 -- DropTable
-DROP TABLE `referral`;
+DROP TABLE `Referral`;
 
 -- DropTable
 DROP TABLE `spy_game_players`;
@@ -341,7 +341,7 @@ DROP TABLE `spy_game_words`;
 DROP TABLE `spy_games`;
 
 -- DropTable
-DROP TABLE `user`;
+DROP TABLE `User`;
 
 -- CreateTable
 CREATE TABLE `users` (

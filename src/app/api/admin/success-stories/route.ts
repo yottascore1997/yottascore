@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import jwt from 'jsonwebtoken'
+import { getUploadEndpointUrl, normalizeUploadUrl } from '@/lib/upload'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
-const PHP_UPLOAD_URL = process.env.PHP_UPLOAD_URL || 'https://score.yottascore.com/upload.php'
+const PHP_UPLOAD_URL = getUploadEndpointUrl()
 const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN
 const MAX_VIDEO_SIZE = 80 * 1024 * 1024 // 80 MB for videos
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024   // 5 MB for images
@@ -49,7 +50,7 @@ async function uploadFile(file: File): Promise<string | null> {
     })
     if (uploadResponse.ok) {
       const uploadData = await uploadResponse.json()
-      return uploadData.url ?? null
+      return normalizeUploadUrl(uploadData.url) ?? uploadData.url ?? null
     }
     const errorData = await uploadResponse.json().catch(() => ({}))
     console.error('PHP upload error:', errorData)

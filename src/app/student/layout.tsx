@@ -16,6 +16,8 @@ const studentLinks = [
   { name: 'PYQ (Previous Year)', href: '/student/pyq', icon: FileText },
   { name: 'Current Affairs', href: '/student/current-affairs', icon: FileText },
   { name: 'Battle Quiz', href: '/student/battle-quiz', icon: Zap },
+  { name: 'Live Quiz', href: '/student/live-quiz', icon: Users },
+  { name: 'Study Partner', href: '/student/study-partner', icon: Users },
   { name: 'Spy Game', href: '/spy-game', icon: Eye },
   { name: 'Weekly Leaderboard', href: '/student/weekly-leaderboard', icon: Trophy },
   { name: 'Exam Notifications', href: '/student/notifications', icon: Bell },

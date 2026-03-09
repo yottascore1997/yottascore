@@ -80,6 +80,38 @@ export default function AdminWinningsPage() {
     }
   };
 
+  const distributeExam = async (examId: string) => {
+    try {
+      setDistributing(true);
+      setError(null);
+      setSuccess(null);
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please login as admin');
+        return;
+      }
+
+      const res = await fetch('/api/admin/distribute-winnings', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examId })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to distribute winnings for exam');
+      }
+
+      const data = await res.json();
+      setSuccess(data.message || 'Queued distribution for exam');
+      fetchEndedExams(); // Refresh the list
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to distribute winnings');
+    } finally {
+      setDistributing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -145,6 +177,19 @@ export default function AdminWinningsPage() {
                     </div>
                     <div className="text-sm text-gray-600">
                       {exam.spots} participants
+                    </div>
+                    <div className="mt-2 flex justify-end space-x-2">
+                      <button
+                        onClick={() => distributeExam(exam.id)}
+                        disabled={distributing || exam.winningsDistributed}
+                        className={`px-3 py-1 rounded text-sm ${
+                          distributing || exam.winningsDistributed
+                            ? 'bg-gray-300 cursor-not-allowed'
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                        }`}
+                      >
+                        {exam.winningsDistributed ? 'Queued' : 'Distribute This Exam'}
+                      </button>
                     </div>
                   </div>
                 </div>

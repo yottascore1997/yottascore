@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import jwt from 'jsonwebtoken'
+import { normalizeUploadUrl } from '@/lib/upload'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
@@ -88,6 +89,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       ...user,
+      profilePhoto: normalizeUploadUrl(user.profilePhoto) ?? user.profilePhoto,
       _count: {
         ...user._count,
         posts: visiblePostsCount // Use visible posts count (instantly visible posts)
@@ -168,6 +170,7 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({
       ...updatedUser,
+      profilePhoto: normalizeUploadUrl(updatedUser.profilePhoto) ?? updatedUser.profilePhoto,
       _count: {
         ...updatedUser._count,
         posts: visiblePostsCount // Use visible posts count (instantly visible posts)

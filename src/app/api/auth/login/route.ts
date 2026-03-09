@@ -77,6 +77,14 @@ const handler = async (req: Request) => {
       data: { userId: user.id, tokenHash, expiresAt },
     })
 
+    // Single-device enforcement: remove any other refresh tokens for this user
+    await prisma.refreshToken.deleteMany({
+      where: {
+        userId: user.id,
+        tokenHash: { not: tokenHash },
+      },
+    })
+
     return NextResponse.json({
       token: accessToken,
       refreshToken,

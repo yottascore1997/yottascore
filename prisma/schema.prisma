@@ -293,6 +293,16 @@ model User {
   bookCarts         BookCart[]
   bookReports       BookReport[]
   
+  // Live Quiz (multiplayer)
+  liveQuizSessionParticipations LiveQuizSessionParticipant[]
+
+  // Study Partner (find study partner - Tinder style)
+  studyPartnerProfile   StudyPartnerProfile?
+  studyPartnerLikesSent StudyPartnerLike[]    @relation("StudyPartnerLikeSender")
+  studyPartnerLikesReceived StudyPartnerLike[] @relation("StudyPartnerLikeReceiver")
+  studyPartnerMatchesAsUser1 StudyPartnerMatch[] @relation("StudyPartnerMatchUser1")
+  studyPartnerMatchesAsUser2 StudyPartnerMatch[] @relation("StudyPartnerMatchUser2")
+
   // Spy Game - Commented out for now
   // spyGamePlayers SpyGamePlayer[]
   
@@ -360,6 +370,25 @@ model LiveExamWinner {
 
   @@unique([examId, rank])
   @@map("LiveExamWinner")
+}
+
+// Audit rows for winnings distribution attempts
+model WinningsDistribution {
+  id            String    @id @default(cuid())
+  examId        String
+  userId        String
+  rank          Int
+  prizeAmount   Float
+  status        String    @default("PENDING") // PENDING, PROCESSING, SUCCESS, FAILED
+  attempts      Int       @default(0)
+  lastError     String?   @db.Text
+  lastAttemptAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([examId, status])
+  @@index([userId])
+  @@map("WinningsDistribution")
 }
 
 model Question {
@@ -776,6 +805,63 @@ model UserBlock {
 
   @@unique([blockerId, blockedId]) // One block record per blocker-blocked pair
   @@map("UserBlock")
+}
+
+// Study Partner - profile for discovery (Tinder-style)
+model StudyPartnerProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio               String?  @db.Text
+  subjects          Json?    // ["Railway", "SSC", "Math"] - category ids or names
+  photos            Json?    // Up to 4 photo URLs for study partner discovery
+  examType          String?  // e.g. "Railway", "SSC CGL"
+  goals             String?  @db.Text
+  studyTimeFrom     String?  // e.g. "09:00" or "9 AM"
+  studyTimeTo       String?  // e.g. "18:00" or "6 PM"
+  studyTimeSlot     String?  // Morning | Afternoon | Evening | Night
+  gender            String?  // Male | Female | Transgender
+  dateOfBirth       DateTime? // For age calculation
+  language          String?  // e.g. "Hindi", "English"
+  city              String?  // e.g. "Mumbai", "Delhi" - for city-based filter
+  isActive           Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("StudyPartnerProfile")
+}
+
+// Like = interested, Pass = not interested
+model StudyPartnerLike {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("StudyPartnerLikeSender", fields: [userId], references: [id], onDelete: Cascade)
+  targetUserId String
+  targetUser  User     @relation("StudyPartnerLikeReceiver", fields: [targetUserId], references: [id], onDelete: Cascade)
+  action      String   // "like" | "pass"
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, targetUserId])
+  @@index([userId])
+  @@index([targetUserId])
+  @@map("StudyPartnerLike")
+}
+
+// Match when both liked each other
+model StudyPartnerMatch {
+  id        String   @id @default(cuid())
+  user1Id   String
+  user1     User     @relation("StudyPartnerMatchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2Id   String
+  user2     User     @relation("StudyPartnerMatchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  unmatchedAt DateTime?
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+  @@map("StudyPartnerMatch")
 }
 
 // DirectMessage model
@@ -1327,6 +1413,7 @@ model QuestionCategory {
   battleRooms BattleRoom[]
   quizQuestions Question[]
   battleQuizAmounts BattleQuizAmount[]
+  liveQuizSessions LiveQuizSession[]
 }
 
 model QuestionBankItem {
@@ -1656,6 +1743,59 @@ model BattleAnswer {
 
 enum BattleRoomStatus {
   WAITING
+  PLAYING
+  FINISHED
+}
+
+// Multiplayer Live Quiz (many players, one session, live leaderboard)
+enum LiveQuizSessionStatus {
+  WAITING   // Lobby, accepting joins
+  PLAYING   // Questions in progress
+  FINISHED  // Quiz ended
+}
+
+model LiveQuizSession {
+  id                  String    @id @default(cuid())
+  categoryId          String
+  category            QuestionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  title               String    // e.g. "Raj. Police Const..."
+  status              LiveQuizSessionStatus @default(WAITING)
+  currentQuestionIndex Int     @default(0)  // 0-based
+  totalQuestions      Int       @default(10)
+  timePerQuestion     Int      @default(15) // seconds
+  questionIds         Json      // Array of QuestionBankItem ids for this run
+  startedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  participants        LiveQuizSessionParticipant[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@map("live_quiz_sessions")
+}
+
+model LiveQuizSessionParticipant {
+  id          String    @id @default(cuid())
+  sessionId   String
+  session     LiveQuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score       Int       @default(0)
+  correctCount Int      @default(0)
+  wrongCount   Int      @default(0)
+  totalTimeMs  Int      @default(0)  // Total time taken in ms
+  answers     Json?     // [{ questionIndex, selectedOption, isCorrect, timeSpentMs }]
+  status      LiveQuizParticipantStatus @default(PLAYING) // PLAYING | FINISHED
+  joinedAt    DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now()) // For "X Playing" - who's still active
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
+  @@map("live_quiz_session_participants")
+}
+
+enum LiveQuizParticipantStatus {
   PLAYING
   FINISHED
 }
