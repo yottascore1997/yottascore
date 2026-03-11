@@ -3487,12 +3487,38 @@ async function tryMatchPlayers(quizId) {
       continue;
     }
     
+    const entryFee = player1.quizData.entryFee || 10;
+    
+    // Re-check wallet balance before deducting (may have changed since join)
+    let p1Wallet, p2Wallet;
+    try {
+      const [u1, u2] = await Promise.all([
+        prisma.user.findUnique({ where: { id: player1.userId }, select: { wallet: true } }),
+        prisma.user.findUnique({ where: { id: player2.userId }, select: { wallet: true } })
+      ]);
+      p1Wallet = u1?.wallet ?? 0;
+      p2Wallet = u2?.wallet ?? 0;
+    } catch (e) {
+      console.error('❌ Error fetching wallet for balance check:', e);
+      continue; // Keep both in queue, try next pair
+    }
+    if (p1Wallet < entryFee || p2Wallet < entryFee) {
+      console.log(`⚠️ Insufficient balance before match - P1: ₹${p1Wallet}, P2: ₹${p2Wallet}, required: ₹${entryFee}`);
+      const player1Socket = io.sockets.sockets.get(player1.socketId);
+      const player2Socket = io.sockets.sockets.get(player2.socketId);
+      if (player1Socket?.connected) player1Socket.emit('matchmaking_error', { message: 'Insufficient balance. Please recharge and try again.' });
+      if (player2Socket?.connected) player2Socket.emit('matchmaking_error', { message: 'Insufficient balance. Please recharge and try again.' });
+      // Remove from queue so they can re-join after recharge (otherwise same pair would keep matching)
+      await queueManager.removeFromQueue(quizId, player1);
+      await queueManager.removeFromQueue(quizId, player2);
+      continue;
+    }
+    
     // Remove matched players from queue
     await queueManager.removeFromQueue(quizId, player1);
     await queueManager.removeFromQueue(quizId, player2);
     
     // Deduct entry fees from both players
-    const entryFee = player1.quizData.entryFee || 10;
     console.log(`💰 Deducting entry fees: ₹${entryFee} from each player`);
     
     try {

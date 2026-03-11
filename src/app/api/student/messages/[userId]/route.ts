@@ -29,31 +29,22 @@ export async function GET(
     const limit = parseInt(searchParams.get('limit') || '50')
     const since = searchParams.get('since') // New parameter for efficient polling
 
-    // Check if either user follows the other (allows viewing messages if there's any follow relationship)
-    console.log('🔍 Checking follow relationship between:', decoded.userId, 'and', userId);
-    
-    const iFollowThem = await prisma.follow.findUnique({
+    // Allow viewing messages ONLY for Study Partner matches (follow is not required).
+    console.log('🔍 Checking study partner match between:', decoded.userId, 'and', userId);
+
+    const [u1, u2] = [decoded.userId, userId].sort();
+    const studyPartnerMatch = await prisma.studyPartnerMatch.findFirst({
       where: {
-        followerId_followingId: {
-          followerId: decoded.userId,
-          followingId: userId,
-        },
+        user1Id: u1,
+        user2Id: u2,
+        unmatchedAt: null,
       },
     });
 
-    const theyFollowMe = await prisma.follow.findUnique({
-      where: {
-        followerId_followingId: {
-          followerId: userId,
-          followingId: decoded.userId,
-        },
-      },
-    });
+    console.log('Study partner match found:', { studyPartnerMatch });
 
-    console.log('Follow relationships found:', { iFollowThem, theyFollowMe });
-
-    // Allow viewing messages if either user follows the other OR if there's existing message history
-    if (!iFollowThem && !theyFollowMe) {
+    // If not matched, still allow if there's existing message history (for legacy conversations).
+    if (!studyPartnerMatch) {
       // Check if there are any existing messages between these users
       const existingMessages = await prisma.directMessage.findFirst({
         where: {
@@ -66,35 +57,12 @@ export async function GET(
 
       console.log('Existing messages found:', existingMessages);
 
-      // If no existing messages, check for follow request
+      // If no existing messages, block access (must match first)
       if (!existingMessages) {
-        const pendingRequest = await prisma.followRequest.findUnique({
-          where: {
-            senderId_receiverId: {
-              senderId: decoded.userId,
-              receiverId: userId,
-            },
-          },
-        });
-
-        console.log('Pending follow request:', pendingRequest);
-
-        if (pendingRequest && pendingRequest.status === 'PENDING') {
-          return new NextResponse(
-            'Your follow request is still pending. You can only view messages after they accept your follow request.',
-            { status: 403 }
-          );
-        } else if (pendingRequest && pendingRequest.status === 'DECLINED') {
-          return new NextResponse(
-            'Your follow request was declined. You need to send a new follow request before you can view messages.',
-            { status: 403 }
-          );
-        } else {
-          return new NextResponse(
-            'You can only view messages with users you follow or who follow you. Please send a follow request first.',
-            { status: 403 }
-          );
-        }
+        return NextResponse.json(
+          { message: 'You can only view messages with users you are matched with as a Study Partner.' },
+          { status: 403 }
+        );
       }
       // If there are existing messages, allow viewing them regardless of follow status
     }
