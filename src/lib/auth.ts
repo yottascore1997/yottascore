@@ -89,6 +89,8 @@ export async function findUserForLogin(identifier: string) {
       username: true,
       role: true,
       hashedPassword: true,
+      isDeactivated: true,
+      deactivatedAt: true,
       failedLoginAttempts: true,
       lockedUntil: true,
       emailVerified: true,
@@ -101,6 +103,7 @@ export async function validateUser(identifier: string, password: string) {
 
   if (!user) return null;
   if (!user.hashedPassword) return null;
+  if (user.isDeactivated) return null;
 
   const now = new Date();
   if (user.lockedUntil && user.lockedUntil > now) {
