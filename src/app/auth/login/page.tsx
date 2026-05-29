@@ -1,13 +1,19 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function Login() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirect')
+  const [redirectTo, setRedirectTo] = useState<string | null>(null)
+
+  useEffect(() => {
+    const redirect = new URLSearchParams(window.location.search).get('redirect')
+    if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+      setRedirectTo(redirect)
+    }
+  }, [])
   const [formData, setFormData] = useState({
     identifier: '',
     password: '',
