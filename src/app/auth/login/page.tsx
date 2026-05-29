@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 export default function Login() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect')
   const [formData, setFormData] = useState({
     identifier: '',
     password: '',
@@ -34,6 +36,10 @@ export default function Login() {
 
       if (response.ok) {
         localStorage.setItem('token', data.token)
+        if (redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')) {
+          router.push(redirectTo)
+          return
+        }
         const role = data.user?.role || data.role
         if (String(role).toUpperCase() === 'ADMIN') {
           router.push('/admin/dashboard')
