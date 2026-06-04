@@ -92,8 +92,7 @@ export const POST = withCORS(async (
       });
     }
   } catch (error) {
-    console.error('Error toggling book like:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to toggle book like' },
       { status: 500 }
     );
@@ -136,8 +135,7 @@ export const GET = withCORS(async (
       liked: !!like,
     });
   } catch (error) {
-    console.error('Error checking book like:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to check book like status' },
       { status: 500 }
     );

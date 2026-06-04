@@ -118,8 +118,7 @@ export async function GET(req: NextRequest) {
       stats: statusStats,
     });
   } catch (error) {
-    console.error('Error fetching support tickets:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

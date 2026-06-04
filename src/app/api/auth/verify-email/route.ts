@@ -53,8 +53,7 @@ const handler = async (req: Request) => {
 
     return NextResponse.json({ message: 'Email verified successfully. You can now sign in.' })
   } catch (error) {
-    console.error('[VERIFY_EMAIL] Error:', error)
-    return NextResponse.json(
+return NextResponse.json(
       { message: 'Something went wrong. Please try again.' },
       { status: 500 }
     )

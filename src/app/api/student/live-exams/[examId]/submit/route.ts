@@ -182,8 +182,7 @@ export async function POST(
       message: `Exam completed successfully! You scored ${Math.round(score * 100) / 100}% and secured rank #${currentRank}`
     });
   } catch (error) {
-    console.error('Error submitting exam:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

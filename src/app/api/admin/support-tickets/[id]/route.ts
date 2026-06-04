@@ -57,8 +57,7 @@ export async function GET(
 
     return NextResponse.json(ticket);
   } catch (error) {
-    console.error('Error fetching support ticket:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -124,8 +123,7 @@ export async function PATCH(
       message: 'Ticket updated successfully' 
     });
   } catch (error) {
-    console.error('Error updating support ticket:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -233,7 +231,6 @@ export async function POST(
       message: 'Reply added successfully' 
     });
   } catch (error) {
-    console.error('Error adding reply:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

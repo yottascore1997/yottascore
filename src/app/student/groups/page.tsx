@@ -46,9 +46,7 @@ export default function GroupsPage() {
 
       const data = await response.json()
       setGroups(data)
-    } catch (error) {
-      console.error('Error fetching groups:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }
@@ -84,9 +82,7 @@ export default function GroupsPage() {
         isPrivate: false
       })
       fetchGroups()
-    } catch (error) {
-      console.error('Error creating group:', error)
-    } finally {
+    } catch {} finally {
       setCreating(false)
     }
   }
@@ -112,9 +108,7 @@ export default function GroupsPage() {
       }
 
       fetchGroups()
-    } catch (error) {
-      console.error('Error joining group:', error)
-    } finally {
+    } catch {} finally {
       setJoining(null)
     }
   }

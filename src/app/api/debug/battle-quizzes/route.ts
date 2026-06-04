@@ -48,8 +48,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('Debug battle quizzes error:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       error: 'Internal server error',
       details: error.message 
     }, { status: 500 });
@@ -125,8 +124,7 @@ export async function POST() {
     });
 
   } catch (error: any) {
-    console.error('Add test questions error:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       error: 'Internal server error',
       details: error.message 
     }, { status: 500 });

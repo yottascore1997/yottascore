@@ -57,7 +57,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
     return NextResponse.json(mcq);
   } catch (error: any) {
-    console.error('Battle Quiz question creation error:', error);
-    return NextResponse.json({ message: error.message || 'Failed to add question.' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Failed to add question.' }, { status: 500 });
   }
 } 

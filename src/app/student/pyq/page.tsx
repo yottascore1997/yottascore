@@ -36,9 +36,7 @@ export default function PYQPage() {
       }
       const data = await res.json()
       setExams(data)
-    } catch (e) {
-      console.error(e)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }

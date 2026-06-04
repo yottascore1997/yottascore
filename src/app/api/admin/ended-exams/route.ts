@@ -38,7 +38,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json(exams);
   } catch (error) {
-    console.error('Error fetching ended exams:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

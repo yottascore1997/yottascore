@@ -50,8 +50,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(questions);
   } catch (error) {
-    console.error('Question bank fetch error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -116,7 +115,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(question);
   } catch (error: any) {
-    console.error('Question bank creation error:', error);
-    return NextResponse.json({ message: error.message || 'Failed to create question.' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Failed to create question.' }, { status: 500 });
   }
 } 

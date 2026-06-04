@@ -65,8 +65,7 @@ const AdminKYCPage: React.FC = () => {
       setKycRequests(data.kycRequests);
       setTotalPages(data.pagination.totalPages);
     } catch (error: any) {
-      console.error('Error fetching KYC requests:', error);
-      toast.error(error.message || 'Failed to load KYC requests');
+toast.error(error.message || 'Failed to load KYC requests');
     } finally {
       setLoading(false);
     }
@@ -109,8 +108,7 @@ const AdminKYCPage: React.FC = () => {
       // Refresh data
       fetchKYCRequests();
     } catch (error: any) {
-      console.error('Error during verification:', error);
-      toast.error(error.message || 'An error occurred during verification.');
+toast.error(error.message || 'An error occurred during verification.');
     } finally {
       setVerifying(null);
     }

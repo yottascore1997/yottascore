@@ -42,7 +42,6 @@ export async function GET(req: Request, { params }: { params: { examId: string }
       imageUrl: exam.imageUrl ? normalizeUploadUrl(exam.imageUrl) : exam.imageUrl,
     });
   } catch (error) {
-    console.error('Error fetching exam details:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

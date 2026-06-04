@@ -62,12 +62,7 @@ export default function AdvancedMessage({
       if (!token) return
 
       const payload = { messageId: message.id, deleteType: 'for_me' }
-      console.log('Message object:', message)
-      console.log('Message ID type:', typeof message.id, 'Value:', message.id)
-      console.log('Sending payload:', payload)
-      console.log('Payload JSON:', JSON.stringify(payload))
-      
-      const response = await fetch(`/api/student/messages/delete-post`, {
+const response = await fetch(`/api/student/messages/delete-post`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,8 +78,7 @@ export default function AdvancedMessage({
         alert('Failed to delete message')
       }
     } catch (error) {
-      console.error('Error deleting message:', error)
-      alert('Failed to delete message')
+alert('Failed to delete message')
     } finally {
       setDeleting(false)
     }
@@ -98,7 +92,7 @@ export default function AdvancedMessage({
       if (!token) return
 
       const payload = { messageId: message.id, deleteType: 'for_everyone' }
-      console.log('Sending payload:', payload) // Debug log
+// Debug log
       
       const response = await fetch(`/api/student/messages/delete-post`, {
         method: 'POST',
@@ -116,8 +110,7 @@ export default function AdvancedMessage({
         alert('Failed to delete message')
       }
     } catch (error) {
-      console.error('Error deleting message:', error)
-      alert('Failed to delete message')
+alert('Failed to delete message')
     } finally {
       setDeleting(false)
     }

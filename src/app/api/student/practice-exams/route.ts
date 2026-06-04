@@ -20,9 +20,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category');
     
-    console.log('Practice exams request - Category filter:', category);
-    
-    // Build where clause for category filtering
+// Build where clause for category filtering
     const whereClause = category ? { category } : {};
     
     const exams = await prisma.practiceExam.findMany({

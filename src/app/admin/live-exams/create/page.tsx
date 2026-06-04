@@ -163,9 +163,7 @@ export default function CreateLiveExam() {
           setSelectedCategoryId(data[0].id);
         }
       }
-    } catch (err) {
-      console.error("Failed to fetch categories:", err);
-    }
+    } catch {}
   };
 
   const handleImportFromQuestionBank = async () => {
@@ -278,14 +276,7 @@ export default function CreateLiveExam() {
         endTime: formData.endTime.toISOString(),
       };
       
-      console.log('🚀 Sending live exam data:', {
-        title: requestData.title,
-        imageUrl: requestData.imageUrl,
-        hasImageUrl: !!requestData.imageUrl,
-        formDataImageUrl: formData.imageUrl
-      });
-      
-      const response = await fetch('/api/admin/live-exams', {
+const response = await fetch('/api/admin/live-exams', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -301,8 +292,7 @@ export default function CreateLiveExam() {
 
       router.push('/admin/dashboard');
     } catch (error) {
-      console.error('Error creating live exam:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create live exam');
+alert(error instanceof Error ? error.message : 'Failed to create live exam');
     } finally {
       setLoading(false);
     }
@@ -461,8 +451,7 @@ export default function CreateLiveExam() {
           setImportedQuestions([]);
         }
       } catch (error) {
-        console.error('Error parsing Excel file:', error);
-        setImportError('Error reading Excel file. Please check the format and try again.');
+setImportError('Error reading Excel file. Please check the format and try again.');
         setImportedQuestions([]);
       } finally {
         setImportLoading(false);
@@ -557,32 +546,19 @@ export default function CreateLiveExam() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('📸 Image upload successful:', {
-          url: data.url,
-          fileName: file.name,
-          fileSize: file.size
-        });
-        
-        if (!data.url || data.url.includes('localhost') || data.url.includes('yourdomain.com')) {
-          console.error('⚠️ Invalid URL returned:', data.url);
-          throw new Error('Received invalid upload URL. Please check server configuration.');
+if (!data.url || data.url.includes('localhost') || data.url.includes('yourdomain.com')) {
+throw new Error('Received invalid upload URL. Please check server configuration.');
         }
         
         setFormData(prev => ({ ...prev, imageUrl: data.url }));
         setImagePreview(data.url);
         setImageFile(file);
-        console.log('✅ FormData updated with imageUrl:', data.url);
-      } else {
+} else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('❌ Upload error response:', {
-          status: response.status,
-          error: errorData
-        });
-        throw new Error(errorData.error || `Upload failed: ${response.status}`);
+throw new Error(errorData.error || `Upload failed: ${response.status}`);
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
+alert('Failed to upload image. Please try again.');
     } finally {
       setImageUploading(false);
     }

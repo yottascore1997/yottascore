@@ -47,7 +47,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     });
     return NextResponse.json(questions);
   } catch (error: any) {
-    console.error('Battle Quiz questions fetch error:', error);
-    return NextResponse.json({ message: error.message || 'Failed to fetch questions.' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Failed to fetch questions.' }, { status: 500 });
   }
 } 

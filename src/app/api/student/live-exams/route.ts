@@ -47,18 +47,9 @@ export const GET = withCORS(async (req: Request) => {
       attempted: exam.participants.length > 0 && !!exam.participants[0].completedAt
     }));
 
-    console.log(`Found ${liveExams.length} live exams`)
-    console.log('Sample live exam data:', liveExams.length > 0 ? {
-      id: liveExams[0].id,
-      title: liveExams[0].title,
-      imageUrl: liveExams[0].imageUrl,
-      hasImageUrl: !!liveExams[0].imageUrl
-    } : 'No live exams found')
-
-    return NextResponse.json(examsWithAttempted);
+return NextResponse.json(examsWithAttempted);
   } catch (error) {
-    console.error('Error fetching live exams:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

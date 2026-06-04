@@ -23,7 +23,7 @@ export default function PYQAnalysisPage() {
         return res.json()
       })
       .then(setData)
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [router])
 

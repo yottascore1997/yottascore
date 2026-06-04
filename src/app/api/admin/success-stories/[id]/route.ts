@@ -32,8 +32,7 @@ export async function GET(
     if (e instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
-    console.error('[SUCCESS_STORY_GET]', e)
-    return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
   }
 }
 
@@ -79,8 +78,7 @@ export async function PUT(
     if (e instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
-    console.error('[SUCCESS_STORY_PUT]', e)
-    return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
   }
 }
 
@@ -110,7 +108,6 @@ export async function DELETE(
     if (e instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
-    console.error('[SUCCESS_STORY_DELETE]', e)
-    return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
   }
 }

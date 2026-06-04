@@ -228,8 +228,7 @@ export default function SpyGameRoomPage() {
         router.push('/auth/login');
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
-      router.push('/auth/login');
+router.push('/auth/login');
     }
   };
 
@@ -250,9 +249,7 @@ export default function SpyGameRoomPage() {
         setIsSpy(data.isSpy);
         toast.success('Word loaded successfully!');
       }
-    } catch (error) {
-      console.error('Error fetching player word:', error);
-    }
+    } catch {}
   };
 
   const fetchGameData = async () => {
@@ -280,9 +277,7 @@ export default function SpyGameRoomPage() {
           userId: user?.id
         });
       }
-    } catch (error) {
-      console.error('Error fetching game data:', error);
-    }
+    } catch {}
   };
 
   const startGame = () => {

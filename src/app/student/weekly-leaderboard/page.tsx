@@ -81,8 +81,7 @@ function WeeklyLeaderboardPage() {
       const leaderboardData = await response.json()
       setData(leaderboardData)
     } catch (error) {
-      console.error('Error fetching leaderboard:', error)
-      setError('Failed to load leaderboard data')
+setError('Failed to load leaderboard data')
     } finally {
       setLoading(false)
     }

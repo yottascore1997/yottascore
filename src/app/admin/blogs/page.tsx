@@ -62,9 +62,7 @@ export default function AdminBlogsPage() {
         const data = await response.json()
         setBlogs(data.blogs)
       }
-    } catch (error) {
-      console.error('Error fetching blogs:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }
@@ -84,9 +82,7 @@ export default function AdminBlogsPage() {
       if (response.ok) {
         setBlogs(blogs.filter(blog => blog.id !== id))
       }
-    } catch (error) {
-      console.error('Error deleting blog:', error)
-    }
+    } catch {}
   }
 
   const togglePublish = async (id: string, currentStatus: boolean) => {
@@ -110,9 +106,7 @@ export default function AdminBlogsPage() {
       if (response.ok) {
         fetchBlogs()
       }
-    } catch (error) {
-      console.error('Error toggling publish status:', error)
-    }
+    } catch {}
   }
 
   const filteredBlogs = blogs.filter(blog =>
@@ -178,9 +172,7 @@ export default function AdminBlogsPage() {
       }
       fetchBlogs()
       clearSelection()
-    } catch (error) {
-      console.error('Error bulk publishing:', error)
-    }
+    } catch {}
   }
 
   const bulkUnpublish = async () => {
@@ -206,9 +198,7 @@ export default function AdminBlogsPage() {
       }
       fetchBlogs()
       clearSelection()
-    } catch (error) {
-      console.error('Error bulk unpublishing:', error)
-    }
+    } catch {}
   }
 
   const bulkDelete = async () => {
@@ -227,9 +217,7 @@ export default function AdminBlogsPage() {
       }
       fetchBlogs()
       clearSelection()
-    } catch (error) {
-      console.error('Error bulk deleting:', error)
-    }
+    } catch {}
   }
 
   const copyBlogLink = (blogId: string) => {

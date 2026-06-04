@@ -333,8 +333,7 @@ export async function GET(request: Request) {
       nextSteps: suggestions.slice(0, 3).map(s => s.action) // Top 3 actionable steps
     });
   } catch (error) {
-    console.error('Error generating improvement suggestions:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

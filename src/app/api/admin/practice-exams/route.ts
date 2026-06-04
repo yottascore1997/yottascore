@@ -47,9 +47,7 @@ export async function POST(req: Request) {
     
     // Handle FormData for file upload
     const formData = await req.formData();
-    console.log('FormData received');
-    
-    const title = formData.get('title') as string;
+const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const instructions = formData.get('instructions') as string;
     const category = formData.get('category') as string;
@@ -62,11 +60,7 @@ export async function POST(req: Request) {
     const logoFile = formData.get('logo') as File | null;
     const categoryLogoFile = formData.get('categoryLogo') as File | null;
     
-    console.log('Parsed form data:', {
-      title, description, instructions, category, subcategory,
-      startTime, endTime, duration, spots, questionsCount: questions?.length
-    });
-    if (!title || !startTime || !duration || !spots || !category || !subcategory) {
+if (!title || !startTime || !duration || !spots || !category || !subcategory) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     
@@ -83,15 +77,13 @@ export async function POST(req: Request) {
         // Validate file size (max 5MB)
         const MAX_SIZE_BYTES = 5 * 1024 * 1024;
         if (file.size > MAX_SIZE_BYTES) {
-          console.error('File too large');
-          return null;
+return null;
         }
         
         // Validate file type
         const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         if (!ALLOWED_TYPES.includes(file.type)) {
-          console.error('Invalid file type');
-          return null;
+return null;
         }
         
         if (UPLOAD_TOKEN && PHP_UPLOAD_URL && PHP_UPLOAD_URL.includes('upload.php')) {
@@ -130,70 +122,38 @@ export async function POST(req: Request) {
             return normalizeUploadUrl(returnedUrl) ?? returnedUrl;
           } else {
             const errorData = await uploadResponse.json().catch(() => ({ error: 'Upload failed' }));
-            console.error('Error uploading file via PHP endpoint:', errorData);
-            return null;
+return null;
           }
         } else {
-          console.warn('PHP upload not configured, skipping file upload');
-          return null;
+return null;
         }
       } catch (fileError) {
-        console.error('Error uploading file:', fileError);
-        return null;
+return null;
       }
     };
     
     // Upload subcategory logo
     if (logoFile && logoFile.size > 0) {
-      console.log('Processing subcategory logo file:', {
-        name: logoFile.name,
-        size: logoFile.size,
-        type: logoFile.type
-      });
-      logoUrl = await uploadFile(logoFile);
+logoUrl = await uploadFile(logoFile);
       if (logoUrl) {
-        console.log('Subcategory logo uploaded successfully:', logoUrl);
-      }
+}
     }
     
     // Upload category logo
     if (categoryLogoFile && categoryLogoFile.size > 0) {
-      console.log('Processing category logo file:', {
-        name: categoryLogoFile.name,
-        size: categoryLogoFile.size,
-        type: categoryLogoFile.type
-      });
-      categoryLogoUrl = await uploadFile(categoryLogoFile);
+categoryLogoUrl = await uploadFile(categoryLogoFile);
       if (categoryLogoUrl) {
-        console.log('Category logo uploaded successfully:', categoryLogoUrl);
-      }
+}
     }
     
     // Test database connection first
     try {
       await prisma.$connect();
-      console.log('Database connection successful');
-    } catch (dbError) {
-      console.error('Database connection failed:', dbError);
-      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+} catch (dbError) {
+return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
     }
     
-    console.log('Creating exam with data:', {
-      title,
-      description,
-      instructions,
-      category,
-      subcategory,
-      startTime: new Date(startTime),
-      endTime: endTime ? new Date(endTime) : null,
-      duration,
-      spots,
-      spotsLeft: spots,
-      createdById: decoded.userId,
-      questionsCount: questions?.length || 0
-    });
-    
-    // Try creating without questions first
+// Try creating without questions first
     const examData = {
       title,
       description,
@@ -210,18 +170,13 @@ export async function POST(req: Request) {
       categoryLogoUrl,
     };
     
-    console.log('Exam data without questions:', examData);
-    
-    const exam = await prisma.practiceExam.create({
+const exam = await prisma.practiceExam.create({
       data: examData,
     });
     
-    console.log('Exam created successfully:', exam.id);
-    
-    // If there are questions, add them separately
+// If there are questions, add them separately
     if (questions && Array.isArray(questions) && questions.length > 0) {
-      console.log('Adding questions:', questions.length);
-      for (const q of questions) {
+for (const q of questions) {
         await prisma.practiceExamQuestion.create({
           data: {
             examId: exam.id,
@@ -232,13 +187,11 @@ export async function POST(req: Request) {
           },
         });
       }
-      console.log('Questions added successfully');
-    }
+}
     
     return NextResponse.json(exam);
   } catch (error) {
-    console.error('Error creating practice exam:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });

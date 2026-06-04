@@ -73,49 +73,33 @@ export default function BattlePage() {
 
   // Monitor battle state changes
   useEffect(() => {
-    console.log('🔄 Battle state changed:', {
-      status: battleState.status,
-      currentQuestion: battleState.currentQuestion,
-      questionText: battleState.question?.text?.substring(0, 50) + '...',
-      timeLeft: battleState.timeLeft,
-      isReactNative
-    });
-  }, [battleState, isReactNative]);
+}, [battleState, isReactNative]);
 
   // Cleanup function for socket listeners
   const cleanupSocketListeners = useCallback(() => {
     if (!socket) return;
     
-    console.log('🧹 Cleaning up socket listeners...');
-    const events = ['match_started', 'next_question', 'match_ended', 'opponent_answered', 'match_not_found', 'pong'];
+const events = ['match_started', 'next_question', 'match_ended', 'opponent_answered', 'match_not_found', 'pong'];
     
     events.forEach(event => {
       if (socketListenersRef.current.has(event)) {
         socket.off(event);
         socketListenersRef.current.delete(event);
-        console.log(`✅ Removed listener for: ${event}`);
-      }
+}
     });
   }, [socket]);
 
   // Setup socket listeners with React Native compatibility
   const setupSocketListeners = useCallback(() => {
     if (!socket || !isConnected) {
-      console.log('❌ Cannot setup listeners - socket not connected');
-      return;
+return;
     }
 
-    console.log('✅ Setting up battle socket listeners for match:', matchId);
-    console.log('   - Is React Native:', isReactNative);
-    console.log('   - Socket ID:', socket.id);
-
-    // Clean up existing listeners first
+// Clean up existing listeners first
     cleanupSocketListeners();
 
     // Listen for battle events
-    console.log('🎧 Attaching socket listeners...');
-    
-    // Match started event
+// Match started event
     const handleMatchStarted = (data: { 
       matchId: string; 
       questionIndex: number; 
@@ -126,8 +110,7 @@ export default function BattlePage() {
       myScore?: number;
       opponentScore?: number;
     }) => {
-      console.log('🎮 Match started event received:', data);
-      setBattleState(prev => ({
+setBattleState(prev => ({
         ...prev,
         status: 'playing',
         currentQuestion: data.questionIndex,
@@ -151,23 +134,16 @@ export default function BattlePage() {
       timeLimit?: number;
       fromTimeout?: boolean;
     }) => {
-      console.log('🎯 Next question event received:', data);
-      console.log('   - Question index:', data.questionIndex);
-      console.log('   - Scores:', data.myScore, data.opponentScore);
-      
-      // Prevent duplicate processing (except when fromTimeout - always process)
+// Prevent duplicate processing (except when fromTimeout - always process)
       const fromTimeout = data.fromTimeout;
       if (!fromTimeout && data.questionIndex === lastQuestionIndexRef.current) {
-        console.log('⚠️ Duplicate next_question event, ignoring');
-        return;
+return;
       }
       
       lastQuestionIndexRef.current = data.questionIndex;
       const timeLimit = data.timeLimit ?? 10;
       
-      console.log('🎯 Applying next question - index:', data.questionIndex, 'fromTimeout:', fromTimeout);
-      
-      // Use requestAnimationFrame or shorter delay to ensure UI updates (fixes timeout case not updating)
+// Use requestAnimationFrame or shorter delay to ensure UI updates (fixes timeout case not updating)
       const applyUpdate = () => {
         setBattleState(prev => ({
           ...prev,
@@ -198,17 +174,7 @@ export default function BattlePage() {
       opponentScore: number;
       myPosition: 'player1' | 'player2';
     }) => {
-      console.log('🏁 Match ended event received:', data);
-      console.log('   - Player 1 score:', data.player1Score);
-      console.log('   - Player 2 score:', data.player2Score);
-      console.log('   - My score:', data.myScore);
-      console.log('   - Opponent score:', data.opponentScore);
-      console.log('   - My position:', data.myPosition);
-      console.log('   - Winner:', data.winner);
-      console.log('   - Is draw:', data.isDraw);
-      console.log('   - Current user ID:', user?.id);
-      
-      if (timerRef.current) {
+if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
@@ -222,12 +188,7 @@ export default function BattlePage() {
       const opponentScore = data.opponentScore;
       const isWinner = data.winner === user?.id;
       
-      console.log('🎯 Final score calculation:');
-      console.log('   - My score:', myScore);
-      console.log('   - Opponent score:', opponentScore);
-      console.log('   - Is winner:', isWinner);
-      
-      setBattleState(prev => ({
+setBattleState(prev => ({
         ...prev,
         status: 'finished',
         player1Score: myScore,
@@ -240,13 +201,7 @@ export default function BattlePage() {
 
     // Opponent answered event (answer can be null when opponent timed out)
     const handleOpponentAnswered = (data: { questionIndex: number; answer?: number | null; timedOut?: boolean }) => {
-      console.log('👥 Opponent answered event received:', data);
-      console.log('   - Question index:', data.questionIndex);
-      console.log('   - Opponent answer:', data.answer, 'timedOut:', data.timedOut);
-      console.log('   - Current question:', battleState.currentQuestion);
-      console.log('   - Is React Native:', isReactNative);
-      
-      setBattleState(prev => ({
+setBattleState(prev => ({
         ...prev,
         opponentAnswers: {
           ...prev.opponentAnswers,
@@ -254,19 +209,16 @@ export default function BattlePage() {
         }
       }));
       
-      console.log('✅ Opponent answered state updated');
-    };
+};
 
     // Match not found event
     const handleMatchNotFound = (data: { matchId: string }) => {
-      console.log('Match not found:', data.matchId);
-      setError('Match not found or has already ended. Please start a new match.');
+setError('Match not found or has already ended. Please start a new match.');
     };
 
     // Pong event for connection testing
     const handlePong = () => {
-      console.log('🏓 Received pong from server - socket connection is working');
-    };
+};
 
     // Attach listeners
     socket.on('match_started', handleMatchStarted);
@@ -285,52 +237,28 @@ export default function BattlePage() {
     socketListenersRef.current.add('pong');
 
     // Request match status from server
-    console.log('📤 Requesting match status from server...');
-    console.log('   - Match ID:', matchId);
-    console.log('   - Socket ID:', socket.id);
-    socket.emit('get_match_status', { matchId });
-    console.log('✅ get_match_status event emitted');
-    
-    // Test socket connection by sending a ping
+socket.emit('get_match_status', { matchId });
+// Test socket connection by sending a ping
     setTimeout(() => {
-      console.log('🏓 Testing socket connection...');
-      socket.emit('ping');
+socket.emit('ping');
     }, 1000);
 
     // Additional debugging for React Native
     if (isReactNative) {
-      console.log('📱 React Native specific socket setup completed');
-      console.log('   - Socket connected:', socket.connected);
-      console.log('   - Socket ID:', socket.id);
-      console.log('   - Transport:', socket.io.engine.transport.name);
-      
-      // Monitor socket state changes for React Native
-      console.log('📱 React Native socket monitoring enabled');
-      console.log('   - Transport type:', socket.io?.engine?.transport?.name || 'unknown');
-    }
+// Monitor socket state changes for React Native
+}
 
   }, [socket, isConnected, matchId, cleanupSocketListeners, isReactNative]);
 
   useEffect(() => {
-    console.log('🔄 Battle useEffect triggered:');
-    console.log('   - Socket exists:', !!socket);
-    console.log('   - Socket connected:', isConnected);
-    console.log('   - Match ID:', matchId);
-    console.log('   - Socket ID:', socket?.id);
-    console.log('   - Is React Native:', isReactNative);
-    
-    if (!socket || !isConnected) {
-      console.log('❌ Socket not connected, waiting...');
-      return;
+if (!socket || !isConnected) {
+return;
     }
 
     setupSocketListeners();
 
     return () => {
-      console.log('🧹 Cleaning up battle socket listeners');
-      console.log('   - Socket ID:', socket?.id);
-      console.log('   - Match ID:', matchId);
-      cleanupSocketListeners();
+cleanupSocketListeners();
       
       // Clear timers
       if (timerRef.current) {
@@ -361,15 +289,8 @@ export default function BattlePage() {
       if (response.ok) {
         const data = await response.json();
         setUser(data);
-        console.log('✅ User profile loaded:', data);
-        console.log('   - User ID:', data.id);
-        console.log('   - User name:', data.name);
-      } else {
-        console.error('❌ Failed to fetch user profile:', response.status);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching user profile:', error);
-    }
+}
+    } catch {}
   };
 
   const startQuestionTimer = (timeLimit: number) => {
@@ -395,20 +316,13 @@ export default function BattlePage() {
 
   const handleAnswer = (answerIndex: number) => {
     if (!socket || !isConnected) {
-      console.log('❌ Cannot submit answer - socket not connected');
-      return;
+return;
     }
     
     const questionIndex = battleState.currentQuestion;
     const timeSpent = 10 - battleState.timeLeft;
     
-    console.log('🖱️ Submitting answer:', { questionIndex, answerIndex, timeSpent });
-    console.log('   - Match ID:', matchId);
-    console.log('   - User ID:', user?.id);
-    console.log('   - Socket connected:', isConnected);
-    console.log('   - Is React Native:', isReactNative);
-    
-    // Record answer locally
+// Record answer locally
     setBattleState(prev => ({
       ...prev,
       answers: {
@@ -426,11 +340,8 @@ export default function BattlePage() {
       timeSpent
     };
     
-    console.log('📤 Emitting answer_question:', answerData);
-    socket.emit('answer_question', answerData);
-    console.log('✅ answer_question event emitted');
-    
-    // Clear timer
+socket.emit('answer_question', answerData);
+// Clear timer
     if (questionTimerRef.current) {
       clearInterval(questionTimerRef.current);
       questionTimerRef.current = null;

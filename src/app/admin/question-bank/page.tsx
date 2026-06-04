@@ -112,9 +112,7 @@ export default function QuestionBankPage() {
         const data = await res.json();
         setQuestions(data);
       }
-    } catch (err) {
-      console.error("Failed to fetch questions:", err);
-    }
+    } catch {}
   };
 
   // Handle category filter change

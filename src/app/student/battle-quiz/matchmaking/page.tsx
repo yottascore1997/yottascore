@@ -63,8 +63,7 @@ function MatchmakingPageContent() {
   useEffect(() => {
     if (!socket || !isConnected || hasStartedSearch.current) return;
 
-    console.log('Starting matchmaking...', { category, mode, amount });
-    hasStartedSearch.current = true;
+hasStartedSearch.current = true;
     searchStartTime.current = Date.now();
 
     // Ensure user is registered first
@@ -75,9 +74,7 @@ function MatchmakingPageContent() {
         if (payload.userId) {
           socket.emit('register_user', payload.userId);
         }
-      } catch (error) {
-        console.error('Error decoding token:', error);
-      }
+      } catch {}
     }
 
     // Start the search timer
@@ -101,8 +98,7 @@ function MatchmakingPageContent() {
       estimatedWait?: number; 
       message?: string 
     }) => {
-      console.log('Matchmaking update:', data);
-      setMatchmakingState(prev => ({
+setMatchmakingState(prev => ({
         ...prev,
         status: data.status as any,
         estimatedWait: data.estimatedWait || prev.estimatedWait
@@ -110,8 +106,7 @@ function MatchmakingPageContent() {
     });
 
     socket.on('opponent_found', (data: { opponent: User; category?: string }) => {
-      console.log('Opponent found:', data);
-      setMatchmakingState(prev => ({
+setMatchmakingState(prev => ({
         ...prev,
         status: 'found',
         opponent: data.opponent,
@@ -120,16 +115,14 @@ function MatchmakingPageContent() {
     });
 
     socket.on('match_starting', (data: { countdown: number }) => {
-      console.log('Match starting:', data);
-      setMatchmakingState(prev => ({
+setMatchmakingState(prev => ({
         ...prev,
         status: 'starting'
       }));
     });
 
     socket.on('match_ready', (data: { matchId: string; roomCode?: string }) => {
-      console.log('Match ready:', data);
-      // Clear timer
+// Clear timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -144,14 +137,12 @@ function MatchmakingPageContent() {
     });
 
     socket.on('matchmaking_error', (data: { message: string }) => {
-      console.error('Matchmaking error:', data);
-      setError(data.message);
+setError(data.message);
       setMatchmakingState(prev => ({ ...prev, status: 'error' }));
     });
 
     socket.on('opponent_cancelled', () => {
-      console.log('Opponent cancelled matchmaking');
-      setMatchmakingState(prev => ({ ...prev, status: 'searching' }));
+setMatchmakingState(prev => ({ ...prev, status: 'searching' }));
     });
 
     return () => {
@@ -188,9 +179,7 @@ function MatchmakingPageContent() {
         const data = await response.json();
         setUser(data);
       }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
+    } catch {}
   };
 
   const handleCancelSearch = () => {

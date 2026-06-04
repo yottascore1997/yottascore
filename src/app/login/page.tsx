@@ -23,8 +23,7 @@ export default function LoginPage() {
   const handleVerifyOtp = () => {
     if (otp.length === 6) {
       // Handle OTP verification
-      console.log('OTP verified');
-    }
+}
   };
 
   return (

@@ -49,8 +49,7 @@ const handler = async (req: Request) => {
       message: 'Account deactivated successfully.',
     })
   } catch (error) {
-    console.error('Deactivate account error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 

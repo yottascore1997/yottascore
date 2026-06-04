@@ -48,8 +48,7 @@ export async function GET(req: Request, { params }: { params: { examId: string }
 
     return NextResponse.json({ participant });
   } catch (error) {
-    console.error('Error checking participant status:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

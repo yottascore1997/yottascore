@@ -126,8 +126,7 @@ export default function RegisterPage() {
         alert(data.message || 'Registration failed. Please try again.');
       }
     } catch (error) {
-      console.error('Registration error:', error);
-      alert('An error occurred during registration. Please try again.');
+alert('An error occurred during registration. Please try again.');
     }
   };
 

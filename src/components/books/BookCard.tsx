@@ -39,9 +39,7 @@ export default function BookCard({ book }: BookCardProps) {
       if (data.success) {
         setIsLiked(data.liked);
       }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -68,9 +66,7 @@ export default function BookCard({ book }: BookCardProps) {
       if (data.success) {
         setIsInWishlist(!isInWishlist);
       }
-    } catch (error) {
-      console.error('Error toggling wishlist:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -102,8 +98,7 @@ export default function BookCard({ book }: BookCardProps) {
         alert(data.error || 'Failed to add to cart');
       }
     } catch (error) {
-      console.error('Error adding to cart:', error);
-      alert('Failed to add to cart');
+alert('Failed to add to cart');
     } finally {
       setLoading(false);
     }

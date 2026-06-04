@@ -6,39 +6,27 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
 export async function GET(req: Request) {
   try {
-    console.log('Received request to fetch student exams')
-    
-    const authHeader = req.headers.get('authorization')
+const authHeader = req.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No authorization header or invalid format')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const token = authHeader.split(' ')[1]
     let decoded
     try {
       decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
-      console.log('Token decoded:', { userId: decoded.userId, role: decoded.role })
-    } catch (error) {
-      console.error('Token verification failed:', error)
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+} catch (error) {
+return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
     if (decoded.role !== 'STUDENT') {
-      console.log('User is not a student')
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Get current time
     const now = new Date()
     
-    console.log('Fetching exams with filters:', {
-      isLive: true,
-      now: now.toISOString(),
-      userId: decoded.userId
-    })
-
-    // Fetch available exams (both upcoming and started exams that haven't ended)
+// Fetch available exams (both upcoming and started exams that haven't ended)
     const exams = await prisma.liveExam.findMany({
       where: {
         AND: [
@@ -99,28 +87,13 @@ export async function GET(req: Request) {
       }
     })
 
-    console.log(`Found ${exams.length} available exams`)
-    console.log('Sample exam data:', exams.length > 0 ? {
-      id: exams[0].id,
-      title: exams[0].title,
-      startTime: exams[0].startTime,
-      endTime: exams[0].endTime,
-      isLive: exams[0].isLive,
-      spotsLeft: exams[0].spotsLeft,
-      imageUrl: exams[0].imageUrl,
-      hasImageUrl: !!exams[0].imageUrl
-    } : 'No exams found')
-    
-    // Also check total exams without filters for debugging
+// Also check total exams without filters for debugging
     const totalExams = await prisma.liveExam.count({
       where: { isLive: true }
     })
-    console.log(`Total live exams in database: ${totalExams}`)
-    return NextResponse.json(exams)
+return NextResponse.json(exams)
   } catch (error) {
-    console.error('[STUDENT_EXAMS_GET] Detailed error:', error)
-    
-    if (error instanceof jwt.JsonWebTokenError) {
+if (error instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 

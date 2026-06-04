@@ -62,8 +62,7 @@ export default function RealTimeBattleQuiz() {
     if (gameState === 'playing' && socket) {
       // Send ping every 10 seconds to keep connection alive
       pingIntervalRef.current = setInterval(() => {
-        console.log('🏓 Sending ping to keep connection alive');
-        socket.emit('ping');
+socket.emit('ping');
       }, 10000);
     } else {
       if (pingIntervalRef.current) {
@@ -89,19 +88,16 @@ export default function RealTimeBattleQuiz() {
 
     // Monitor socket connection status
     const handleConnect = () => {
-      console.log('🔗 Socket connected');
-    };
+};
 
     const handleDisconnect = (reason: string) => {
-      console.log('🔌 Socket disconnected:', reason);
-      if (gameState === 'playing') {
+if (gameState === 'playing') {
         setError('Connection lost. Please refresh the page to reconnect.');
       }
     };
 
     const handleConnectError = (error: any) => {
-      console.error('🔌 Socket connection error:', error);
-      setError('Connection error. Please check your internet connection.');
+setError('Connection error. Please check your internet connection.');
     };
 
     // Add connection event listeners
@@ -112,43 +108,34 @@ export default function RealTimeBattleQuiz() {
     // Manual authentication as fallback
     const token = localStorage.getItem('token');
     if (token) {
-      console.log('Sending manual authentication...');
-      socket.emit('authenticate', { token });
+socket.emit('authenticate', { token });
     } else {
-      console.error('No token found in localStorage');
-      setError('Authentication required. Please login again.');
+setError('Authentication required. Please login again.');
       return;
     }
 
     // Listen for authentication
     socket.on('authenticated', (data: { user: any }) => {
-      console.log('Socket authenticated successfully:', data.user);
-      setLoading(false);
+setLoading(false);
       // Join the battle room only once
       if (!hasJoinedRef.current) {
-        console.log('Joining battle for quiz:', quizId);
-        hasJoinedRef.current = true;
+hasJoinedRef.current = true;
         socket.emit('join_battle', { quizId });
-      } else {
-        console.log('Already joined battle, skipping duplicate join request');
       }
     });
 
     socket.on('auth_error', (message: string) => {
-      console.error('Socket authentication error:', message);
-      setError(message);
+setError(message);
     });
 
     // Listen for game events
     socket.on('waiting', () => {
-      console.log('Waiting for opponent...');
-      setGameState('waiting');
+setGameState('waiting');
       setError(null);
     });
 
     socket.on('opponent_joined', (data: { opponent: Opponent }) => {
-      console.log('Opponent joined:', data.opponent);
-      setOpponent(data.opponent);
+setOpponent(data.opponent);
       setGameState('starting');
       setError(null);
       
@@ -166,19 +153,15 @@ export default function RealTimeBattleQuiz() {
     });
 
     socket.on('question_start', (data: { questionIndex: number, timeLimit: number, question?: Question, totalQuestions?: number }) => {
-      console.log('🎯 Received question_start event:', data);
-      
-      // Clear the next question timeout if it exists
+// Clear the next question timeout if it exists
       if (nextQuestionTimeoutRef.current) {
         clearTimeout(nextQuestionTimeoutRef.current);
         nextQuestionTimeoutRef.current = null;
-        console.log('✅ Cleared next question timeout');
-      }
+}
       
       // Prevent duplicate processing of the same question
       if (data.questionIndex === lastProcessedQuestionRef.current) {
-        console.log('⚠️ Duplicate question_start event received, ignoring');
-        return;
+return;
       }
       
       // Update the last processed question
@@ -200,17 +183,11 @@ export default function RealTimeBattleQuiz() {
         });
       }
       
-      console.log('🎯 Question started successfully:');
-      console.log('   - Question index:', data.questionIndex);
-      console.log('   - Time limit:', data.timeLimit);
-      console.log('   - Total questions:', data.totalQuestions);
-      
-      startQuestionTimer();
+startQuestionTimer();
     });
 
     socket.on('opponent_answer', (data: { questionIndex: number, answer: number }) => {
-      console.log('👥 Opponent answered:', data);
-      setOpponent(prev => prev ? {
+setOpponent(prev => prev ? {
         ...prev,
         currentQuestion: data.questionIndex,
         isAnswered: true,
@@ -225,11 +202,7 @@ export default function RealTimeBattleQuiz() {
       opponentScore: number,
       totalQuestions?: number
     }) => {
-      console.log('📊 Received question_result event:', data);
-      console.log('📊 Current question index:', currentQuestionIndex);
-      console.log('📊 Total questions from server:', data.totalQuestions || 'unknown');
-      
-      // Update total questions count from server
+// Update total questions count from server
       if (data.totalQuestions) {
         totalQuestionsRef.current = data.totalQuestions;
       }
@@ -245,16 +218,9 @@ export default function RealTimeBattleQuiz() {
         isCorrect: selectedAnswer === data.correctAnswer
       });
       
-      console.log('📊 Question result processed:');
-      console.log('   - Question index:', data.questionIndex);
-      console.log('   - My score:', data.myScore);
-      console.log('   - Opponent score:', data.opponentScore);
-      console.log('   - Is correct:', selectedAnswer === data.correctAnswer);
-      
-      // Show result briefly before next question
+// Show result briefly before next question
       setTimeout(() => {
-        console.log('⏭️ Question result timeout completed, waiting for next question...');
-        setQuestionResult(null); // Clear the result
+setQuestionResult(null); // Clear the result
         
         // Check if this was the last question using the question index from the result
         const isLastQuestion = data.totalQuestions ? 
@@ -262,25 +228,15 @@ export default function RealTimeBattleQuiz() {
           (data.questionIndex >= totalQuestionsRef.current - 1);
           
         if (isLastQuestion) {
-          console.log('🏁 Last question completed, game should finish');
-          setGameState('finished');
+setGameState('finished');
         } else {
-          console.log('📝 Expecting next question from server...');
-          console.log('   - Current question index from result:', data.questionIndex);
-          console.log('   - Total questions:', data.totalQuestions);
-          console.log('   - Next question should be:', data.questionIndex + 1);
-          
-          // Only set timeout if we haven't already received the next question
+// Only set timeout if we haven't already received the next question
           // Check if the next question has already been processed
           const nextQuestionIndex = data.questionIndex + 1;
           if (lastProcessedQuestionRef.current < nextQuestionIndex) {
-            console.log('⏰ Setting timeout for next question...');
-            nextQuestionTimeoutRef.current = setTimeout(() => {
-              console.log('⚠️ Next question timeout - opponent may have disconnected');
-              setError('Opponent may have disconnected. Please refresh to try again.');
+nextQuestionTimeoutRef.current = setTimeout(() => {
+setError('Opponent may have disconnected. Please refresh to try again.');
             }, 5000); // 5 second timeout
-          } else {
-            console.log('✅ Next question already received, skipping timeout');
           }
         }
       }, 2000);
@@ -292,14 +248,12 @@ export default function RealTimeBattleQuiz() {
       opponentScore: number, 
       prizeAmount: number 
     }) => {
-      console.log('🏁 Game finished event received:', data);
-      setGameResult(data);
+setGameResult(data);
       setGameState('finished');
     });
 
     socket.on('opponent_disconnected', () => {
-      console.log('🔌 Opponent disconnected');
-      setGameResult({ 
+setGameResult({ 
         winner: 'you', 
         reason: 'Opponent disconnected',
         myScore,
@@ -310,12 +264,10 @@ export default function RealTimeBattleQuiz() {
 
     socket.on('error', (message: string) => {
       setError(message);
-      console.error('Socket error:', message);
-    });
+});
 
     socket.on('pong', () => {
-      console.log('🏓 Received pong from server');
-    });
+});
 
     return () => {
       socket.off('connect', handleConnect);
@@ -361,12 +313,8 @@ export default function RealTimeBattleQuiz() {
   };
 
   const handleAnswer = (answerIndex: number) => {
-    console.log('🖱️ Answer button clicked:', answerIndex);
-    console.log('🖱️ Current state:', { isAnswered, gameState });
-    
-    if (isAnswered || gameState !== 'playing') {
-      console.log('❌ Cannot submit answer - already answered or not playing');
-      return;
+if (isAnswered || gameState !== 'playing') {
+return;
     }
     
     setSelectedAnswer(answerIndex);
@@ -375,12 +323,7 @@ export default function RealTimeBattleQuiz() {
     if (timerRef.current) clearInterval(timerRef.current);
     
     // Debug log before emitting
-    console.log('Emitting submit_answer:', {
-      quizId,
-      questionIndex: currentQuestionIndex,
-      answer: answerIndex
-    });
-    // Send answer to server
+// Send answer to server
     socket?.emit('submit_answer', {
       quizId,
       questionIndex: currentQuestionIndex,

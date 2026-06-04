@@ -32,7 +32,6 @@ export async function GET(req: NextRequest) {
     })
     return NextResponse.json(entries)
   } catch (e) {
-    console.error('[CA_ENTRIES]', e)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

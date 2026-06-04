@@ -137,8 +137,7 @@ export async function POST(
       myEntry,
     });
   } catch (e) {
-    console.error('Live quiz submit error:', e);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

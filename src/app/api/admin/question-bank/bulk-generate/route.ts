@@ -153,13 +153,9 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
 
-    console.log(`[Bulk Generate] Starting generation of ${count} questions for topic: ${topic}`);
-
-    // Generate all questions
+// Generate all questions
     const generatedQuestions = generateBulkQuestions(topic, count);
-    console.log(`[Bulk Generate] Generated ${generatedQuestions.length} questions`);
-
-    // Batch insert for performance (insert 100 at a time)
+// Batch insert for performance (insert 100 at a time)
     const batchSize = 100;
     const savedQuestions = [];
     let savedCount = 0;
@@ -184,9 +180,7 @@ export async function POST(req: NextRequest) {
       });
 
       savedCount += batch.length;
-      console.log(`[Bulk Generate] Saved batch: ${savedCount}/${generatedQuestions.length}`);
-
-      // Fetch saved questions to return
+// Fetch saved questions to return
       const saved = await prisma.questionBankItem.findMany({
         where: {
           categoryId,
@@ -203,9 +197,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log(`[Bulk Generate] Successfully saved ${savedCount} questions`);
-
-    return NextResponse.json({
+return NextResponse.json({
       success: true,
       generated: generatedQuestions.length,
       saved: savedCount,
@@ -213,8 +205,7 @@ export async function POST(req: NextRequest) {
       method: 'template-bulk'
     });
   } catch (error: any) {
-    console.error('[Bulk Generate] Error:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       message: error.message || 'Failed to generate questions.' 
     }, { status: 500 });
   }

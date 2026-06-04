@@ -32,11 +32,9 @@ export default function FirebaseTestPage() {
       const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         size: 'invisible',
         callback: () => {
-          console.log('reCAPTCHA solved');
-        },
+},
         'expired-callback': () => {
-          console.log('reCAPTCHA expired');
-          setResult('reCAPTCHA expired. Please try again.');
+setResult('reCAPTCHA expired. Please try again.');
         }
       });
 
@@ -46,8 +44,7 @@ export default function FirebaseTestPage() {
       setShowOTP(true);
       setResult(`✅ OTP sent successfully to ${phone}! Check your phone for SMS.`);
     } catch (error: any) {
-      console.error('Phone login error:', error);
-      setResult(`❌ Phone login error: ${error.message}`);
+setResult(`❌ Phone login error: ${error.message}`);
     }
   };
 
@@ -63,8 +60,7 @@ export default function FirebaseTestPage() {
       const idToken = await userCredential.user.getIdToken();
       
       // Test API first
-      console.log('🧪 Testing Firebase API...');
-      const testResponse = await fetch('/api/auth/firebase-test', {
+const testResponse = await fetch('/api/auth/firebase-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken, phoneNumber: userCredential.user.phoneNumber }),
@@ -77,9 +73,7 @@ export default function FirebaseTestPage() {
       }
       
       const testData = await testResponse.json();
-      console.log('✅ Test API response:', testData);
-      
-      // Now try the real Firebase API
+// Now try the real Firebase API
       const response = await fetch('/api/auth/firebase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,9 +91,7 @@ export default function FirebaseTestPage() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         
-        console.log('✅ Firebase login successful:', data.user);
-        
-        // Redirect to dashboard (same as existing login)
+// Redirect to dashboard (same as existing login)
         const role = data.user?.role || data.role;
         if (String(role).toUpperCase() === 'ADMIN') {
           window.location.href = '/admin/dashboard';
@@ -111,8 +103,7 @@ export default function FirebaseTestPage() {
         setResult(`❌ Backend error: ${errorData.error}`);
       }
     } catch (error: any) {
-      console.error('OTP verification error:', error);
-      setResult(`❌ OTP verification error: ${error.message}`);
+setResult(`❌ OTP verification error: ${error.message}`);
     }
   };
 

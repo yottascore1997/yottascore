@@ -133,8 +133,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error joining battle room:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     );

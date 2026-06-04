@@ -13,13 +13,7 @@ const missingVars = Object.entries(requiredEnvVars)
 
 if (missingVars.length > 0) {
   const errorMsg = `❌ Missing Firebase Admin SDK environment variables: ${missingVars.join(', ')}`;
-  console.error(errorMsg);
-  console.error('⚠️ Please add these to your .env file:');
-  console.error('   FIREBASE_PROJECT_ID=your-project-id');
-  console.error('   FIREBASE_CLIENT_EMAIL=your-service-account-email');
-  console.error('   FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----"');
-  
-  // In production, throw error - in development, log warning
+// In production, throw error - in development, log warning
   if (process.env.NODE_ENV === 'production') {
     throw new Error(errorMsg);
   }
@@ -35,12 +29,8 @@ if (!admin.apps.length && !missingVars.length) {
         privateKey: requiredEnvVars.privateKey?.replace(/\\n/g, '\n'),
       }),
     });
-    console.log('✅ Firebase Admin SDK initialized successfully');
-    console.log('📋 Project:', requiredEnvVars.projectId);
-  } catch (error: any) {
-    console.error('❌ Firebase Admin initialization error:', error.message);
-    
-    if (process.env.NODE_ENV === 'production') {
+} catch (error: any) {
+if (process.env.NODE_ENV === 'production') {
       throw error;
     }
   }

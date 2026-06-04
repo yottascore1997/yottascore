@@ -59,8 +59,7 @@ export default function ReferralPage() {
         setError('Failed to fetch referral stats');
       }
     } catch (error) {
-      console.error('Error fetching referral stats:', error);
-      setError('Failed to fetch referral stats');
+setError('Failed to fetch referral stats');
     } finally {
       setLoading(false);
     }
@@ -86,8 +85,7 @@ export default function ReferralPage() {
         setError('Failed to generate referral code');
       }
     } catch (error) {
-      console.error('Error generating referral code:', error);
-      setError('Failed to generate referral code');
+setError('Failed to generate referral code');
     } finally {
       setGeneratingCode(false);
     }
@@ -99,9 +97,7 @@ export default function ReferralPage() {
         await navigator.clipboard.writeText(stats.referralCode);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-      } catch (error) {
-        console.error('Failed to copy:', error);
-      }
+      } catch {}
     }
   };
 
@@ -117,18 +113,14 @@ export default function ReferralPage() {
             text: shareText,
             url: shareUrl
           });
-        } catch (error) {
-          console.error('Error sharing:', error);
-        }
+        } catch {}
       } else {
         // Fallback to copying to clipboard
         try {
           await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
-        } catch (error) {
-          console.error('Failed to copy:', error);
-        }
+        } catch {}
       }
     }
   };

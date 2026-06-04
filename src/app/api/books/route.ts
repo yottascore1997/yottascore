@@ -215,8 +215,7 @@ export const GET = withCORS(async (request: NextRequest) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching books:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to fetch books' },
       { status: 500 }
     );
@@ -308,8 +307,7 @@ export const POST = withCORS(async (request: NextRequest) => {
       data: book,
     });
   } catch (error) {
-    console.error('Error creating book:', error);
-    if (error instanceof z.ZodError) {
+if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Validation error', details: error.errors },
         { status: 400 }

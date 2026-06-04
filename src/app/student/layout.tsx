@@ -75,9 +75,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           // Fetch unread notification count when user comes online
           fetchUnreadNotificationCount();
         }
-      } catch (error) {
-        console.error('Error decoding token:', error);
-      }
+      } catch {}
     }
   }, [socket, isConnected]);
 
@@ -96,9 +94,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         const data = await response.json();
         setUnreadNotificationCount(data.unreadCount || 0);
       }
-    } catch (error) {
-      console.error('Error fetching unread notification count:', error);
-    }
+    } catch {}
   };
 
   // Listen for real-time notification updates

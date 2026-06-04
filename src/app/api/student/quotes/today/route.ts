@@ -46,7 +46,6 @@ export async function GET(req: Request) {
       date: today.toISOString().slice(0, 10)
     })
   } catch (e) {
-    console.error('[QUOTES_TODAY]', e)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

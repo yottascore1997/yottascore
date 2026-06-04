@@ -49,8 +49,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ certificates });
   } catch (error) {
-    console.error('[CERTIFICATES_GET]', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

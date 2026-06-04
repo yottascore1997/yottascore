@@ -62,7 +62,6 @@ export async function GET(req: Request, { params }: { params: { examId: string }
     });
     return NextResponse.json(questions);
   } catch (error) {
-    console.error('Error fetching exam questions:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

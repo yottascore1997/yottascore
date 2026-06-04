@@ -80,32 +80,22 @@ export default function AdminDashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token')
-      console.log('Token from localStorage:', token ? 'exists' : 'missing')
-      
-      if (!token) {
-        console.log('No token found, redirecting to login')
-        router.push('/auth/login')
+if (!token) {
+router.push('/auth/login')
         return
       }
       
       try {
         const payload = JSON.parse(atob(token.split('.')[1]))
-        console.log('Token payload:', payload)
-        console.log('User role:', payload.role)
-        
-        if (payload.role !== 'ADMIN') {
-          console.log('User is not admin, redirecting to student dashboard')
-          router.push('/student/dashboard')
+if (payload.role !== 'ADMIN') {
+router.push('/student/dashboard')
           return
         }
         // If we reach here, user is authenticated as admin
-        console.log('User is admin, fetching dashboard stats')
-        fetchDashboardStats()
+fetchDashboardStats()
       } catch (e) {
-        console.error('Token parsing error:', e)
-        // Don't redirect immediately, try to fetch data first
-        console.log('Trying to fetch data despite token parsing error')
-        fetchDashboardStats()
+// Don't redirect immediately, try to fetch data first
+fetchDashboardStats()
       }
     }
     
@@ -115,11 +105,8 @@ export default function AdminDashboard() {
   const fetchDashboardStats = async () => {
     try {
       const token = localStorage.getItem('token')
-      console.log('Fetching dashboard stats with token:', token ? 'exists' : 'missing')
-      
-      if (!token) {
-        console.log('No token for API call, redirecting to login')
-        router.push('/auth/login')
+if (!token) {
+router.push('/auth/login')
         return
       }
 
@@ -129,22 +116,14 @@ export default function AdminDashboard() {
         },
       })
       
-      console.log('API response status:', response.status)
-      
-      if (response.ok) {
+if (response.ok) {
         const data = await response.json()
-        console.log('Dashboard data received:', data)
-        setStats(data)
+setStats(data)
       } else if (response.status === 401) {
         // Only redirect on actual auth error
-        console.log('401 Unauthorized, redirecting to login')
-        router.push('/auth/login')
-      } else {
-        console.error('API Error:', response.status, response.statusText)
+router.push('/auth/login')
       }
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }

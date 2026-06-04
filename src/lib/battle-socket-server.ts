@@ -78,8 +78,7 @@ class BattleSocketServer {
 
   private setupEventHandlers() {
     this.io.on('connection', (socket: BattleSocket) => {
-      console.log(`🔌 Battle socket connected: ${socket.id}, User: ${socket.userId}`);
-      this.userSockets.set(socket.userId!, socket.id);
+this.userSockets.set(socket.userId!, socket.id);
 
       // Handle battle room creation
       socket.on('create_battle_room', async (data: { name: string; categoryId?: string }) => {
@@ -120,9 +119,7 @@ class BattleSocketServer {
 
   private async handleCreateRoom(socket: BattleSocket, data: { name: string; categoryId?: string }) {
     try {
-      console.log(`🏠 Creating battle room: ${data.name} by user ${socket.userId}`);
-
-      // Create room in database
+// Create room in database
       const room = await prisma.battleRoom.create({
         data: {
           name: data.name,
@@ -189,19 +186,14 @@ class BattleSocketServer {
         }
       });
 
-      console.log(`✅ Battle room created: ${room.id}`);
-
-    } catch (error) {
-      console.error('Error creating battle room:', error);
-      socket.emit('error', { message: 'Failed to create room' });
+} catch (error) {
+socket.emit('error', { message: 'Failed to create room' });
     }
   }
 
   private async handleJoinRoom(socket: BattleSocket, data: { roomId: string }) {
     try {
-      console.log(`🚪 User ${socket.userId} joining room ${data.roomId}`);
-
-      const room = this.rooms.get(data.roomId);
+const room = this.rooms.get(data.roomId);
       if (!room) {
         socket.emit('error', { message: 'Room not found' });
         return;
@@ -272,19 +264,14 @@ class BattleSocketServer {
         }
       });
 
-      console.log(`✅ User ${socket.userId} joined room ${data.roomId}`);
-
-    } catch (error) {
-      console.error('Error joining room:', error);
-      socket.emit('error', { message: 'Failed to join room' });
+} catch (error) {
+socket.emit('error', { message: 'Failed to join room' });
     }
   }
 
   private async handleLeaveRoom(socket: BattleSocket, data: { roomId: string }) {
     try {
-      console.log(`🚪 User ${socket.userId} leaving room ${data.roomId}`);
-
-      const room = this.rooms.get(data.roomId);
+const room = this.rooms.get(data.roomId);
       if (!room) {
         socket.emit('error', { message: 'Room not found' });
         return;
@@ -317,8 +304,7 @@ class BattleSocketServer {
           where: { id: data.roomId }
         });
         this.rooms.delete(data.roomId);
-        console.log(`🗑️ Room ${data.roomId} deleted (no players left)`);
-      } else {
+} else {
         // Notify remaining players
         this.io.to(data.roomId).emit('player_left', {
           playerId: socket.userId,
@@ -332,19 +318,14 @@ class BattleSocketServer {
         });
       }
 
-      console.log(`✅ User ${socket.userId} left room ${data.roomId}`);
-
-    } catch (error) {
-      console.error('Error leaving room:', error);
-      socket.emit('error', { message: 'Failed to leave room' });
+} catch (error) {
+socket.emit('error', { message: 'Failed to leave room' });
     }
   }
 
   private async handlePlayerReady(socket: BattleSocket, data: { roomId: string }) {
     try {
-      console.log(`✅ User ${socket.userId} ready in room ${data.roomId}`);
-
-      const room = this.rooms.get(data.roomId);
+const room = this.rooms.get(data.roomId);
       if (!room) {
         socket.emit('error', { message: 'Room not found' });
         return;
@@ -387,19 +368,14 @@ class BattleSocketServer {
         }, 3000);
       }
 
-      console.log(`✅ Player ready status updated: ${player.isReady}`);
-
-    } catch (error) {
-      console.error('Error updating ready status:', error);
-      socket.emit('error', { message: 'Failed to update ready status' });
+} catch (error) {
+socket.emit('error', { message: 'Failed to update ready status' });
     }
   }
 
   private async startBattle(roomId: string) {
     try {
-      console.log(`🎮 Starting battle in room ${roomId}`);
-
-      const room = this.rooms.get(roomId);
+const room = this.rooms.get(roomId);
       if (!room || room.players.length !== 2) {
         return;
       }
@@ -470,18 +446,12 @@ class BattleSocketServer {
         this.startQuestion(roomId, 0);
       }, 2000);
 
-      console.log(`✅ Battle started in room ${roomId}`);
-
-    } catch (error) {
-      console.error('Error starting battle:', error);
-    }
+} catch {}
   }
 
   private async startQuestion(roomId: string, questionIndex: number) {
     try {
-      console.log(`❓ Starting question ${questionIndex + 1} in room ${roomId}`);
-
-      const room = this.rooms.get(roomId);
+const room = this.rooms.get(roomId);
       if (!room || !room.questions || questionIndex >= room.questions.length) {
         return;
       }
@@ -529,18 +499,12 @@ class BattleSocketServer {
         }
       }, 1000);
 
-      console.log(`✅ Question ${questionIndex + 1} started in room ${roomId}`);
-
-    } catch (error) {
-      console.error('Error starting question:', error);
-    }
+} catch {}
   }
 
   private async endQuestion(roomId: string, questionIndex: number) {
     try {
-      console.log(`⏰ Question ${questionIndex + 1} ended in room ${roomId}`);
-
-      const room = this.rooms.get(roomId);
+const room = this.rooms.get(roomId);
       if (!room || !room.questions || questionIndex >= room.questions.length) {
         return;
       }
@@ -586,18 +550,12 @@ class BattleSocketServer {
         }
       }, 3000);
 
-      console.log(`✅ Question ${questionIndex + 1} ended in room ${roomId}`);
-
-    } catch (error) {
-      console.error('Error ending question:', error);
-    }
+} catch {}
   }
 
   private async endBattle(roomId: string) {
     try {
-      console.log(`🏁 Ending battle in room ${roomId}`);
-
-      const room = this.rooms.get(roomId);
+const room = this.rooms.get(roomId);
       if (!room) {
         return;
       }
@@ -646,21 +604,14 @@ class BattleSocketServer {
       // Clean up room after 10 seconds
       setTimeout(() => {
         this.rooms.delete(roomId);
-        console.log(`🗑️ Room ${roomId} cleaned up`);
-      }, 10000);
+}, 10000);
 
-      console.log(`✅ Battle ended in room ${roomId}`);
-
-    } catch (error) {
-      console.error('Error ending battle:', error);
-    }
+} catch {}
   }
 
   private async handleSubmitAnswer(socket: BattleSocket, data: { roomId: string; questionIndex: number; answerIndex: number }) {
     try {
-      console.log(`📝 User ${socket.userId} submitting answer in room ${data.roomId}`);
-
-      const room = this.rooms.get(data.roomId);
+const room = this.rooms.get(data.roomId);
       if (!room || room.status !== 'active') {
         socket.emit('error', { message: 'Battle not active' });
         return;
@@ -693,18 +644,13 @@ class BattleSocketServer {
         questionIndex: data.questionIndex
       });
 
-      console.log(`✅ Answer submitted by user ${socket.userId}`);
-
-    } catch (error) {
-      console.error('Error submitting answer:', error);
-      socket.emit('error', { message: 'Failed to submit answer' });
+} catch (error) {
+socket.emit('error', { message: 'Failed to submit answer' });
     }
   }
 
   private handleDisconnect(socket: BattleSocket) {
-    console.log(`🔌 Battle socket disconnected: ${socket.id}, User: ${socket.userId}`);
-    
-    this.userSockets.delete(socket.userId!);
+this.userSockets.delete(socket.userId!);
 
     if (socket.roomId) {
       // Handle player disconnect from room

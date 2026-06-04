@@ -100,9 +100,7 @@ export default function AdminSupportTicketsPage() {
         setTickets(data.tickets || []);
         setStats(data.stats || {});
       }
-    } catch (error) {
-      console.error('Error fetching tickets:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };

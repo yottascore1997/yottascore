@@ -20,7 +20,6 @@ export function isIPBlocked(ip: string): boolean {
  */
 export function blockIP(ip: string, reason?: string) {
   blockedIPs.add(ip);
-  console.warn(`🚫 IP blocked: ${ip}. Reason: ${reason || 'Suspicious activity'}`);
 }
 
 /**
@@ -94,14 +93,7 @@ export function logSecurityEvent(event: {
 }) {
   const timestamp = new Date().toISOString();
   
-  console.log(`🔒 [SECURITY] ${timestamp} - ${event.type}`, {
-    ip: event.ip,
-    phoneNumber: event.phoneNumber ? `***${event.phoneNumber.slice(-4)}` : undefined,
-    success: event.success,
-    message: event.message,
-  });
-  
-  // In production, send to monitoring service (e.g., Sentry, DataDog)
+// In production, send to monitoring service (e.g., Sentry, DataDog)
   if (process.env.NODE_ENV === 'production' && !event.success) {
     // TODO: Send to monitoring service
     // sentry.captureMessage('Security event', { level: 'warning', extra: event });

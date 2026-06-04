@@ -83,8 +83,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(exams)
   } catch (error) {
-    console.error('Error fetching exams:', error)
-    return NextResponse.json(
+return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }
     )
@@ -152,8 +151,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(exam)
   } catch (error) {
-    console.error('Error creating exam:', error)
-    return NextResponse.json(
+return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }
     )

@@ -139,8 +139,7 @@ export const GET = withCORS(async (request: NextRequest) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching user listings:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to fetch your book listings' },
       { status: 500 }
     );

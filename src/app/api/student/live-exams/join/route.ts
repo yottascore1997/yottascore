@@ -163,9 +163,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Error joining exam:', error);
-
-    if (error instanceof Error && error.message === 'INSUFFICIENT_WALLET') {
+if (error instanceof Error && error.message === 'INSUFFICIENT_WALLET') {
       return NextResponse.json(
         { error: 'Insufficient wallet balance' },
         { status: 400 }

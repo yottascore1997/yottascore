@@ -30,8 +30,7 @@ export async function GET(
 
     return NextResponse.json(notification);
   } catch (error) {
-    console.error("Error fetching notification:", error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );

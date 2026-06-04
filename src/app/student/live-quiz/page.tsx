@@ -38,9 +38,7 @@ export default function LiveQuizPage() {
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setCategories(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error(e);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };

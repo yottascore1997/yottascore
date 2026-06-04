@@ -69,49 +69,27 @@ export default function PrivateRoomPage() {
 
   // Debug room state changes
   useEffect(() => {
-    console.log('🔄 Room state changed:', roomState);
-    console.log('   - Players:', roomState.players);
-    console.log('   - Player count:', roomState.players.length);
-    console.log('   - Max players:', roomState.maxPlayers);
-    console.log('   - Status:', roomState.status);
-  }, [roomState]);
+}, [roomState]);
 
   // Debug user changes
   useEffect(() => {
-    console.log('👤 User state changed:', user);
-    if (user) {
-      console.log('   - User ID:', user.id);
-      console.log('   - User name:', user.name);
-      console.log('   - User isHost:', user.isHost);
-      
-      // Reset hasJoinedRoom flag when user is loaded so we can join room
+if (user) {
+// Reset hasJoinedRoom flag when user is loaded so we can join room
       if (hasJoinedRoom.current) {
-        console.log('🔄 Resetting hasJoinedRoom flag for user:', user.id);
-        hasJoinedRoom.current = false;
+hasJoinedRoom.current = false;
       }
     }
   }, [user]);
 
   useEffect(() => {
-    console.log('🔍 useEffect triggered:');
-    console.log('   - Socket exists:', !!socket);
-    console.log('   - Is connected:', isConnected);
-    console.log('   - Has joined room:', hasJoinedRoom.current);
-    console.log('   - User exists:', !!user);
-    console.log('   - User data:', user);
-    
-    if (!socket || !isConnected || hasJoinedRoom.current || !user) {
-      console.log('❌ Cannot join room - conditions not met');
-      return;
+if (!socket || !isConnected || hasJoinedRoom.current || !user) {
+return;
     }
 
-    console.log('✅ Joining private room:', roomCode);
-    console.log('User data:', user);
-    hasJoinedRoom.current = true;
+hasJoinedRoom.current = true;
 
     // Join the private room
-    console.log('📤 Emitting join_private_room event');
-    socket.emit('join_private_room', { 
+socket.emit('join_private_room', { 
       roomCode,
       userId: user.id,
       quizData: {
@@ -120,60 +98,43 @@ export default function PrivateRoomPage() {
         timePerQuestion: roomState.timePerQuestion
       }
     });
-    console.log('📤 join_private_room event emitted');
-
-    // Listen for room events
+// Listen for room events
     socket.on('room_joined', (data: { 
       room: RoomState; 
       user: User; 
       isHost: boolean 
     }) => {
-      console.log('🎯 Room joined event received:');
-      console.log('   - Full data:', data);
-      console.log('   - Room state:', data.room);
-      console.log('   - Players in room:', data.room.players);
-      console.log('   - Player count:', data.room.players.length);
-      console.log('   - Max players:', data.room.maxPlayers);
-      console.log('   - User:', data.user);
-      console.log('   - Is host:', data.isHost);
-      
-      setRoomState(data.room);
+setRoomState(data.room);
       
       // Update user with isHost value from server
       const updatedUser = { 
         ...data.user, 
         isHost: data.isHost 
       };
-      console.log('🔄 Updating user with isHost:', updatedUser);
-      setUser(updatedUser);
+setUser(updatedUser);
       
-      console.log('✅ Room state updated');
-    });
+});
 
     socket.on('player_joined', (data: { player: User }) => {
-      console.log('Player joined:', data);
-      setRoomState(prev => ({
+setRoomState(prev => ({
         ...prev,
         players: [...prev.players, data.player]
       }));
     });
 
     socket.on('room_updated', (data: { room: RoomState }) => {
-      console.log('Room updated:', data);
-      setRoomState(data.room);
+setRoomState(data.room);
     });
 
     socket.on('player_left', (data: { playerId: string }) => {
-      console.log('Player left:', data);
-      setRoomState(prev => ({
+setRoomState(prev => ({
         ...prev,
         players: prev.players.filter(p => p.id !== data.playerId)
       }));
     });
 
     socket.on('room_starting', (data: { countdown: number }) => {
-      console.log('Room starting:', data);
-      setRoomState(prev => ({
+setRoomState(prev => ({
         ...prev,
         status: 'starting',
         countdown: data.countdown
@@ -195,11 +156,7 @@ export default function PrivateRoomPage() {
     });
 
     socket.on('game_started', (data: { matchId: string }) => {
-      console.log('🎮 Game started event received:', data);
-      console.log('   - Match ID:', data.matchId);
-      console.log('   - Redirecting to battle page...');
-      
-      if (countdownRef.current) {
+if (countdownRef.current) {
         clearInterval(countdownRef.current);
         countdownRef.current = null;
       }
@@ -208,29 +165,24 @@ export default function PrivateRoomPage() {
     });
 
     socket.on('room_error', (data: { message: string }) => {
-      console.error('Room error:', data);
-      setError(data.message);
+setError(data.message);
     });
 
     socket.on('room_not_found', () => {
-      console.error('Room not found:', roomCode);
-      setError('Room not found. Please check the room code.');
+setError('Room not found. Please check the room code.');
     });
 
     socket.on('room_full', () => {
-      console.error('Room is full:', roomCode);
-      setError('Room is full. Maximum 2 players allowed.');
+setError('Room is full. Maximum 2 players allowed.');
     });
 
     // Add connection error handling
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      setError('Connection error. Please refresh the page.');
+setError('Connection error. Please refresh the page.');
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
-      if (reason === 'io server disconnect') {
+if (reason === 'io server disconnect') {
         setError('Disconnected from server. Please refresh the page.');
       }
     });
@@ -258,17 +210,14 @@ export default function PrivateRoomPage() {
   }, [socket, isConnected, roomCode, router, user]);
 
   const fetchUserProfile = async () => {
-    console.log('🔍 Fetching user profile...');
-    try {
+try {
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('❌ No token found, redirecting to login');
-        router.push('/auth/login');
+router.push('/auth/login');
         return;
       }
 
-      console.log('📤 Fetching profile from API...');
-      const response = await fetch('/api/student/profile', {
+const response = await fetch('/api/student/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -276,30 +225,14 @@ export default function PrivateRoomPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ User profile loaded:', data);
-        setUser(data);
-      } else {
-        console.log('❌ Failed to fetch user profile:', response.status);
+setUser(data);
       }
-    } catch (error) {
-      console.error('❌ Error fetching user profile:', error);
-    }
+    } catch {}
   };
 
   const handleStartGame = () => {
-    console.log('🎮 Start game button clicked');
-    console.log('   - Socket connected:', isConnected);
-    console.log('   - User is host:', user?.isHost);
-    console.log('   - Room code:', roomCode);
-    
-    if (socket && isConnected && user?.isHost) {
-      console.log('✅ Emitting start_private_game event');
-      socket.emit('start_private_game', { roomCode });
-    } else {
-      console.log('❌ Cannot start game:');
-      console.log('   - Socket exists:', !!socket);
-      console.log('   - Is connected:', isConnected);
-      console.log('   - User is host:', user?.isHost);
+if (socket && isConnected && user?.isHost) {
+socket.emit('start_private_game', { roomCode });
     }
   };
 
@@ -315,9 +248,7 @@ export default function PrivateRoomPage() {
       await navigator.clipboard.writeText(roomCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Failed to copy room code:', error);
-    }
+    } catch {}
   };
 
   const shareRoom = async () => {
@@ -334,8 +265,7 @@ export default function PrivateRoomPage() {
         copyRoomCode();
       }
     } catch (error) {
-      console.error('Error sharing:', error);
-      copyRoomCode();
+copyRoomCode();
     }
   };
 
@@ -489,15 +419,7 @@ export default function PrivateRoomPage() {
         {roomState.status === 'waiting' && (
           <div className="bg-white rounded-2xl shadow-lg p-6">
             {(() => {
-              console.log('🎮 Game Controls Debug:');
-              console.log('   - User:', user);
-              console.log('   - User isHost:', user?.isHost);
-              console.log('   - Room host:', roomState.host);
-              console.log('   - Room creator ID:', roomState.host?.id);
-              console.log('   - Current user ID:', user?.id);
-              console.log('   - Players:', roomState.players);
-              
-              return user?.isHost ? (
+return user?.isHost ? (
                 <div className="text-center">
                   <Button
                     onClick={handleStartGame}

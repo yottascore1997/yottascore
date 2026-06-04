@@ -53,9 +53,7 @@ export default function StoryBar({ onAddStory, onViewStory, refreshTrigger }: St
         const data = await response.json()
         setStories(data)
       }
-    } catch (error) {
-      console.error('Error fetching stories:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }
@@ -73,9 +71,7 @@ export default function StoryBar({ onAddStory, onViewStory, refreshTrigger }: St
         },
         body: JSON.stringify({ storyId })
       })
-    } catch (error) {
-      console.error('Error marking story as viewed:', error)
-    }
+    } catch {}
   }
 
   if (loading) {

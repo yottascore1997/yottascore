@@ -108,8 +108,6 @@ const handler = async (req: Request) => {
       const candidate = requestedRole.toUpperCase()
       if (allowedRoles.includes(candidate as AllowedRole)) {
         selectedRole = candidate as AllowedRole
-      } else {
-        console.warn('[REGISTER] Invalid role requested, defaulting to STUDENT:', { requestedRole })
       }
     }
 
@@ -117,8 +115,7 @@ const handler = async (req: Request) => {
     const existingUser = await prisma.user.findUnique({ where: { email: emailTrimmed } })
 
     if (existingUser) {
-      console.log('User already exists:', emailTrimmed)
-      return NextResponse.json(
+return NextResponse.json(
         { message: 'User already exists' },
         { status: 400 }
       )
@@ -162,8 +159,7 @@ const handler = async (req: Request) => {
       }
       
       referrerId = referrer.id;
-      console.log('Referral code validated:', { referralCode, referrerId });
-    }
+}
 
     // Strong password: min 8 chars, at least one letter and one number
     const pwdCheck = validatePasswordStrength(password)
@@ -179,25 +175,14 @@ const handler = async (req: Request) => {
     
     // Validate hash was created correctly (bcrypt hashes are always 60 characters)
     if (!hashedPassword || hashedPassword.length !== 60) {
-      console.error('[REGISTER] Invalid password hash generated:', {
-        hashLength: hashedPassword?.length,
-        hashPrefix: hashedPassword?.substring(0, 20)
-      })
-      return NextResponse.json(
+return NextResponse.json(
         { message: 'Password hashing failed. Please try again.' },
         { status: 500 }
       )
     }
     
     // Debug logging
-    console.log('[REGISTER] Password hashing successful:', {
-      passwordLength: password.length,
-      hashedPasswordLength: hashedPassword.length,
-      hashedPasswordPrefix: hashedPassword.substring(0, 20) + '...',
-      isValidHash: hashedPassword.length === 60
-    })
-
-    // Create new user with referral info
+// Create new user with referral info
     const user = await prisma.user.create({
       data: {
         email: emailTrimmed,
@@ -218,12 +203,7 @@ const handler = async (req: Request) => {
     
     // Verify stored password hash is valid
     if (!verifyUser?.hashedPassword || verifyUser.hashedPassword.length !== 60) {
-      console.error('[REGISTER] Password hash validation failed after storage:', {
-        userId: user.id,
-        storedHashLength: verifyUser?.hashedPassword?.length,
-        expectedLength: 60
-      })
-      // Delete the user if password wasn't stored correctly
+// Delete the user if password wasn't stored correctly
       await prisma.user.delete({ where: { id: user.id } })
       return NextResponse.json(
         { message: 'Password storage failed. Please try again.' },
@@ -234,24 +214,14 @@ const handler = async (req: Request) => {
     // Test password verification to ensure it works
     const testVerification = await bcrypt.compare(password, verifyUser.hashedPassword)
     if (!testVerification) {
-      console.error('[REGISTER] Password verification test failed after storage')
-      await prisma.user.delete({ where: { id: user.id } })
+await prisma.user.delete({ where: { id: user.id } })
       return NextResponse.json(
         { message: 'Password verification failed. Please try again.' },
         { status: 500 }
       )
     }
     
-    console.log('[REGISTER] User created and verified successfully:', { 
-      id: user.id, 
-      email: user.email,
-      username: user.username,
-      hashedPasswordStored: !!verifyUser?.hashedPassword,
-      hashedPasswordLength: verifyUser?.hashedPassword?.length,
-      passwordVerified: testVerification
-    })
-
-    // If referral code was used, process the referral
+// If referral code was used, process the referral
     if (referralCode && referrerId) {
       try {
         // Use transaction to ensure data consistency
@@ -304,10 +274,8 @@ const handler = async (req: Request) => {
           });
         });
 
-        console.log('Referral processed successfully:', { referralCode, referrerId, userId: user.id });
-      } catch (referralError) {
-        console.error('Error processing referral:', referralError);
-        // Don't fail registration if referral processing fails
+} catch (referralError) {
+// Don't fail registration if referral processing fails
       }
     }
 
@@ -341,11 +309,8 @@ const handler = async (req: Request) => {
       })
 
       if (error) {
-        console.error('[REGISTER] Resend verification email error:', error)
-        // Don't fail registration - user exists, they can use resend-verification
+// Don't fail registration - user exists, they can use resend-verification
       }
-    } else {
-      console.warn('[REGISTER] RESEND_API_KEY not set - verification email not sent')
     }
 
     return NextResponse.json({
@@ -353,9 +318,7 @@ const handler = async (req: Request) => {
       email: emailTrimmed,
     })
   } catch (error) {
-    console.error('Registration error details:', error)
-    
-    // Check for Prisma errors
+// Check for Prisma errors
     if ((error as any).code === 'P2002') {
       const target = (error as any).meta?.target as string[] | undefined
       const field = Array.isArray(target) ? target.join(',') : String(target || '')

@@ -32,7 +32,6 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Auth test error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

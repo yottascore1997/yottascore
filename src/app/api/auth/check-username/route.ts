@@ -29,14 +29,7 @@ const handler = async (req: Request) => {
     
     return NextResponse.json({ available: !existing })
   } catch (error: any) {
-    console.error('[CHECK_USERNAME] Error details:', {
-      message: error?.message,
-      code: error?.code,
-      meta: error?.meta,
-      stack: error?.stack
-    })
-    
-    // Handle Prisma-specific errors
+// Handle Prisma-specific errors
     if (error?.code === 'P2002') {
       // Unique constraint violation - username exists
       return NextResponse.json({ available: false }, { status: 200 })

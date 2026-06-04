@@ -64,51 +64,35 @@ export async function GET(req: Request) {
     if (error instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
-    console.error('[LIVE_EXAMS_GET]', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    console.log('Received request to create live exam');
-    
-    const authHeader = req.headers.get('authorization');
+const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No authorization header or invalid format');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
       decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
-      console.log('Token decoded:', { userId: decoded.userId, role: decoded.role });
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+} catch (error) {
+return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     if (decoded.role !== 'ADMIN') {
-      console.log('User is not an admin');
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await req.json();
-    console.log('Request body:', body);
-    console.log('🔍 ImageUrl in request:', {
-      imageUrl: body.imageUrl,
-      hasImageUrl: !!body.imageUrl,
-      imageUrlType: typeof body.imageUrl
-    });
-
-    let validatedData;
+let validatedData;
     try {
       validatedData = createLiveExamSchema.parse(body);
-      console.log('Validated data:', validatedData);
-    } catch (error) {
-      console.error('Validation error:', error);
-      return NextResponse.json({ 
+} catch (error) {
+return NextResponse.json({ 
         error: 'Validation error', 
         details: error instanceof z.ZodError ? error.errors : 'Invalid data format'
       }, { status: 400 });
@@ -117,25 +101,7 @@ export async function POST(req: Request) {
     const totalCollection = validatedData.spots * validatedData.entryFee;
     const prizePool = totalCollection * 0.9; // 90% goes to prize pool
 
-    console.log('Creating live exam with data:', {
-      title: validatedData.title,
-      description: validatedData.description,
-      instructions: validatedData.instructions,
-      category: validatedData.category,
-      imageUrl: validatedData.imageUrl,
-      startTime: new Date(validatedData.startTime),
-      endTime: new Date(validatedData.endTime),
-      duration: validatedData.duration,
-      spots: validatedData.spots,
-      spotsLeft: validatedData.spots,
-      entryFee: validatedData.entryFee,
-      totalCollection,
-      prizePool,
-      createdById: decoded.userId,
-      questionsCount: validatedData.questions.length
-    });
-
-    const imageUrlToSave = normalizeUploadUrl(validatedData.imageUrl);
+const imageUrlToSave = normalizeUploadUrl(validatedData.imageUrl);
 
     const liveExam = await prisma.liveExam.create({
       data: {
@@ -164,15 +130,7 @@ export async function POST(req: Request) {
       }
     });
 
-    console.log('Live exam created successfully:', liveExam);
-    console.log('💾 Saved exam imageUrl:', {
-      id: liveExam.id,
-      title: liveExam.title,
-      imageUrl: liveExam.imageUrl,
-      hasImageUrl: !!liveExam.imageUrl
-    });
-    
-    // Set up auto-end timer for this exam if it has an endTime
+// Set up auto-end timer for this exam if it has an endTime
     if (liveExam.endTime) {
       try {
         const endTimeDate = new Date(liveExam.endTime);
@@ -180,23 +138,15 @@ export async function POST(req: Request) {
         const timeUntilEnd = endTimeDate.getTime() - now.getTime();
         
         if (timeUntilEnd > 0) {
-          console.log(`Setting up auto-end timer for exam ${liveExam.id} in ${Math.floor(timeUntilEnd / 1000)} seconds`);
-          
-          // Note: The actual timer will be set up by the socket server
+// Note: The actual timer will be set up by the socket server
           // This is just for logging purposes
-        } else {
-          console.log(`Exam ${liveExam.id} has already ended, will be marked as not live`);
         }
-      } catch (error) {
-        console.error('Error setting up auto-end timer:', error);
-      }
+      } catch {}
     }
     
     return NextResponse.json(liveExam);
   } catch (error) {
-    console.error('[LIVE_EXAMS_POST] Detailed error:', error);
-    
-    if (error instanceof jwt.JsonWebTokenError) {
+if (error instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
     

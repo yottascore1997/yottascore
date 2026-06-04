@@ -56,9 +56,7 @@ export default function AdminBattleQuizLeaderboard() {
         const data = await res.json();
         setLeaderboard(data);
       }
-    } catch (err) {
-      console.error("Failed to fetch leaderboard:", err);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -78,9 +76,7 @@ export default function AdminBattleQuizLeaderboard() {
         const data = await res.json();
         setStats(data);
       }
-    } catch (err) {
-      console.error("Failed to fetch stats:", err);
-    }
+    } catch {}
   };
 
   const getRankBadge = (rank: number) => {

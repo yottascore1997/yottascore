@@ -60,8 +60,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ items: itemsWithMeta, total, page, limit });
   } catch (err) {
-    console.error('Error fetching distributions:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

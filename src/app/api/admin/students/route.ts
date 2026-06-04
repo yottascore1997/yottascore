@@ -54,8 +54,7 @@ const getHandler = async (req: Request) => {
     }));
     return NextResponse.json(transformedStudents);
   } catch (error) {
-    console.error('Error fetching students:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 };
 
@@ -112,8 +111,7 @@ const postHandler = async (req: Request) => {
     });
     return NextResponse.json(user);
   } catch (error) {
-    console.error('Error creating student:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 };
 

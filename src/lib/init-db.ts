@@ -22,13 +22,10 @@ async function main() {
           role: 'ADMIN',
         },
       })
-      console.log('Admin user created')
-    }
+}
 
-    console.log('Database initialized successfully')
-  } catch (error) {
-    console.error('Error initializing database:', error)
-    throw error
+} catch (error) {
+throw error
   } finally {
     await prisma.$disconnect()
   }
@@ -36,6 +33,5 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error(error)
-    process.exit(1)
+process.exit(1)
   }) 

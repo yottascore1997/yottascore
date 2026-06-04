@@ -165,12 +165,8 @@ export default function BattleQuizHomepage() {
         setAvailableAmounts(data);
         // Reset selected amount when category changes
         setSelectedAmount(null);
-      } else {
-        console.error('Failed to fetch amounts');
       }
-    } catch (error) {
-      console.error('Failed to fetch amounts:', error);
-    }
+    } catch {}
   };
 
   const fetchLeaderboard = async () => {
@@ -186,9 +182,7 @@ export default function BattleQuizHomepage() {
         const data = await response.json();
         setLeaderboard(data.slice(0, 5)); // Top 5 players
       }
-    } catch (error) {
-      console.error('Failed to fetch leaderboard:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -240,9 +234,7 @@ export default function BattleQuizHomepage() {
         const errorData = await response.json();
         alert(errorData.error || 'Failed to create room');
       }
-    } catch (error) {
-      console.error('Error creating private room:', error);
-    }
+    } catch {}
   };
 
   const handleJoinPrivateRoom = () => {

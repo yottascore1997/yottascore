@@ -82,9 +82,7 @@ function MessagesPageContent() {
           year: null
         };
         setCurrentUser(user);
-      } catch (error) {
-        console.error('Error decoding JWT token:', error);
-      }
+      } catch {}
     }
 
     fetchConversations()
@@ -132,9 +130,7 @@ function MessagesPageContent() {
           const data = await response.json()
           setCurrentUser(data)
         }
-      } catch (error) {
-        console.error("Failed to fetch current user", error)
-      }
+      } catch {}
     }
     fetchCurrentUser()
   }, [])
@@ -228,9 +224,7 @@ function MessagesPageContent() {
               )
             )
 
-          } catch (error) {
-            console.error("Failed to mark messages as read", error)
-          }
+          } catch {}
         }
         markAsRead()
       }
@@ -255,9 +249,7 @@ function MessagesPageContent() {
         const data = await response.json()
         setConversations(data)
       }
-    } catch (error) {
-      console.error('Error fetching conversations:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }
@@ -267,50 +259,28 @@ function MessagesPageContent() {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      console.log('🔍 Fetching messages for user:', userId);
-
-      const response = await fetch(`/api/student/messages/${userId}`, {
+const response = await fetch(`/api/student/messages/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       })
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-
-      if (response.ok) {
+if (response.ok) {
         const data = await response.json()
-        console.log('📨 Fetched messages data:', data);
-        console.log('📨 Data type:', typeof data);
-        console.log('📨 Is array:', Array.isArray(data));
-        console.log('📨 Data length:', data?.length);
-        
-        if (data && Array.isArray(data)) {
-          console.log('📨 Processing array of messages...');
-          
-          // Sort messages by creation time (oldest first)
+if (data && Array.isArray(data)) {
+// Sort messages by creation time (oldest first)
           const sortedMessages: Message[] = [...data].sort((a: Message, b: Message) => 
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
           
-          console.log('📨 Sorted messages:', sortedMessages.map((m: Message) => ({
-            id: m.id,
-            content: m.content.substring(0, 30),
-            sender: m.sender.name,
-            receiver: m.receiver.name,
-            createdAt: m.createdAt
-          })));
-          
-          setMessages(sortedMessages);
+setMessages(sortedMessages);
           
           if (data.length === 0) {
-            console.log('📨 No messages found, checking for pending requests...');
-            const pendingRequest = messageRequests.find(req => 
+const pendingRequest = messageRequests.find(req => 
               req.sender.id === userId && req.status === 'PENDING'
             )
             if (pendingRequest) {
-              console.log('📨 Found pending request:', pendingRequest);
-              setMessages([{
+setMessages([{
                 id: `request-${pendingRequest.id}`,
                 content: pendingRequest.content,
                 messageType: pendingRequest.messageType,
@@ -323,24 +293,18 @@ function MessagesPageContent() {
                 requestId: pendingRequest.id
               }])
             } else {
-              console.log('📨 No pending requests either, setting empty messages');
-              setMessages([]);
+setMessages([]);
             }
           }
         } else {
-          console.log('❌ No messages data or not an array');
-          console.log('❌ Data:', data);
-          setMessages([]);
+setMessages([]);
         }
       } else {
         const errorText = await response.text();
-        console.log('❌ Response not ok:', response.status);
-        console.log('❌ Error text:', errorText);
-        setMessages([]);
+setMessages([]);
       }
     } catch (error) {
-      console.error('❌ Error fetching messages:', error)
-      setMessages([]);
+setMessages([]);
     }
   }
 
@@ -366,9 +330,7 @@ function MessagesPageContent() {
         }
         setSelectedUser(user)
       }
-    } catch (error) {
-      console.error('Error fetching user profile:', error)
-    }
+    } catch {}
   }
 
   const fetchMessageRequests = async () => {
@@ -389,9 +351,7 @@ function MessagesPageContent() {
         const data = await response.json()
         setMessageRequests(data)
       }
-    } catch (error) {
-      console.error('Error fetching message requests:', error)
-    }
+    } catch {}
   }
 
   const handleAcceptRequest = async (requestId: string) => {
@@ -422,9 +382,7 @@ function MessagesPageContent() {
           ))
         }
       }
-    } catch (error) {
-      console.error('Error accepting message request:', error)
-    }
+    } catch {}
   }
 
   const handleRejectRequest = async (requestId: string) => {
@@ -448,9 +406,7 @@ function MessagesPageContent() {
         setMessageRequests(prev => prev.filter(req => req.id !== requestId))
         setMessages(prev => prev.filter(msg => msg.requestId !== requestId))
       }
-    } catch (error) {
-      console.error('Error rejecting message request:', error)
-    }
+    } catch {}
   }
 
   const sendMessage = async () => {
@@ -491,14 +447,11 @@ function MessagesPageContent() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Server error response:', response.status, errorText);
-        throw new Error(`Server responded with ${response.status}: ${errorText}`)
+throw new Error(`Server responded with ${response.status}: ${errorText}`)
       }
       
       const result = await response.json()
-      console.log('Message API response:', result);
-
-      if (result.type === 'direct') {
+if (result.type === 'direct') {
         // Replace optimistic message with real message from server
         if (result.message) {
           setMessages(prev => prev.map(msg => 
@@ -541,9 +494,7 @@ function MessagesPageContent() {
       }
 
     } catch (error) {
-      console.error('Error sending message:', error)
-      
-      // Remove optimistic message on error
+// Remove optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id))
       setNewMessage(content)
       
@@ -619,13 +570,7 @@ function MessagesPageContent() {
       const formData = new FormData();
       formData.append('file', file);
 
-      console.log('📤 Uploading file:', {
-        name: file.name,
-        type: file.type,
-        size: `${(file.size / (1024 * 1024)).toFixed(2)}MB`
-      });
-
-      const response = await fetch('/api/upload', {
+const response = await fetch('/api/upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -640,9 +585,7 @@ function MessagesPageContent() {
       }
 
       const result = await response.json();
-      console.log('📥 Upload result:', result);
-      
-      if (result.success && result.url) {
+if (result.success && result.url) {
         // Create optimistic file message for immediate display
         const optimisticMessage: Message = {
           id: `temp-file-${Date.now()}`,
@@ -707,8 +650,7 @@ function MessagesPageContent() {
       }
 
     } catch (error) {
-      console.error("File upload error:", error);
-      alert("Sorry, there was an error uploading your file.");
+alert("Sorry, there was an error uploading your file.");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -1100,12 +1042,9 @@ function MessagesPageContent() {
                       })
                       if (response.ok) {
                         const data = await response.json()
-                        console.log('Follow Status Debug:', data)
-                        alert(`Follow Status:\nFollow: ${data.follow ? 'Yes' : 'No'}\nRequest: ${data.followRequest?.status || 'None'}\nMessages: ${data.messageCount}`)
+alert(`Follow Status:\nFollow: ${data.follow ? 'Yes' : 'No'}\nRequest: ${data.followRequest?.status || 'None'}\nMessages: ${data.messageCount}`)
                       }
-                    } catch (error) {
-                      console.error('Debug error:', error)
-                    }
+                    } catch {}
                   }}
                   className="text-xs"
                 >
@@ -1117,22 +1056,18 @@ function MessagesPageContent() {
                   onClick={async () => {
                     try {
                       const token = localStorage.getItem('token')
-                      console.log('🔍 Testing API directly for user:', (selectedUser as User)?.id);
-                      const response = await fetch(`/api/student/messages/${(selectedUser as User)?.id}`, {
+const response = await fetch(`/api/student/messages/${(selectedUser as User)?.id}`, {
                         headers: { Authorization: `Bearer ${token}` }
                       })
-                      console.log('📡 Direct API Response status:', response.status);
-                      if (response.ok) {
+if (response.ok) {
                         const data = await response.json()
-                        console.log('📨 Direct API Response data:', data);
-                        alert(`Direct API Test:\nStatus: ${response.status}\nMessages: ${data?.length || 0}\nData: ${JSON.stringify(data, null, 2)}`)
+alert(`Direct API Test:\nStatus: ${response.status}\nMessages: ${data?.length || 0}\nData: ${JSON.stringify(data, null, 2)}`)
                       } else {
                         const errorText = await response.text();
                         alert(`Direct API Error:\nStatus: ${response.status}\nError: ${errorText}`)
                       }
                     } catch (error) {
-                      console.error('Direct API test error:', error)
-                      alert(`Direct API Test Error: ${error}`)
+alert(`Direct API Test Error: ${error}`)
                     }
                   }}
                   className="text-xs bg-red-100"
@@ -1219,8 +1154,7 @@ function MessagesPageContent() {
                <div
                  key={conversation.user.id}
                  onClick={() => {
-                   console.log('Clicked on conversation with user:', conversation.user);
-                   setSelectedUser(conversation.user);
+setSelectedUser(conversation.user);
                  }}
                  className="p-4 hover:bg-gray-50 cursor-pointer flex items-center"
                >

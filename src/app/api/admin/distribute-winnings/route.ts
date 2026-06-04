@@ -137,12 +137,10 @@ export async function POST(req: Request) {
         if (result && !result.skipped) distributedCount++;
       } catch (ex) {
         // Log and continue with other exams; do not mark as distributed on failure
-        console.error(`Failed to distribute for exam ${exam.id}:`, ex);
-      }
+}
     }
     return NextResponse.json({ message: `Winnings distributed for ${distributedCount} exams.` });
   } catch (error) {
-    console.error('Error distributing winnings:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

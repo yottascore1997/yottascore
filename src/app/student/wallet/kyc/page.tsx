@@ -67,8 +67,7 @@ const KYCPage: React.FC = () => {
       const data: KYCData = await res.json();
       setKycData(data);
     } catch (error: any) {
-      console.error('Error fetching KYC data:', error);
-      toast.error(error.message || 'Failed to load KYC data');
+toast.error(error.message || 'Failed to load KYC data');
     } finally {
       setLoading(false);
     }
@@ -131,8 +130,7 @@ const KYCPage: React.FC = () => {
       };
       reader.readAsDataURL(selectedFile);
     } catch (error: any) {
-      console.error('Error uploading document:', error);
-      toast.error(error.message || 'An error occurred during upload.');
+toast.error(error.message || 'An error occurred during upload.');
     } finally {
       setUploading(false);
     }

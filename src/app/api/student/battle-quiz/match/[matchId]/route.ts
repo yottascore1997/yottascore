@@ -105,8 +105,7 @@ export const GET = withCORS(async (
     });
 
   } catch (error: any) {
-    console.error('Battle quiz match fetch error:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       error: 'Internal server error',
       details: error.message 
     }, { status: 500 });

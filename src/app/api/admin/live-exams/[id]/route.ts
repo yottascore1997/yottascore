@@ -65,8 +65,7 @@ const patchHandler = async (req: NextRequest, { params }: { params: { id: string
 
     return NextResponse.json(updatedExam);
   } catch (error) {
-    console.error('Error updating live exam:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 };
 
@@ -105,8 +104,7 @@ const deleteHandler = async (req: NextRequest, { params }: { params: { id: strin
 
     return NextResponse.json({ message: 'Exam deleted successfully' });
   } catch (error) {
-    console.error('Error deleting live exam:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 };
 

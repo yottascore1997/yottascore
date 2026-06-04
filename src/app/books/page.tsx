@@ -71,12 +71,8 @@ export default function BooksPage() {
       if (data.success) {
         setBooks(data.data.books);
         setPagination(data.data.pagination);
-      } else {
-        console.error('Failed to fetch books:', data.error);
       }
-    } catch (error) {
-      console.error('Error fetching books:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };

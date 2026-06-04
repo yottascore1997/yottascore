@@ -92,9 +92,7 @@ export default function QuestionOfTheDayPage() {
           setSelectedCategoryId(data[0].id)
         }
       }
-    } catch (err) {
-      console.error("Failed to fetch categories:", err)
-    } finally {
+    } catch {} finally {
       setLoadingCategories(false)
     }
   }
@@ -116,8 +114,7 @@ export default function QuestionOfTheDayPage() {
         setQuestionBankQuestions(data)
       }
     } catch (err) {
-      console.error("Failed to fetch question bank questions:", err)
-      setQuestionBankQuestions([])
+setQuestionBankQuestions([])
     } finally {
       setLoadingQuestionBank(false)
     }

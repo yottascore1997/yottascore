@@ -33,7 +33,6 @@ export async function GET(
 
     return NextResponse.json(questions)
   } catch (error) {
-    console.error('[PYQ] Questions error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

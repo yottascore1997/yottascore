@@ -43,9 +43,7 @@ export default function SearchPage() {
 
       const data = await response.json()
       setResults(data)
-    } catch (error) {
-      console.error('Error searching:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }
@@ -91,9 +89,7 @@ export default function SearchPage() {
 
       // Refresh search results
       handleSearch()
-    } catch (error) {
-      console.error('Error following user:', error)
-    }
+    } catch {}
   }
 
   const handleUnfollow = async (userId: string) => {
@@ -117,9 +113,7 @@ export default function SearchPage() {
 
       // Refresh search results
       handleSearch()
-    } catch (error) {
-      console.error('Error unfollowing user:', error)
-    }
+    } catch {}
   }
 
   const handleCancelRequest = async (userId: string) => {
@@ -145,9 +139,7 @@ export default function SearchPage() {
 
       // Refresh search results
       handleSearch()
-    } catch (error) {
-      console.error('Error cancelling follow request:', error)
-    }
+    } catch {}
   }
 
   return (

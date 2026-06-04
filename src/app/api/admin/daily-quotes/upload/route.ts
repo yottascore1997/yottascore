@@ -55,7 +55,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message: `${added} quote(s) added.`, added })
   } catch (e) {
-    console.error('[DAILY_QUOTES_UPLOAD]', e)
-    return NextResponse.json({ message: 'Upload failed.' }, { status: 500 })
+return NextResponse.json({ message: 'Upload failed.' }, { status: 500 })
   }
 }

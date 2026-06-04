@@ -51,9 +51,7 @@ export default function CreatePYQPage() {
         setCategories(data)
         if (data.length > 0 && !selectedCategoryId) setSelectedCategoryId(data[0].id)
       }
-    } catch (e) {
-      console.error(e)
-    }
+    } catch {}
   }
 
   const handleImportFromQuestionBank = async () => {

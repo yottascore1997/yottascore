@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import jwt from 'jsonwebtoken'
-import { getSocketServer } from '@/lib/socket-server'
+import {
+  buildConversationsFromMessages,
+  loadConversationPartnersInitial,
+  mergeStudyPartnerMatches,
+  sortConversations,
+} from '@/lib/messages-conversations'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
@@ -17,77 +22,65 @@ export async function GET(req: Request) {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
     const currentUserId = decoded.userId
 
-    // Get the last update time from query params for efficient polling
     const { searchParams } = new URL(req.url)
     const lastUpdate = searchParams.get('lastUpdate')
 
-    // 1. Find all messages involving the current user (with optional time filter)
-    const whereClause: any = {
-      OR: [{ senderId: currentUserId }, { receiverId: currentUserId }],
-    };
+    let conversationPartners: Map<
+      string,
+      {
+        latestMessage: {
+          id: string
+          content: string
+          messageType: string
+          fileUrl: string | null
+          isRead: boolean
+          createdAt: Date
+          senderId: string
+          receiverId: string
+        } | null
+        unreadCount: number
+      }
+    >
 
-    // If lastUpdate is provided, only fetch messages after that time
     if (lastUpdate) {
-      whereClause.createdAt = {
-        gt: new Date(lastUpdate)
-      };
-    }
-
-    const messages = await prisma.directMessage.findMany({
-      where: whereClause,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      // Limit results for better performance
-      take: lastUpdate ? 100 : 1000,
-    })
-
-    // 2. Group messages by the other participant to build the conversation list
-    const conversationPartners = new Map<string, { latestMessage: any; unreadCount: number }>()
-
-    for (const message of messages) {
-      const otherUserId = message.senderId === currentUserId ? message.receiverId : message.senderId
-      
-      // If we haven't seen this person yet, add them with their latest message
-      if (!conversationPartners.has(otherUserId)) {
-        conversationPartners.set(otherUserId, {
-          latestMessage: message,
-          unreadCount: 0,
-        })
+      const whereClause: {
+        OR: Array<{ senderId: string } | { receiverId: string }>
+        createdAt?: { gt: Date }
+      } = {
+        OR: [{ senderId: currentUserId }, { receiverId: currentUserId }],
+        createdAt: { gt: new Date(lastUpdate) },
       }
 
-      // If this is an unread message for the current user, increment the count
-      if (message.receiverId === currentUserId && !message.isRead) {
-        const conversation = conversationPartners.get(otherUserId)!
-        conversation.unreadCount += 1
-      }
+      const messages = await prisma.directMessage.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+        select: {
+          id: true,
+          content: true,
+          messageType: true,
+          fileUrl: true,
+          isRead: true,
+          createdAt: true,
+          senderId: true,
+          receiverId: true,
+        },
+      })
+
+      conversationPartners = buildConversationsFromMessages(messages, currentUserId)
+    } else {
+      conversationPartners = await loadConversationPartnersInitial(currentUserId)
     }
 
-    // 2b. Add Study Partner matches with no conversation yet (so they show at top)
-    const matches = await prisma.studyPartnerMatch.findMany({
-      where: {
-        OR: [{ user1Id: currentUserId }, { user2Id: currentUserId }],
-        unmatchedAt: null,
-      },
-      select: { user1Id: true, user2Id: true },
-    })
-    for (const m of matches) {
-      const otherUserId = m.user1Id === currentUserId ? m.user2Id : m.user1Id
-      if (!conversationPartners.has(otherUserId)) {
-        conversationPartners.set(otherUserId, { latestMessage: null, unreadCount: 0 })
-      }
-    }
+    await mergeStudyPartnerMatches(conversationPartners, currentUserId)
 
-    // 3. Get user details for each conversation partner (batch query for efficiency)
     const partnerIds = Array.from(conversationPartners.keys())
     if (partnerIds.length === 0) {
       return NextResponse.json([])
     }
 
     const partners = await prisma.user.findMany({
-      where: {
-        id: { in: partnerIds },
-      },
+      where: { id: { in: partnerIds } },
       select: {
         id: true,
         name: true,
@@ -95,35 +88,18 @@ export async function GET(req: Request) {
       },
     })
 
-    // 4. Combine partner details with conversation data; sort: no chat first (matches), then by latest message time
-    const conversations = partners.map((partner: any) => {
-      const convoData = conversationPartners.get(partner.id)!
-      return {
-        user: partner,
-        latestMessage: convoData.latestMessage,
-        unreadCount: convoData.unreadCount,
-      }
-    }).sort((a: any, b: any) => {
-      const aNoChat = !a.latestMessage
-      const bNoChat = !b.latestMessage
-      if (aNoChat && !bNoChat) return -1
-      if (!aNoChat && bNoChat) return 1
-      if (aNoChat && bNoChat) return 0
-      return new Date(b.latestMessage.createdAt).getTime() - new Date(a.latestMessage.createdAt).getTime()
-    })
+    const conversations = sortConversations(partners, conversationPartners)
 
-    // Add cache headers for better performance
     const response = NextResponse.json(conversations)
-    response.headers.set('Cache-Control', 'private, max-age=30') // Cache for 30 seconds
+    response.headers.set('Cache-Control', 'private, max-age=30')
     response.headers.set('X-Last-Update', new Date().toISOString())
-    
+
     return response
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[MESSAGES_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }
 
@@ -149,7 +125,6 @@ export async function POST(req: Request) {
       return new NextResponse('Receiver ID and content are required', { status: 400 })
     }
 
-    // Check if sender follows the receiver OR they are study partner match
     const iFollowThem = await prisma.follow.findUnique({
       where: {
         followerId_followingId: {
@@ -157,21 +132,20 @@ export async function POST(req: Request) {
           followingId: receiverId,
         },
       },
-    });
+    })
 
-    const [u1, u2] = [decoded.userId, receiverId].sort();
+    const [u1, u2] = [decoded.userId, receiverId].sort()
     const studyPartnerMatch = await prisma.studyPartnerMatch.findFirst({
       where: {
         user1Id: u1,
         user2Id: u2,
         unmatchedAt: null,
       },
-    });
+    })
 
-    const canMessage = !!iFollowThem || !!studyPartnerMatch;
+    const canMessage = !!iFollowThem || !!studyPartnerMatch
 
     if (!canMessage) {
-      // Check if there's a pending follow request
       const pendingRequest = await prisma.followRequest.findUnique({
         where: {
           senderId_receiverId: {
@@ -179,64 +153,57 @@ export async function POST(req: Request) {
             receiverId: receiverId,
           },
         },
-      });
+      })
 
       if (pendingRequest && pendingRequest.status === 'PENDING') {
         return new NextResponse(
           'Your follow request is still pending. You can only message this user after they accept your follow request.',
           { status: 403 }
-        );
+        )
       } else if (pendingRequest && pendingRequest.status === 'DECLINED') {
         return new NextResponse(
           'Your follow request was declined. You need to send a new follow request before you can message this user.',
           { status: 403 }
-        );
+        )
       } else {
         return new NextResponse(
           'You need to follow this user or match with them as study partner before you can message them.',
           { status: 403 }
-        );
+        )
       }
     }
 
-    // If you follow them or are study partner match, you can send direct message
-    console.log(`💾 Creating message: ${decoded.userId} -> ${receiverId}: "${content}"`);
-    const message = await prisma.directMessage.create({
+const message = await prisma.directMessage.create({
       data: {
         content,
         messageType,
         fileUrl,
         senderId: decoded.userId,
-        receiverId
+        receiverId,
       },
       include: {
         sender: {
           select: {
             id: true,
             name: true,
-            profilePhoto: true
-          }
+            profilePhoto: true,
+          },
         },
         receiver: {
           select: {
             id: true,
             name: true,
-            profilePhoto: true
-          }
-        }
-      }
-    });
+            profilePhoto: true,
+          },
+        },
+      },
+    })
 
-    // Note: Real-time notifications are now handled by the socket server
-    // when the frontend emits 'private_message' event
-    console.log(`✅ Direct message sent to database. Frontend should emit 'private_message' event.`);
-
-    return NextResponse.json({ type: 'direct', message });
+return NextResponse.json({ type: 'direct', message })
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[MESSAGES_POST]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
-} 
+}

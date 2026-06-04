@@ -31,9 +31,7 @@ export const getSocketServer = (): SocketIOServer | null => {
 
 export const initSocket = (res: NextApiResponseWithSocket) => {
   if (!res.socket.server.io) {
-    console.log('Initializing Socket.IO server...');
-    
-    const io = new SocketIOServer(res.socket.server, {
+const io = new SocketIOServer(res.socket.server, {
       path: '/api/socket',
       addTrailingSlash: false,
       cors: {
@@ -44,9 +42,7 @@ export const initSocket = (res: NextApiResponseWithSocket) => {
     });
 
     io.on('connection', (socket) => {
-      console.log('Client connected:', socket.id);
-
-      // Handle user authentication
+// Handle user authentication
       socket.on('authenticate', async (data: { token: string }) => {
         try {
           const decoded = await verifyToken(data.token);
@@ -77,65 +73,54 @@ export const initSocket = (res: NextApiResponseWithSocket) => {
           socket.data.user = userSocket;
 
           socket.emit('authenticated', { user: userSocket });
-          console.log('User authenticated:', user.name);
-        } catch (error) {
-          console.error('Authentication error:', error);
-          socket.emit('auth_error', { message: 'Authentication failed' });
+} catch (error) {
+socket.emit('auth_error', { message: 'Authentication failed' });
         }
       });
 
       // Handle joining rooms
       socket.on('join-room', (roomId) => {
         socket.join(roomId);
-        console.log(`User ${socket.id} joined room: ${roomId}`);
-      });
+});
 
       // Handle leaving rooms
       socket.on('leave-room', (roomId) => {
         socket.leave(roomId);
-        console.log(`User ${socket.id} left room: ${roomId}`);
-      });
+});
 
       // Handle battle quiz events
       socket.on('join-battle', (data) => {
-        console.log('Join battle request:', data);
-        // Handle battle joining logic here
+// Handle battle joining logic here
       });
 
       socket.on('submit-answer', (data) => {
-        console.log('Answer submitted:', data);
-        // Handle answer submission logic here
+// Handle answer submission logic here
       });
 
       // Handle live exam events
       socket.on('join-live-exam', (examId) => {
         socket.join(`exam-${examId}`);
-        console.log(`User ${socket.id} joined live exam: ${examId}`);
-      });
+});
 
       // Handle chat messages
       socket.on('send-message', (data) => {
-        console.log('Message received:', data);
-        // Broadcast message to room
+// Broadcast message to room
         socket.to(data.roomId).emit('new-message', data);
       });
 
       socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
-      });
+});
     });
 
     res.socket.server.io = io;
     setSocketServer(io); // Store the instance globally
-    console.log('Socket.IO server initialized successfully');
-  }
+}
   return res.socket.server.io;
 };
 
 export function initSocketServer(res: NextApiResponseWithSocket) {
   if (!res.socket.server.io) {
-    console.log('Initializing Socket.IO server...');
-    const io = new SocketIOServer(res.socket.server, {
+const io = new SocketIOServer(res.socket.server, {
       path: '/api/socket',
       addTrailingSlash: false,
       cors: {
@@ -152,27 +137,22 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
     setSocketServer(io);
 
     io.on('connection', (socket) => {
-      console.log('Client connected:', socket.id);
-
-      socket.on('register_user', (userId) => {
+socket.on('register_user', (userId) => {
         if (userId) {
           userSockets[userId] = socket.id;
-          console.log(`User ${userId} registered with socket ${socket.id}`);
-        }
+}
       });
 
       socket.on('join_chat', (chatId) => {
         socket.join(chatId);
-        console.log(`Socket ${socket.id} joined chat ${chatId}`);
-      });
+});
 
       socket.on('private_message', (data) => {
         const { message } = data;
         
         // Check if message and receiver exist before accessing properties
         if (!message || !message.receiver) {
-          console.warn('Received private_message with missing receiver:', message);
-          return;
+return;
         }
         
         const receiverId = message.receiver.id;
@@ -183,8 +163,7 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
           io.to(receiverSocketId).emit('new_message', message);
         } else {
           // This can be used later to implement push notifications for offline users
-          console.log(`User ${receiverId} is not connected, message will be delivered on next login.`);
-        }
+}
       });
 
       socket.on('start_typing', ({ chatId }) => {
@@ -232,8 +211,7 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
       });
 
       socket.on('join_matchmaking', ({ quizId }) => {
-        console.log('Join matchmaking request:', { quizId, socketId: socket.id });
-        socket.data.quizId = quizId;
+socket.data.quizId = quizId;
         
         if (queue.length > 0) {
           const opponentId = queue.shift()!;
@@ -265,9 +243,7 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
             if (response.ok) {
               quizQuestions[quizId] = await response.json();
             }
-          } catch (error) {
-            console.error('Error fetching quiz questions:', error);
-          }
+          } catch {}
         }
 
         const opponentId = matches[socket.id];
@@ -299,8 +275,7 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
 
       // Battle Quiz System Events
       socket.on('get_match_status', async (data: { matchId: string }) => {
-        console.log('🔍 get_match_status received:', data);
-        // For now, just emit match_started to simulate a match
+// For now, just emit match_started to simulate a match
         socket.emit('match_started', {
           matchId: data.matchId,
           totalQuestions: 5,
@@ -315,9 +290,7 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
         answer: number; 
         timeSpent: number 
       }) => {
-        console.log('📝 answer_question received:', data);
-        
-        // Find opponent in the same match
+// Find opponent in the same match
         const opponentId = matches[socket.id];
         if (opponentId) {
           // Notify opponent that this player answered
@@ -342,8 +315,7 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
               myPosition: 'player1' as const
             };
             
-            console.log('🏁 Emitting match_ended:', finalData);
-            socket.emit('match_ended', finalData);
+socket.emit('match_ended', finalData);
             
             if (opponentId) {
               io.to(opponentId).emit('match_ended', {
@@ -374,14 +346,11 @@ export function initSocketServer(res: NextApiResponseWithSocket) {
       });
 
       socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
-        
-        // Find the user and remove them from the mapping
+// Find the user and remove them from the mapping
         const userId = Object.keys(userSockets).find(key => userSockets[key] === socket.id);
         if (userId) {
           delete userSockets[userId];
-          console.log(`User ${userId} unregistered.`);
-        }
+}
         
         const idx = queue.indexOf(socket.id);
         if (idx !== -1) queue.splice(idx, 1);
@@ -458,9 +427,7 @@ class BattleQuizSocketServer {
 
   private setupSocketHandlers() {
     this.io.on('connection', (socket) => {
-      console.log('User connected:', socket.id);
-
-      // Authenticate user
+// Authenticate user
       socket.on('authenticate', async (data: { token: string }) => {
         try {
           const decoded = await verifyToken(data.token);
@@ -491,10 +458,8 @@ class BattleQuizSocketServer {
           socket.data.user = userSocket;
 
           socket.emit('authenticated', { user: userSocket });
-          console.log('User authenticated:', user.name);
-        } catch (error) {
-          console.error('Authentication error:', error);
-          socket.emit('auth_error', { message: 'Authentication failed' });
+} catch (error) {
+socket.emit('auth_error', { message: 'Authentication failed' });
         }
       });
 
@@ -579,8 +544,7 @@ class BattleQuizSocketServer {
           isHost: room.hostId === user.userId 
         });
 
-        console.log(`User ${user.name} joined room ${data.roomCode}`);
-      });
+});
 
       socket.on('leave_private_room', (data: { roomCode: string }) => {
         const user = socket.data.user;
@@ -600,8 +564,7 @@ class BattleQuizSocketServer {
           this.io.to(data.roomCode).emit('player_left', { playerId: user.userId });
         }
 
-        console.log(`User ${user.name} left room ${data.roomCode}`);
-      });
+});
 
       socket.on('start_private_game', (data: { roomCode: string }) => {
         const user = socket.data.user;
@@ -706,9 +669,7 @@ class BattleQuizSocketServer {
         const user = socket.data.user;
         if (!user) return;
 
-        console.log('User disconnected:', user.name);
-
-        // Remove from matchmaking queue
+// Remove from matchmaking queue
         this.matchmakingQueue = this.matchmakingQueue.filter((q: MatchmakingQueue) => q.userId !== user.userId);
 
         // Remove from private rooms
@@ -994,9 +955,7 @@ class BattleQuizSocketServer {
         }
       });
 
-    } catch (error) {
-      console.error('Error saving game result:', error);
-    }
+    } catch {}
 
     // Clean up
     this.battleGames.delete(matchId);
@@ -1032,9 +991,7 @@ class BattleQuizSocketServer {
           totalScore: 0
         }
       });
-    } catch (error) {
-      console.error('Error updating user stats:', error);
-    }
+    } catch {}
   }
 
   private calculateAverageResponseTime(responseTimes: number[]): number {

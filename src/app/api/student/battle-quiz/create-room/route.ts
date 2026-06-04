@@ -72,9 +72,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`Private room created: ${roomCode} by user ${decoded.userId}`);
-
-    return NextResponse.json({
+return NextResponse.json({
       success: true,
       roomCode: room.roomCode,
       roomId: room.id,
@@ -85,8 +83,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating private room:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

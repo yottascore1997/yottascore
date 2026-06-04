@@ -78,8 +78,7 @@ export const GET = withCORS(async (req: NextRequest) => {
     });
 
   } catch (error) {
-    console.error('Error fetching referral stats:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }
     );

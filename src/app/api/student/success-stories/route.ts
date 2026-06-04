@@ -30,7 +30,6 @@ export async function GET(req: NextRequest) {
     if (e instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
-    console.error('[STUDENT_SUCCESS_STORIES_GET]', e)
-    return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
   }
 }

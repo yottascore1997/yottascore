@@ -31,8 +31,7 @@ export async function GET(
 
     return NextResponse.json(notification);
   } catch (error) {
-    console.error("Error fetching notification:", error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
@@ -80,8 +79,7 @@ export async function PUT(
 
     return NextResponse.json(notification);
   } catch (error) {
-    console.error("Error updating notification:", error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
@@ -110,8 +108,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Notification deleted successfully" });
   } catch (error) {
-    console.error("Error deleting notification:", error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );

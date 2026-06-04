@@ -24,8 +24,7 @@ export default function FirebaseLoginPage() {
   };
 
   const handleError = (error: string) => {
-    console.error('Firebase login error:', error);
-    alert('Login failed: ' + error);
+alert('Login failed: ' + error);
   };
 
   return (

@@ -125,8 +125,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(sortedData);
   } catch (error) {
-    console.error("Error fetching leaderboard:", error);
-    return NextResponse.json(
+return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 }
     );

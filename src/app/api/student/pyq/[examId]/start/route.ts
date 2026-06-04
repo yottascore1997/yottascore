@@ -34,7 +34,6 @@ export async function POST(
 
     return NextResponse.json({ attemptId: attempt.id, duration: exam.duration, totalQuestions: exam._count.questions })
   } catch (error) {
-    console.error('[PYQ] Start error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

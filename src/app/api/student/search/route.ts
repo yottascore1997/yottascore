@@ -30,9 +30,7 @@ export async function GET(req: Request) {
     }
 
     const searchTerm = query.trim()
-    console.log(`🔍 Searching for: "${searchTerm}"`)
-
-    // Search users - try multiple approaches
+// Search users - try multiple approaches
     let users = await prisma.user.findMany({
       where: {
         OR: [
@@ -55,8 +53,7 @@ export async function GET(req: Request) {
 
     // If no results with STUDENT role, try without role filter
     if (users.length === 0) {
-      console.log('🔍 No STUDENT users found, trying without role filter...')
-      users = await prisma.user.findMany({
+users = await prisma.user.findMany({
         where: {
           OR: [
             { name: { contains: searchTerm } },
@@ -77,9 +74,7 @@ export async function GET(req: Request) {
       })
     }
 
-    console.log(`📊 Found ${users.length} users matching search term`)
-
-    // Check if current user is following each user AND follow request status
+// Check if current user is following each user AND follow request status
     const usersWithFollowStatus = await Promise.all(
       users.map(async (user: any) => {
         // Check if we're following them
@@ -176,7 +171,6 @@ export async function GET(req: Request) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[SEARCH_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 } 

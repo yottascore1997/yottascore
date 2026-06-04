@@ -69,24 +69,23 @@ export async function GET(
       take: limit
     })
 
-    // Check if user has liked each post
-    const postsWithLikes = await Promise.all(
-      posts.map(async (post) => {
-        const userLike = await prisma.like.findUnique({
-          where: {
-            userId_postId: {
+    const postIds = posts.map((post) => post.id)
+    const userLikes =
+      postIds.length > 0
+        ? await prisma.like.findMany({
+            where: {
               userId: decoded.userId,
-              postId: post.id
-            }
-          }
-        })
+              postId: { in: postIds },
+            },
+            select: { postId: true },
+          })
+        : []
 
-        return {
-          ...post,
-          isLiked: !!userLike
-        }
-      })
-    )
+    const likedPostIds = new Set(userLikes.map((like) => like.postId))
+    const postsWithLikes = posts.map((post) => ({
+      ...post,
+      isLiked: likedPostIds.has(post.id),
+    }))
 
     return NextResponse.json(postsWithLikes)
 
@@ -94,7 +93,6 @@ export async function GET(
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[USER_POSTS_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

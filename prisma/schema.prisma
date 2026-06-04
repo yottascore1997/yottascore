@@ -833,6 +833,7 @@ model StudyPartnerProfile {
   updatedAt         DateTime @updatedAt
 
   @@index([isActive])
+  @@index([isActive, updatedAt])
   @@map("StudyPartnerProfile")
 }
 

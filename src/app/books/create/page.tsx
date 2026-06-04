@@ -39,8 +39,7 @@ export default function CreateBookPage() {
           });
         },
         (error) => {
-          console.log('Geolocation error:', error);
-        }
+}
       );
     }
   }, []);
@@ -62,8 +61,7 @@ export default function CreateBookPage() {
         setFormData(prev => ({ ...prev, backImage: imageUrl }));
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
+alert('Failed to upload image. Please try again.');
     }
   };
 
@@ -97,12 +95,10 @@ export default function CreateBookPage() {
       if (data.success) {
         router.push(`/books/${data.data.id}`);
       } else {
-        console.error('Failed to create book:', data.error);
-        alert('Failed to create book listing. Please try again.');
+alert('Failed to create book listing. Please try again.');
       }
     } catch (error) {
-      console.error('Error creating book:', error);
-      alert('An error occurred. Please try again.');
+alert('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

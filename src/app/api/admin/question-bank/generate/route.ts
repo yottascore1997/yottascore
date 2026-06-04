@@ -238,8 +238,7 @@ export async function POST(req: NextRequest) {
         const templateData = await templateResponse.json();
         return NextResponse.json(templateData);
       } catch (templateError: any) {
-        console.error('Template generation error:', templateError);
-        return NextResponse.json({ 
+return NextResponse.json({ 
           message: 'Failed to generate questions with templates.',
           error: templateError.message
         }, { status: 500 });
@@ -276,8 +275,7 @@ export async function POST(req: NextRequest) {
         );
       }
     } catch (aiError: any) {
-      console.error('AI Generation error:', aiError);
-      return NextResponse.json({ 
+return NextResponse.json({ 
         message: 'Failed to generate questions with AI.',
         error: aiError.message,
         suggestion: 'Please check your API key configuration (OPENAI_API_KEY or GEMINI_API_KEY) or use template-based generation (FREE)'
@@ -326,8 +324,7 @@ export async function POST(req: NextRequest) {
         });
         savedQuestions.push(question);
       } catch (dbError) {
-        console.error('Failed to save question:', dbError);
-        // Continue with other questions
+// Continue with other questions
       }
     }
 
@@ -339,8 +336,7 @@ export async function POST(req: NextRequest) {
       message: `Successfully generated and saved ${savedQuestions.length} questions.`
     });
   } catch (error: any) {
-    console.error('Auto-generate questions error:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       message: error.message || 'Failed to generate questions.' 
     }, { status: 500 });
   }

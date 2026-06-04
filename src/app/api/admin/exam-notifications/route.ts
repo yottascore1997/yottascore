@@ -24,8 +24,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(notifications);
   } catch (error) {
-    console.error("Error fetching notifications:", error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
@@ -47,7 +46,7 @@ export async function POST(req: Request) {
 
     // Handle FormData for file upload
     const formData = await req.formData();
-    console.log("Received form data:", Object.fromEntries(formData.entries())); // Debug log
+// Debug log
 
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
@@ -60,7 +59,7 @@ export async function POST(req: Request) {
 
     // Validate required fields
     if (!title || !description || !year || !month || !applyLastDate || !applyLink) {
-      console.log("Missing fields:", { title, description, year, month, applyLastDate, applyLink }); // Debug log
+// Debug log
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -109,10 +108,8 @@ export async function POST(req: Request) {
         
         // Set the URL for the uploaded file
         logoUrl = `/uploads/${fileName}`;
-        console.log("Logo uploaded successfully:", logoUrl);
-      } catch (error) {
-        console.error("Error uploading logo:", error);
-        return NextResponse.json(
+} catch (error) {
+return NextResponse.json(
           { error: "Failed to upload logo" },
           { status: 500 }
         );
@@ -133,11 +130,10 @@ export async function POST(req: Request) {
       },
     });
 
-    console.log("Created notification:", notification); // Debug log
+// Debug log
     return NextResponse.json(notification);
   } catch (error) {
-    console.error("Error creating notification:", error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );

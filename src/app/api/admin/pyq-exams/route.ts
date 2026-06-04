@@ -31,8 +31,7 @@ export async function GET(req: Request) {
     })
     return NextResponse.json(exams)
   } catch (error) {
-    console.error('[PYQ] List error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -95,7 +94,6 @@ export async function POST(req: Request) {
     })
     return NextResponse.json(created)
   } catch (error) {
-    console.error('[PYQ] Create error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

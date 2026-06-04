@@ -65,8 +65,7 @@ export default function EditBookPage() {
         router.push('/books/my-listings');
       }
     } catch (error) {
-      console.error('Error fetching book:', error);
-      alert('Failed to load book details');
+alert('Failed to load book details');
       router.push('/books/my-listings');
     } finally {
       setLoading(false);
@@ -88,8 +87,7 @@ export default function EditBookPage() {
         setFormData(prev => ({ ...prev, backImage: imageUrl }));
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
+alert('Failed to upload image. Please try again.');
     }
   };
 
@@ -124,12 +122,10 @@ export default function EditBookPage() {
         alert('Book listing updated successfully!');
         router.push(`/books/${bookId}`);
       } else {
-        console.error('Failed to update book:', data.error);
-        alert(data.error || 'Failed to update book listing. Please try again.');
+alert(data.error || 'Failed to update book listing. Please try again.');
       }
     } catch (error) {
-      console.error('Error updating book:', error);
-      alert('An error occurred. Please try again.');
+alert('An error occurred. Please try again.');
     } finally {
       setSaving(false);
     }

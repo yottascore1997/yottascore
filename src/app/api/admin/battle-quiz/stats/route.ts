@@ -99,8 +99,7 @@ export async function GET(request: NextRequest) {
       averageWinRate
     });
   } catch (error) {
-    console.error("Error fetching battle quiz stats:", error);
-    return NextResponse.json(
+return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 }
     );

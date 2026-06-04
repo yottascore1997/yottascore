@@ -91,8 +91,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, vote });
   } catch (error) {
-    console.error('Error voting on poll:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -137,7 +136,6 @@ export async function GET(
       userVote: userVote?.optionIndex || null
     });
   } catch (error) {
-    console.error('Error fetching poll results:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

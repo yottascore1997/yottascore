@@ -114,9 +114,7 @@ export const POST = withCORS(async (req: Request) => {
     });
 
   } catch (error) {
-    console.error('Error in wallet deduction:', error);
-
-    if (error instanceof Error && error.message === 'INSUFFICIENT_WALLET') {
+if (error instanceof Error && error.message === 'INSUFFICIENT_WALLET') {
       return NextResponse.json({
         message: 'Insufficient wallet balance'
       }, { status: 400 });

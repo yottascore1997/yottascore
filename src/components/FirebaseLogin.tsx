@@ -35,21 +35,15 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
         const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
           callback: () => {
-            console.log('✅ reCAPTCHA solved');
-          },
+},
           'expired-callback': () => {
-            console.log('⚠️ reCAPTCHA expired');
-          },
+},
           'error-callback': (error) => {
-            console.error('❌ reCAPTCHA error:', error);
-          }
+}
         });
         
         setRecaptchaVerifier(verifier);
-        console.log('✅ reCAPTCHA verifier initialized');
-      } catch (error) {
-        console.error('❌ reCAPTCHA initialization error:', error);
-      }
+} catch {}
     }
     
     return () => {
@@ -57,9 +51,7 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
       if (recaptchaVerifier) {
         try {
           recaptchaVerifier.clear();
-        } catch (e) {
-          console.log('reCAPTCHA cleanup error (ignored)');
-        }
+        } catch {}
       }
     };
   }, []);
@@ -93,14 +85,11 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
     e.preventDefault();
     try {
       if (!recaptchaVerifier) {
-        console.error('❌ reCAPTCHA not initialized');
-        onError('reCAPTCHA not initialized. Please refresh the page.');
+onError('reCAPTCHA not initialized. Please refresh the page.');
         return;
       }
 
-      console.log('📱 Validating phone number:', phoneNumber);
-      
-      // Step 1: Validate phone number and check rate limits
+// Step 1: Validate phone number and check rate limits
       const validationResponse = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,24 +99,18 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
       const validationData = await validationResponse.json();
       
       if (!validationResponse.ok || !validationData.success) {
-        console.error('❌ Validation failed:', validationData.error);
-        onError(validationData.error || 'Phone number validation failed');
+onError(validationData.error || 'Phone number validation failed');
         return;
       }
       
       const formattedPhone = validationData.phoneNumber;
-      console.log('✅ Phone validated:', formattedPhone);
+// Step 2: Send OTP via Firebase
+const confirmationResult = await signInWithPhone(formattedPhone, recaptchaVerifier);
       
-      // Step 2: Send OTP via Firebase
-      console.log('📱 Sending OTP via Firebase...');
-      const confirmationResult = await signInWithPhone(formattedPhone, recaptchaVerifier);
-      
-      console.log('✅ OTP sent! Verification ID:', confirmationResult.verificationId);
-      setVerificationId(confirmationResult.verificationId);
+setVerificationId(confirmationResult.verificationId);
       setShowOTP(true);
     } catch (error: any) {
-      console.error('❌ OTP send error:', error);
-      onError(`Failed to send OTP: ${error.message}`);
+onError(`Failed to send OTP: ${error.message}`);
     }
   };
 

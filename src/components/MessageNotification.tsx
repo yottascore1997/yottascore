@@ -26,9 +26,7 @@ export default function MessageNotification({ onMessageReceived }: MessageNotifi
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setUser({ id: payload.userId, token });
-      } catch (error) {
-        console.error('Error decoding token:', error);
-      }
+      } catch {}
     }
   }, []);
 
@@ -44,16 +42,13 @@ export default function MessageNotification({ onMessageReceived }: MessageNotifi
     });
 
     newSocket.on('connect', () => {
-      console.log('🔌 Message notification socket connected');
-      // Join user's personal room
+// Join user's personal room
       newSocket.emit('join_chat', `user_${user.id}`);
     });
 
     // Listen for new messages
     newSocket.on('new_message', (message) => {
-      console.log('📨 New message received:', message);
-      
-      // Add to notifications
+// Add to notifications
       const notification: NotificationData = {
         type: 'new_message',
         message,
@@ -76,15 +71,13 @@ export default function MessageNotification({ onMessageReceived }: MessageNotifi
 
     // Listen for message notifications
     newSocket.on('message_notification', (data: NotificationData) => {
-      console.log('🔔 Message notification:', data);
-      setNotifications(prev => [...prev, data]);
+setNotifications(prev => [...prev, data]);
       setShowNotification(true);
     });
 
     // Listen for admin push notifications
     newSocket.on('admin_notification', (data: any) => {
-      console.log('🔔 Admin push notification:', data);
-      const notification: NotificationData = {
+const notification: NotificationData = {
         type: 'admin_notification',
         message: {
           title: data.title,

@@ -90,7 +90,6 @@ export const POST = withCORS(async (req: Request) => {
     });
 
   } catch (error) {
-    console.error('Error in wallet withdrawal:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 });

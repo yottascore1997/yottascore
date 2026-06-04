@@ -68,7 +68,6 @@ export async function POST(req: NextRequest) {
     if (e instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
-    console.error('[study-partner like POST]', e);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

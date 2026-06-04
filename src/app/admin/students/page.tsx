@@ -99,8 +99,7 @@ export default function AdminStudentsPage() {
         router.push('/auth/login');
       }
     } catch (err) {
-      console.error('Error fetching students:', err);
-      setStudents([]);
+setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -117,9 +116,7 @@ export default function AdminStudentsPage() {
         const data = await res.json();
         setDashboardStats(data);
       }
-    } catch (err) {
-      console.error('Error fetching dashboard stats:', err);
-    }
+    } catch {}
   };
 
   const fetchGrowthData = async () => {
@@ -133,9 +130,7 @@ export default function AdminStudentsPage() {
         const data = await res.json();
         setGrowthData(data);
       }
-    } catch (err) {
-      console.error('Error fetching growth data:', err);
-    }
+    } catch {}
   };
 
   const filterAndSortStudents = () => {

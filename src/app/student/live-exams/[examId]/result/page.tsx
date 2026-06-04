@@ -160,9 +160,7 @@ export default function LiveExamResultPage() {
         setImprovementData(data)
         setShowImproveModal(true)
       }
-    } catch (err) {
-      console.error('Failed to fetch improvement suggestions:', err)
-    } finally {
+    } catch {} finally {
       setLoadingImprovements(false)
     }
   }

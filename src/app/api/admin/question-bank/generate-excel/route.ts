@@ -87,8 +87,7 @@ Make each question unique and relevant to the topic.`;
       throw new Error(`Failed to parse Gemini response: ${error}`);
     }
   } catch (error: any) {
-    console.error('[Gemini] Error:', error);
-    throw error;
+throw error;
   }
 }
 
@@ -105,14 +104,10 @@ async function generateBulkQuestionsWithGemini(
   const allQuestions: GeneratedQuestion[] = [];
   const batches = Math.ceil(totalCount / batchSize);
 
-  console.log(`[Gemini Excel] Generating ${totalCount} questions in ${batches} batches`);
-
-  for (let i = 0; i < batches; i++) {
+for (let i = 0; i < batches; i++) {
     const currentBatchSize = Math.min(batchSize, totalCount - allQuestions.length);
     
-    console.log(`[Gemini Excel] Batch ${i + 1}/${batches}: Generating ${currentBatchSize} questions...`);
-
-    try {
+try {
       const batchQuestions = await generateWithGemini(
         topic,
         category,
@@ -121,15 +116,12 @@ async function generateBulkQuestionsWithGemini(
       );
       
       allQuestions.push(...batchQuestions);
-      console.log(`[Gemini Excel] Batch ${i + 1} complete: ${batchQuestions.length} questions generated`);
-
-      // Rate limiting: Wait between batches (Gemini free tier limit: 60 requests/minute)
+// Rate limiting: Wait between batches (Gemini free tier limit: 60 requests/minute)
       if (i < batches - 1) {
         await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
       }
     } catch (error: any) {
-      console.error(`[Gemini Excel] Batch ${i + 1} failed:`, error.message);
-      // Continue with next batch even if one fails
+// Continue with next batch even if one fails
     }
   }
 
@@ -193,9 +185,7 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
 
-    console.log(`[Gemini Excel] Starting generation: ${count} questions for "${topic}"`);
-
-    // Generate questions using Gemini AI
+// Generate questions using Gemini AI
     let generatedQuestions: GeneratedQuestion[];
     
     if (count > 50) {
@@ -216,9 +206,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`[Gemini Excel] Generated ${generatedQuestions.length} questions`);
-
-    // Validate generated questions
+// Validate generated questions
     const validQuestions = generatedQuestions.filter(q => 
       q.text && 
       Array.isArray(q.options) && 
@@ -256,8 +244,7 @@ export async function POST(req: NextRequest) {
         });
         savedCount += batch.length;
       }
-      console.log(`[Gemini Excel] Saved ${savedCount} questions to database`);
-    }
+}
 
     // Create Excel file
     const excelData = [
@@ -309,9 +296,7 @@ export async function POST(req: NextRequest) {
     const safeTopic = topic.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 30);
     const filename = `${safeTopic}_${count}_questions_${Date.now()}.xlsx`;
 
-    console.log(`[Gemini Excel] Excel file created: ${filename}`);
-
-    // Return Excel file
+// Return Excel file
     return new NextResponse(buffer, {
       status: 200,
       headers: {
@@ -321,8 +306,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('[Gemini Excel] Error:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       message: error.message || 'Failed to generate Excel file.',
       error: error.message
     }, { status: 500 });

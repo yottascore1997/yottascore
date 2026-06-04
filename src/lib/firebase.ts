@@ -42,8 +42,7 @@ export const db = getFirestore(app);
 //     connectFirestoreEmulator(db, 'localhost', 8080);
 //   } catch (error) {
 //     // Emulators already connected
-//     console.log('Firebase emulators already connected');
-//   }
+//     //   }
 // }
 
 export default app;

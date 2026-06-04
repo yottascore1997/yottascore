@@ -89,8 +89,7 @@ export const GET = withCORS(async (request: NextRequest) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching cart:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to fetch cart' },
       { status: 500 }
     );
@@ -207,8 +206,7 @@ export const POST = withCORS(async (request: NextRequest) => {
       data: cartItem,
     });
   } catch (error) {
-    console.error('Error adding to cart:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to add to cart' },
       { status: 500 }
     );
@@ -262,8 +260,7 @@ export const DELETE = withCORS(async (request: NextRequest) => {
       message: 'Book removed from cart',
     });
   } catch (error) {
-    console.error('Error removing from cart:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to remove from cart' },
       { status: 500 }
     );

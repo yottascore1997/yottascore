@@ -104,9 +104,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
     return NextResponse.json({ message: 'Exam deleted successfully' });
   } catch (error: any) {
-    console.error('Error deleting exam:', error);
-    
-    // Provide more specific error messages
+// Provide more specific error messages
     if (error.code === 'P2003') {
       return NextResponse.json({ 
         error: 'Cannot delete exam. It has related records that need to be removed first.',

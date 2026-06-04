@@ -43,8 +43,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(categories);
   } catch (error) {
-    console.error('Question categories fetch error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -96,7 +95,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(category);
   } catch (error: any) {
-    console.error('Question category creation error:', error);
-    return NextResponse.json({ message: error.message || 'Failed to create category.' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Failed to create category.' }, { status: 500 });
   }
 } 

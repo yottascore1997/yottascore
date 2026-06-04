@@ -98,8 +98,7 @@ const handler = async (req: Request) => {
       },
     })
   } catch (error) {
-    console.error('Login error:', error)
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     )

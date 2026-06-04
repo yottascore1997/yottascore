@@ -54,7 +54,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(customAmounts);
   } catch (error: any) {
-    console.error('Error fetching battle quiz amounts:', error);
-    return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
   }
 } 

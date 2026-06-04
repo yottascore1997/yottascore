@@ -43,8 +43,7 @@ export async function GET(
       totalParticipants,
     });
   } catch (error) {
-    console.error('Verify certificate error:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

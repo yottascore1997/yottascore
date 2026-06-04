@@ -57,8 +57,7 @@ export function getCurrentLocation(): Promise<{lat: number, lng: number} | null>
         });
       },
       (error) => {
-        console.error('Geolocation error:', error);
-        resolve(null);
+resolve(null);
       },
       {
         enableHighAccuracy: true,

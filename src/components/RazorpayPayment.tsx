@@ -96,8 +96,7 @@ const RazorpayPayment: React.FC<RazorpayPaymentProps> = ({
             toast.success('Payment successful! Wallet updated.');
             onSuccess(result);
           } catch (error: any) {
-            console.error('Payment verification error:', error);
-            toast.error(error.message || 'Payment verification failed');
+toast.error(error.message || 'Payment verification failed');
             onError(error);
           }
         },
@@ -120,8 +119,7 @@ const RazorpayPayment: React.FC<RazorpayPaymentProps> = ({
       razorpay.open();
     } catch (error: any) {
       toast.dismiss();
-      console.error('Payment error:', error);
-      toast.error(error.message || 'Payment failed');
+toast.error(error.message || 'Payment failed');
       onError(error);
     } finally {
       setLoading(false);

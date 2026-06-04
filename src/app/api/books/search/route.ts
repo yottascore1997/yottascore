@@ -251,8 +251,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error searching books:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to search books' },
       { status: 500 }
     );

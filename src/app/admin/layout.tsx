@@ -258,8 +258,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         setIsAuthenticated(true);
         setIsLoading(false);
       } catch (error) {
-        console.error('Auth check failed:', error);
-        localStorage.removeItem('token');
+localStorage.removeItem('token');
         router.push('/auth/login');
         setIsLoading(false);
       }

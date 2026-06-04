@@ -40,8 +40,7 @@ export default function BlogDetailPage({ params }: { params: { id: string } }) {
         setError('Error loading blog')
       }
     } catch (error) {
-      console.error('Error fetching blog:', error)
-      setError('Error loading blog')
+setError('Error loading blog')
     } finally {
       setLoading(false)
     }

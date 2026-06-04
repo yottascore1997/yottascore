@@ -204,8 +204,7 @@ export const POST = withCORS(async (req: NextRequest) => {
     });
 
   } catch (error: any) {
-    console.error('Battle quiz join error:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       error: 'Internal server error',
       details: error.message 
     }, { status: 500 });

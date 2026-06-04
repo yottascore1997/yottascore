@@ -46,8 +46,7 @@ export default function CreateBlogPage() {
         alert(`Error: ${error}`)
       }
     } catch (error) {
-      console.error('Error creating blog:', error)
-      alert('Error creating blog')
+alert('Error creating blog')
     } finally {
       setLoading(false)
     }

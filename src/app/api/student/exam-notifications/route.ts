@@ -23,8 +23,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(notifications);
   } catch (error) {
-    console.error("Error fetching notifications:", error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );

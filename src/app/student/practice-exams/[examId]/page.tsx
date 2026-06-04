@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { jwtDecode } from 'jwt-decode';
 import Link from "next/link";
+import { pollWhenVisible } from '@/lib/poll-when-visible';
 
 interface Exam {
   id: string;
@@ -78,48 +79,38 @@ export default function PracticeExamDetailPage() {
 
   // Fetch leaderboard
   useEffect(() => {
-    let interval: NodeJS.Timeout;
     const fetchLeaderboard = async () => {
-      console.log('Fetching leaderboard for exam:', examId, 'Active tab:', activeTab);
-      setLeaderboardLoading(true);
+setLeaderboardLoading(true);
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          console.log('No token found');
-          setLeaderboard([]);
+setLeaderboard([]);
           return;
         }
         const res = await fetch(`/api/student/practice-exams/${examId}/leaderboard`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {
-          console.log('Leaderboard API error:', res.status);
-          setLeaderboard([]);
+setLeaderboard([]);
           return;
         }
         const data = await res.json();
-        console.log('Leaderboard data received:', data);
-        setLeaderboard(data);
+setLeaderboard(data);
       } catch (e) {
-        console.error('Leaderboard fetch error:', e);
-        setLeaderboard([]);
+setLeaderboard([]);
       } finally {
         setLeaderboardLoading(false);
       }
     };
     
     if (activeTab === 'leaderboard' && examId) {
-      console.log('Starting leaderboard fetch...');
-      fetchLeaderboard();
-      interval = setInterval(fetchLeaderboard, 10000);
+const stopPolling = pollWhenVisible(fetchLeaderboard, 10000);
+      return () => {
+stopPolling();
+      };
     }
-    
-    return () => {
-      if (interval) {
-        console.log('Clearing leaderboard interval');
-        clearInterval(interval);
-      }
-    };
+
+    return () => {};
   }, [activeTab, examId]);
 
   // Fetch attempt
@@ -146,8 +137,7 @@ export default function PracticeExamDetailPage() {
   // Manual refresh function for leaderboard
   const refreshLeaderboard = async () => {
     if (!examId) return;
-    console.log('Manual refresh triggered');
-    setLeaderboardLoading(true);
+setLeaderboardLoading(true);
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -162,11 +152,9 @@ export default function PracticeExamDetailPage() {
         return;
       }
       const data = await res.json();
-      console.log('Manual refresh - Leaderboard data:', data);
-      setLeaderboard(data);
+setLeaderboard(data);
     } catch (e) {
-      console.error('Manual refresh error:', e);
-      setLeaderboard([]);
+setLeaderboard([]);
     } finally {
       setLeaderboardLoading(false);
     }
@@ -203,10 +191,8 @@ export default function PracticeExamDetailPage() {
         <button
           className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${activeTab === 'leaderboard' ? 'bg-blue-700 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-blue-100'}`}
           onClick={() => {
-            console.log('Leaderboard tab clicked, current activeTab:', activeTab);
-            setActiveTab('leaderboard');
-            console.log('Setting activeTab to leaderboard');
-          }}
+setActiveTab('leaderboard');
+}}
         >
           Leaderboard
         </button>

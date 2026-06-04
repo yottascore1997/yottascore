@@ -57,7 +57,6 @@ export async function GET(req: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('[BLOGS_PUBLIC_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }
