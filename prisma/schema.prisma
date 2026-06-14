@@ -314,7 +314,7 @@ model User {
 }
 
 model LiveExam {
-  id          String      @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   description String?
   instructions String?    @db.Text
@@ -328,11 +328,12 @@ model LiveExam {
   prizePool   Float
   startTime   DateTime
   endTime     DateTime?
-  isLive      Boolean    @default(false)
+  isLive      Boolean   @default(false)
   winningsDistributed Boolean @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  createdBy   User       @relation(fields: [createdById], references: [id])
+  convertedToPractice Boolean @default(false) // Track if converted to practice exam
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   User      @relation(fields: [createdById], references: [id])
   createdById String
   questions   Question[]
   participants LiveExamParticipant[]

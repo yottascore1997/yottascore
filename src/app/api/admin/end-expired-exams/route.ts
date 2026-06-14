@@ -8,7 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 // Function to check and end expired exams
 async function checkAndEndExpiredExams() {
   try {
-const now = new Date();
+    const now = new Date();
     
     // Find live exams that have ended (endTime is in the past)
     const expiredExams = await prisma.liveExam.findMany({
@@ -18,25 +18,72 @@ const now = new Date();
           lt: now
         }
       },
-      select: {
-        id: true,
-        title: true,
-        endTime: true
+      include: {
+        questions: true
       }
     });
     
     if (expiredExams.length === 0) {
-return { ended: 0, exams: [] };
+      return { ended: 0, exams: [], convertedToPractice: 0 };
     }
     
-const endedExams: Array<{ id: string; title: string; endTime: Date | null }> = [];
+    const endedExams: Array<{ id: string; title: string; endTime: Date | null }> = [];
+    let convertedToPractice = 0;
     
     for (const exam of expiredExams) {
-// Update exam status to not live
+      // Update exam status to not live
       await prisma.liveExam.update({
         where: { id: exam.id },
         data: { isLive: false }
       });
+      
+      // Convert to practice exam only if not already converted
+      if (!exam.convertedToPractice) {
+        try {
+          // Create practice exam
+          const practiceExam = await prisma.practiceExam.create({
+            data: {
+              title: `${exam.title} (Practice)`,
+              description: exam.description,
+              instructions: exam.instructions,
+              duration: exam.duration,
+              spots: exam.spots,
+              spotsLeft: exam.spots,
+              startTime: exam.startTime,
+              endTime: exam.endTime,
+              logoUrl: exam.imageUrl,
+              category: exam.category || 'General',
+              subcategory: 'Live Exam Archive',
+              createdById: exam.createdById,
+            }
+          });
+          
+          // Copy questions
+          if (exam.questions && exam.questions.length > 0) {
+            for (const q of exam.questions) {
+              await prisma.practiceExamQuestion.create({
+                data: {
+                  examId: practiceExam.id,
+                  text: q.text,
+                  options: q.options,
+                  correct: q.correctAnswer,
+                  marks: 1,
+                }
+              });
+            }
+          }
+          
+          // Mark as converted
+          await prisma.liveExam.update({
+            where: { id: exam.id },
+            data: { convertedToPractice: true }
+          });
+          
+          convertedToPractice++;
+        } catch (convertError) {
+          console.error('Error converting live exam to practice:', convertError);
+        }
+      }
       
       endedExams.push({
         id: exam.id,
@@ -44,12 +91,12 @@ const endedExams: Array<{ id: string; title: string; endTime: Date | null }> = [
         endTime: exam.endTime
       });
       
-}
+    }
     
-return { ended: expiredExams.length, exams: endedExams };
+    return { ended: expiredExams.length, exams: endedExams, convertedToPractice };
     
   } catch (error) {
-throw error;
+    throw error;
   }
 }
 
@@ -71,7 +118,7 @@ export const POST = withCORS(async (req: Request) => {
     
     return NextResponse.json({
       success: true,
-      message: `Successfully ended ${result.ended} expired exams`,
+      message: `Successfully ended ${result.ended} expired exams and converted ${result.convertedToPractice} to practice exams`,
       ...result
     });
     
