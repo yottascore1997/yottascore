@@ -17,6 +17,7 @@ export default function AdminPracticeExamsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<'all' | 'upcoming' | 'ongoing' | 'ended'>('all');
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     fetchExams();
@@ -37,6 +38,28 @@ export default function AdminPracticeExamsPage() {
       setExams([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const convertEndedLiveExams = async () => {
+    setConverting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/admin/end-expired-exams", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alert(`Success! Ended ${data.ended} exams and converted ${data.convertedToPractice} to practice exams!`);
+        fetchExams();
+      } else {
+        alert("Failed to convert exams!");
+      }
+    } catch (e) {
+      alert("Error converting exams!");
+    } finally {
+      setConverting(false);
     }
   };
 
@@ -108,15 +131,34 @@ alert('Failed to delete exam. Please check your connection and try again.');
               <h1 className="text-3xl font-bold text-gray-800">Practice Exams</h1>
               <p className="text-gray-600 mt-2">Manage and monitor your practice exams</p>
             </div>
-            <button
-              onClick={() => router.push("/admin/practice-exams/create")}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all flex items-center space-x-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              <span>Create New Exam</span>
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => router.push("/admin/practice-exams/create")}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all flex items-center space-x-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Create New Exam</span>
+              </button>
+              <button
+                onClick={convertEndedLiveExams}
+                disabled={converting}
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-lg hover:from-green-600 hover:to-teal-700 transition-all flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {converting ? (
+                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
+                    <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+                <span>{converting ? "Converting..." : "Convert Ended Live Exams"}</span>
+              </button>
+            </div>
           </div>
         </div>
 

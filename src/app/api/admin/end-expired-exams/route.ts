@@ -10,13 +10,13 @@ async function checkAndEndExpiredExams() {
   try {
     const now = new Date();
     
-    // Find live exams that have ended (endTime is in the past)
+    // Find live exams that have ended (endTime is in the past) OR already ended but not converted
     const expiredExams = await prisma.liveExam.findMany({
       where: {
-        isLive: true,
         endTime: {
           lt: now
-        }
+        },
+        convertedToPractice: false
       },
       include: {
         questions: true
@@ -31,11 +31,13 @@ async function checkAndEndExpiredExams() {
     let convertedToPractice = 0;
     
     for (const exam of expiredExams) {
-      // Update exam status to not live
-      await prisma.liveExam.update({
-        where: { id: exam.id },
-        data: { isLive: false }
-      });
+      // Update exam status to not live if still live
+      if (exam.isLive) {
+        await prisma.liveExam.update({
+          where: { id: exam.id },
+          data: { isLive: false }
+        });
+      }
       
       // Convert to practice exam only if not already converted
       if (!exam.convertedToPractice) {
