@@ -8,7 +8,8 @@ import {
   FaCheckCircle, FaLightbulb, FaUserFriends, FaBolt, FaGem,
   FaShieldAlt, FaMoneyBillWave, FaDownload, FaBars, FaTimes,
   FaPlay, FaCalendarAlt, FaBell, FaAward, FaBookOpen, FaArrowRight,
-  FaCoins, FaChartBar, FaMobileAlt, FaDesktop, FaCloud, FaInfinity
+  FaCoins, FaChartBar, FaMobileAlt, FaDesktop, FaCloud, FaInfinity,
+  FaHeart
 } from 'react-icons/fa';
 
 export default function HomePage() {
@@ -772,6 +773,96 @@ const upcomingExams = [
               </div>
             </>
           )}
+        </div>
+      </section>
+
+      {/* Find Your Study Partner - Premium dark section */}
+      <section className="relative py-20 sm:py-28 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_30%_20%,rgba(234,179,8,0.12),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_70%_80%,rgba(168,85,247,0.15),transparent_50%)]" />
+
+        <svg className="absolute w-14 h-14 text-red-400/25 top-[12%] left-[8%] rotate-[-12deg]" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+        <svg className="absolute w-20 h-20 text-red-500/20 top-[20%] right-[10%] rotate-[8deg]" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+        <svg className="absolute w-10 h-10 text-red-400/30 bottom-[30%] left-[6%] rotate-[-6deg]" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+        <svg className="absolute w-16 h-16 text-red-500/20 bottom-[18%] right-[6%] rotate-[12deg]" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid lg:grid-cols-2 gap-14 lg:gap-20 items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 bg-amber-500/15 text-amber-300 px-4 py-2.5 rounded-full text-sm font-semibold mb-6 border border-amber-400/30">
+                  <FaHeart className="text-red-500" />
+                  <span>Like finding the right person — for your goals</span>
+                </div>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-6 leading-tight tracking-tight">
+                  <span className="text-white">Find your </span>
+                  <span className="text-amber-400">study partner</span>
+                </h2>
+                <p className="text-lg text-slate-300 mb-8 leading-relaxed max-w-lg">
+                  Not just another feature. Someone who’s preparing for the same exam, has the same schedule, and actually shows up. Swipe, match, and study together — like finding your person, but for your preparation.
+                </p>
+                <ul className="space-y-4 mb-10">
+                  {[
+                    'Swipe through profiles of students preparing for your exam',
+                    'Match when you both like each other — then chat and plan',
+                    'Study together on video, share notes, and keep each other accountable',
+                  ].map((line, i) => (
+                    <li key={i} className="flex items-center gap-4 text-slate-200">
+                      <span className="flex-shrink-0 w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-400 text-sm font-bold">{i + 1}</span>
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/student/study-partner"
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-amber-500 text-slate-900 rounded-2xl font-bold text-lg shadow-lg shadow-amber-500/30 hover:bg-amber-400 hover:shadow-amber-400/40 transition-all duration-300"
+                >
+                  <FaUserFriends className="text-xl" />
+                  Start discovering partners
+                </Link>
+              </div>
+
+              <div className="relative flex justify-center lg:justify-end">
+                <div className="relative w-full max-w-[340px]">
+                  <div className="absolute -top-1 -right-1 z-20 flex items-center gap-2 bg-amber-500 text-slate-900 px-4 py-2 rounded-full text-sm font-bold shadow-xl shadow-amber-500/40">
+                    <FaHeart className="text-red-500" />
+                    <span>It&apos;s a match!</span>
+                  </div>
+
+                  <div className="relative h-[400px] sm:h-[440px]">
+                    <div className="absolute inset-0 top-5 left-5 rounded-3xl bg-slate-700/40 border border-slate-600/50 shadow-2xl transform rotate-[-5deg] scale-[0.96]" />
+                    <div className="absolute inset-0 top-2 left-2 rounded-3xl bg-slate-600/50 border border-slate-500/50 shadow-2xl transform rotate-[3deg] scale-[0.98]" />
+                    <div className="absolute inset-0 rounded-3xl bg-white shadow-2xl overflow-hidden border border-slate-200/80">
+                      <div className="h-2/5 bg-gradient-to-br from-amber-400/30 via-violet-200/30 to-amber-300/20" />
+                      <div className="p-6 flex flex-col h-[60%] -mt-16 relative">
+                        <div className="w-24 h-24 rounded-2xl bg-white border-4 border-white shadow-xl flex items-center justify-center text-4xl mx-auto mb-4">
+                          👩‍🎓
+                        </div>
+                        <div className="text-center mb-2">
+                          <p className="text-slate-800 font-bold text-xl">Someone like you</p>
+                          <p className="text-slate-500 text-sm">Same exam · Same hustle</p>
+                        </div>
+                        <div className="mt-auto pt-4 flex gap-3">
+                          <span className="flex-1 py-3 rounded-xl bg-red-500 text-white font-semibold text-sm text-center">Pass</span>
+                          <span className="flex-1 py-3 rounded-xl bg-green-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-500/30">
+                            <FaHeart className="text-red-500" /> Like
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="absolute -bottom-3 left-0 right-0 flex justify-center">
+                    <div className="bg-orange-500 backdrop-blur-sm border border-orange-400 rounded-2xl px-6 py-3.5 flex items-center gap-4 shadow-xl">
+                      <span className="text-white font-bold text-lg">1000+</span>
+                      <span className="text-white/90 text-sm font-medium">matches this week</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
