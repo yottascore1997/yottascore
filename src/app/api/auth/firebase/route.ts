@@ -18,23 +18,24 @@ async function verifyFirebaseToken(idToken: string) {
     }
     
     if (hasAdminSDK) {
-      // Use Admin SDK for secure verification
-      const { adminAuth, isAdminSDKInitialized } = await import('@/lib/firebase-admin');
-      
-      if (!isAdminSDKInitialized() || !adminAuth) {
+      const { adminAuth, isAdminSDKInitialized } = await import('@/lib/firebase-admin')
+
+      if (!isAdminSDKInitialized()) {
         if (process.env.NODE_ENV === 'production') {
-          throw new Error('Firebase Admin SDK not initialized');
+          throw new Error(
+            'Firebase Admin SDK not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY on the server.'
+          )
         }
-} else {
-const decodedToken = await adminAuth.verifyIdToken(idToken, true); // checkRevoked = true
-        
-return {
+      } else {
+        const decodedToken = await adminAuth.verifyIdToken(idToken, true)
+
+        return {
           uid: decodedToken.uid,
           email: decodedToken.email || '',
           phone_number: decodedToken.phone_number || '',
           name: decodedToken.name || `User ${decodedToken.phone_number || 'Unknown'}`,
-          firebase: decodedToken.firebase
-        };
+          firebase: decodedToken.firebase,
+        }
       }
     }
     

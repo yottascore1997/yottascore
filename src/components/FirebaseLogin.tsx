@@ -67,6 +67,7 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
   const [otp, setOtp] = useState('');
   const [verificationId, setVerificationId] = useState('');
   const [showOTP, setShowOTP] = useState(false);
+  const [isDummyLogin, setIsDummyLogin] = useState(false);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
@@ -93,6 +94,13 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
         return;
       }
 
+      if (validationData.isDummy) {
+        setIsDummyLogin(true);
+        setShowOTP(true);
+        return;
+      }
+
+      setIsDummyLogin(false);
       verifier = await createRecaptchaVerifier();
       const formattedPhone = validationData.phoneNumber;
       const confirmationResult = await signInWithPhone(formattedPhone, verifier);
@@ -117,6 +125,22 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
     onError('');
 
     try {
+      if (isDummyLogin) {
+        const response = await fetch('/api/auth/dummy-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber, otp }),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          onSuccess(data.token, data.user);
+        } else {
+          onError(data.error || 'Login failed');
+        }
+        return;
+      }
+
       const user = await verifyOTP(verificationId, otp);
       if (!user) return;
 
@@ -142,6 +166,7 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
 
   const handleBack = () => {
     setShowOTP(false);
+    setIsDummyLogin(false);
     setOtp('');
     setVerificationId('');
   };
@@ -203,7 +228,16 @@ export default function FirebaseLogin({ onSuccess, onError }: FirebaseLoginProps
       ) : (
         <form onSubmit={handleOTPVerification} className="space-y-5">
           <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-            OTP sent to <span className="font-semibold">{phoneNumber}</span>
+            {isDummyLogin ? (
+              <>
+                Test login: <span className="font-semibold">{phoneNumber}</span> — OTP{' '}
+                <span className="font-semibold">123456</span> use karein
+              </>
+            ) : (
+              <>
+                OTP sent to <span className="font-semibold">{phoneNumber}</span>
+              </>
+            )}
           </div>
 
           <div className="space-y-2">

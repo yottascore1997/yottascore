@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withCORS } from '@/lib/cors';
 import { validateAndFormatPhone, isTestPhoneNumber } from '@/lib/phone-validation';
+import { isDummyLoginEnabled, isDummyPhoneNumber } from '@/lib/dummy-auth';
 import { checkOTPRateLimit, checkIPRateLimit } from '@/lib/rate-limiter';
 import { getClientIP, validateOrigin, logSecurityEvent, isIPBlocked } from '@/lib/security';
 
@@ -92,6 +93,8 @@ return NextResponse.json(
       );
     }
 
+    const isDummy = isDummyLoginEnabled() && isDummyPhoneNumber(formattedPhone);
+
     // All validations passed
 // Log security event
     logSecurityEvent({
@@ -99,13 +102,16 @@ return NextResponse.json(
       ip,
       phoneNumber: formattedPhone,
       success: true,
-      message: 'OTP request validated',
+      message: isDummy ? 'Dummy OTP login requested' : 'OTP request validated',
     });
     
     return NextResponse.json({
       success: true,
-      message: 'Validation passed. Proceed with OTP send.',
+      message: isDummy
+        ? 'Dummy login enabled. Use OTP 123456.'
+        : 'Validation passed. Proceed with OTP send.',
       phoneNumber: formattedPhone,
+      isDummy,
     });
 
   } catch (error: any) {
