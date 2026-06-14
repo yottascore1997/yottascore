@@ -102,8 +102,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching referral data:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

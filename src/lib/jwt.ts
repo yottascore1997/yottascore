@@ -13,8 +13,7 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
     const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
     return decoded;
   } catch (error) {
-    console.error("Token verification failed:", error);
-    return null;
+return null;
   }
 }
 

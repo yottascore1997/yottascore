@@ -62,8 +62,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, answer: questionAnswer });
   } catch (error) {
-    console.error('Error answering question:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -107,8 +106,7 @@ export async function GET(
       userAnswer: userAnswer || null
     });
   } catch (error) {
-    console.error('Error fetching question answers:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

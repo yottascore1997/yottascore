@@ -46,8 +46,7 @@ const WithdrawHistoryPage: React.FC = () => {
       );
       setWithdrawals(withdrawalTransactions);
     } catch (error: any) {
-      console.error('Error fetching withdrawal history:', error);
-      toast.error(error.message || 'Failed to load withdrawal history');
+toast.error(error.message || 'Failed to load withdrawal history');
     } finally {
       setLoading(false);
     }

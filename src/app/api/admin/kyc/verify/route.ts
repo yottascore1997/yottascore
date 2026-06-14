@@ -118,23 +118,14 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log('User KYC status updated to REJECTED:', {
-        userId: kycDocument.userId,
-        newStatus: updatedUser.kycStatus,
-        rejectionReason: validatedData.rejectionReason,
-        rejectedAt: updatedUser.kycRejectedAt
-      });
-
-      return NextResponse.json({
+return NextResponse.json({
         success: true,
         message: 'KYC document rejected successfully'
       });
     }
 
   } catch (error) {
-    console.error('KYC verification error:', error);
-    
-    if (error instanceof z.ZodError) {
+if (error instanceof z.ZodError) {
       return new NextResponse('Invalid request data', { status: 400 });
     }
 
@@ -184,9 +175,7 @@ export async function GET(request: NextRequest) {
       where.kycStatus = status;
     }
 
-    console.log('Admin KYC filter:', { status, where });
-
-    // Get KYC requests with documents
+// Get KYC requests with documents
     const [kycRequests, total] = await Promise.all([
       prisma.user.findMany({
         where: {
@@ -233,16 +222,6 @@ export async function GET(request: NextRequest) {
       })
     ]);
 
-    console.log('KYC requests found:', kycRequests.length);
-    type KycRequestType = typeof kycRequests[number];
-    kycRequests.forEach((req: KycRequestType) => {
-      console.log('User KYC status:', { 
-        name: req.name, 
-        status: req.kycStatus, 
-        documents: req.kycDocuments.length 
-      });
-    });
-
     return NextResponse.json({
       kycRequests,
       pagination: {
@@ -254,7 +233,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('KYC requests fetch error:', error);
-    return new NextResponse('Internal server error', { status: 500 });
+return new NextResponse('Internal server error', { status: 500 });
   }
 } 

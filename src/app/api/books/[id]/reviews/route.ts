@@ -104,8 +104,7 @@ export async function POST(
       data: review,
     });
   } catch (error) {
-    console.error('Error creating review:', error);
-    if (error instanceof z.ZodError) {
+if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Validation error', details: error.errors },
         { status: 400 }
@@ -164,8 +163,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error fetching reviews:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to fetch reviews' },
       { status: 500 }
     );

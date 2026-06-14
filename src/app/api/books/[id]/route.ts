@@ -126,8 +126,7 @@ export const GET = withCORS(async (
       },
     });
   } catch (error) {
-    console.error('Error fetching book:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to fetch book' },
       { status: 500 }
     );
@@ -217,8 +216,7 @@ export const PUT = withCORS(async (
       data: book,
     });
   } catch (error) {
-    console.error('Error updating book:', error);
-    if (error instanceof z.ZodError) {
+if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Validation error', details: error.errors },
         { status: 400 }
@@ -295,8 +293,7 @@ export const DELETE = withCORS(async (
       message: 'Book listing deleted successfully',
     });
   } catch (error) {
-    console.error('Error deleting book:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to delete book' },
       { status: 500 }
     );

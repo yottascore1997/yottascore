@@ -76,8 +76,7 @@ export async function POST(
       message: 'Book added to wishlist successfully',
     });
   } catch (error) {
-    console.error('Error adding to wishlist:', error);
-    if (error instanceof z.ZodError) {
+if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Validation error', details: error.errors },
         { status: 400 }
@@ -137,8 +136,7 @@ export async function DELETE(
       message: 'Book removed from wishlist successfully',
     });
   } catch (error) {
-    console.error('Error removing from wishlist:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to remove book from wishlist' },
       { status: 500 }
     );
@@ -175,8 +173,7 @@ export async function GET(
       data: wishlistItem,
     });
   } catch (error) {
-    console.error('Error checking wishlist:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to check wishlist status' },
       { status: 500 }
     );

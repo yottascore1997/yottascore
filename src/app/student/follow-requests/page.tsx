@@ -49,9 +49,7 @@ export default function FollowRequestsPage() {
 
       const data = await response.json()
       setRequests(data)
-    } catch (error) {
-      console.error('Error fetching follow requests:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }
@@ -80,9 +78,7 @@ export default function FollowRequestsPage() {
 
       // Remove the request from the list
       setRequests((prev) => prev.filter((req) => req.id !== requestId))
-    } catch (error) {
-      console.error('Error handling follow request:', error)
-    } finally {
+    } catch {} finally {
       setProcessing(null)
     }
   }

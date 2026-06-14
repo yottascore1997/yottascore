@@ -107,9 +107,7 @@ export default function FeedPage() {
       try {
         const decoded = JSON.parse(atob(token.split('.')[1]))
         setCurrentUserId(decoded.userId)
-      } catch (error) {
-        console.error('Error decoding token:', error)
-      }
+      } catch {}
     }
   }, [])
 
@@ -185,9 +183,7 @@ export default function FeedPage() {
         const data = await response.json()
         setPendingPosts(data)
       }
-    } catch (error) {
-      console.error('Failed to fetch pending posts:', error)
-    }
+    } catch {}
   }
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -368,9 +364,7 @@ export default function FeedPage() {
             : post
         ))
       }
-    } catch (error) {
-      console.error('Failed to toggle like:', error)
-    }
+    } catch {}
   }
 
   const handleReportPost = (postId: string) => {
@@ -409,8 +403,7 @@ export default function FeedPage() {
         alert(error || 'Failed to report post')
       }
     } catch (error) {
-      console.error('Error reporting post:', error)
-      alert('Failed to report post')
+alert('Failed to report post')
     } finally {
       setReporting(false)
     }
@@ -451,8 +444,7 @@ export default function FeedPage() {
         alert(error || 'Failed to delete post')
       }
     } catch (error) {
-      console.error('Error deleting post:', error)
-      alert('Failed to delete post')
+alert('Failed to delete post')
     } finally {
       setDeletingPost(false)
     }
@@ -494,8 +486,7 @@ export default function FeedPage() {
         alert(error || 'Failed to block user')
       }
     } catch (error) {
-      console.error('Error blocking user:', error)
-      alert('Failed to block user')
+alert('Failed to block user')
     } finally {
       setBlocking(false)
     }
@@ -524,9 +515,7 @@ export default function FeedPage() {
           [postId]: results
         }))
       }
-    } catch (error) {
-      console.error('Error fetching poll results:', error)
-    }
+    } catch {}
   }
 
   const handlePollVote = async (postId: string, optionIndex: number) => {
@@ -567,8 +556,7 @@ export default function FeedPage() {
         alert(error.error || 'Failed to vote')
       }
     } catch (error) {
-      console.error('Error voting on poll:', error)
-      alert('Failed to vote')
+alert('Failed to vote')
     }
   }
 
@@ -594,8 +582,7 @@ export default function FeedPage() {
         alert(error.error || 'Failed to submit answer')
       }
     } catch (error) {
-      console.error('Error answering question:', error)
-      alert('Failed to submit answer')
+alert('Failed to submit answer')
     }
   }
 

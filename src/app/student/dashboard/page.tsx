@@ -53,9 +53,7 @@ function BattleQuizList() {
 
       const data = await response.json()
       setQuizzes(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Error fetching quizzes:', error)
-    }
+    } catch {}
   }
 
   const handleJoinQuiz = async (quizId: string) => {
@@ -82,8 +80,7 @@ function BattleQuizList() {
 
       router.push(`/student/live-exams/${quizId}`)
     } catch (error) {
-      console.error('Error joining exam:', error)
-      alert(error instanceof Error ? error.message : 'Failed to join exam')
+alert(error instanceof Error ? error.message : 'Failed to join exam')
     }
   }
 
@@ -309,9 +306,7 @@ function QuestionOfTheDay() {
           selectedOption: index
         })
       })
-    } catch (error) {
-      console.error('Error submitting answer:', error)
-    }
+    } catch {}
   }
 
   if (loading) {
@@ -632,8 +627,7 @@ export default function StudentDashboard() {
       const data = await response.json()
       setQuizzes(Array.isArray(data) ? data : [])
     } catch (error) {
-      console.error('Error fetching quizzes:', error)
-      setError(error instanceof Error ? error.message : 'Failed to fetch quizzes')
+setError(error instanceof Error ? error.message : 'Failed to fetch quizzes')
     } finally {
       setLoading(false)
     }
@@ -716,8 +710,7 @@ export default function StudentDashboard() {
 
       router.push(`/student/live-exams/${quizId}`)
     } catch (error) {
-      console.error('Error joining exam:', error)
-      alert(error instanceof Error ? error.message : 'Failed to join exam')
+alert(error instanceof Error ? error.message : 'Failed to join exam')
     }
   }
 

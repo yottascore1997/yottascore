@@ -20,17 +20,10 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    console.log('Received body:', body)
-    console.log('Body type:', typeof body)
-    console.log('Body keys:', Object.keys(body))
-    
-    const { messageId, deleteType } = body
+const { messageId, deleteType } = body
 
-    console.log('messageId:', messageId, 'type:', typeof messageId)
-    console.log('deleteType:', deleteType, 'type:', typeof deleteType)
-
-    if (!messageId || !deleteType) {
-      console.log('Missing required fields:', { messageId, deleteType }) // Debug log
+if (!messageId || !deleteType) {
+// Debug log
       return new NextResponse('Message ID and delete type are required', { status: 400 })
     }
 
@@ -86,7 +79,6 @@ export async function POST(req: NextRequest) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[MESSAGE_DELETE_POST]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

@@ -72,12 +72,8 @@ export default function MyListingsPage() {
         setBooks(data.data.books);
         setPagination(data.data.pagination);
         setSummary(data.data.summary);
-      } else {
-        console.error('Failed to fetch listings:', data.error);
       }
-    } catch (error) {
-      console.error('Error fetching listings:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -92,8 +88,7 @@ export default function MyListingsPage() {
   };
 
   const handleEditBook = (bookId: string) => {
-    console.log('Editing book:', bookId);
-    router.push(`/books/${bookId}/edit`);
+router.push(`/books/${bookId}/edit`);
   };
 
   const handleDeleteBook = async (bookId: string) => {
@@ -119,8 +114,7 @@ export default function MyListingsPage() {
         alert(data.error || 'Failed to delete listing');
       }
     } catch (error) {
-      console.error('Error deleting book:', error);
-      alert('Failed to delete listing');
+alert('Failed to delete listing');
     }
   };
 

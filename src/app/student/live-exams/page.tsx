@@ -90,8 +90,7 @@ export default function LiveExams() {
         const data = await response.json();
         setExams(data);
       } catch (error) {
-        console.error('Error fetching exams:', error);
-        setError(error instanceof Error ? error.message : 'Failed to fetch exams');
+setError(error instanceof Error ? error.message : 'Failed to fetch exams');
       } finally {
         setLoading(false);
       }
@@ -136,8 +135,7 @@ export default function LiveExams() {
 
       router.push(`/student/live-exams/${examId}`);
     } catch (error) {
-      console.error('Error joining exam:', error);
-      alert(error instanceof Error ? error.message : 'Failed to join exam');
+alert(error instanceof Error ? error.message : 'Failed to join exam');
     } finally {
       setJoiningExamId(null);
     }

@@ -33,8 +33,7 @@ const handler = async (req: Request) => {
     }
 
     if (!process.env.RESEND_API_KEY) {
-      console.error('[RESEND_VERIFICATION] RESEND_API_KEY not set')
-      return NextResponse.json(
+return NextResponse.json(
         { message: 'Email service not configured. Please try again later.' },
         { status: 500 }
       )
@@ -71,8 +70,7 @@ const handler = async (req: Request) => {
     })
 
     if (error) {
-      console.error('[RESEND_VERIFICATION] Resend error:', error)
-      return NextResponse.json(
+return NextResponse.json(
         { message: 'Failed to send email. Please try again later.' },
         { status: 500 }
       )
@@ -80,8 +78,7 @@ const handler = async (req: Request) => {
 
     return NextResponse.json({ message: 'If that email exists, we sent a verification link.' })
   } catch (err) {
-    console.error('[RESEND_VERIFICATION] Error:', err)
-    return NextResponse.json(
+return NextResponse.json(
       { message: 'Something went wrong. Please try again.' },
       { status: 500 }
     )

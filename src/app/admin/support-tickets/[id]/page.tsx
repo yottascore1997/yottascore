@@ -112,12 +112,8 @@ export default function AdminTicketDetailPage() {
           priority: data.priority,
           assignedToId: data.assignedToId || '',
         });
-      } else {
-        console.error('Error fetching ticket');
       }
-    } catch (error) {
-      console.error('Error fetching ticket:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -155,8 +151,7 @@ export default function AdminTicketDetailPage() {
         alert(error.error || 'Failed to upload file');
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      alert('Failed to upload file');
+alert('Failed to upload file');
     } finally {
       setUploading(false);
     }
@@ -209,12 +204,8 @@ export default function AdminTicketDetailPage() {
         setIsInternal(false);
         setAttachments([]);
         fetchTicket();
-      } else {
-        console.error('Error sending reply');
       }
-    } catch (error) {
-      console.error('Error sending reply:', error);
-    } finally {
+    } catch {} finally {
       setSendingReply(false);
     }
   };
@@ -236,12 +227,8 @@ export default function AdminTicketDetailPage() {
       if (response.ok) {
         setEditingTicket(false);
         fetchTicket();
-      } else {
-        console.error('Error updating ticket');
       }
-    } catch (error) {
-      console.error('Error updating ticket:', error);
-    }
+    } catch {}
   };
 
   const formatDate = (dateString: string) => {

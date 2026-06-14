@@ -44,7 +44,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json(withAttemptCount)
   } catch (error) {
-    console.error('[PYQ] List error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

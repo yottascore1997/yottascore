@@ -80,7 +80,6 @@ export async function GET(req: Request) {
     })
 
   } catch (error) {
-    console.error('[DEBUG_FOLLOW_STATUS]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

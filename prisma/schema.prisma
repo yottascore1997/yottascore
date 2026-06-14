@@ -134,6 +134,10 @@ model User {
   role            Role        @default(USER)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+
+  // Account lifecycle
+  isDeactivated   Boolean     @default(false)
+  deactivatedAt   DateTime?
   
   // Login lockout (N failed attempts -> temporary lock)
   failedLoginAttempts Int     @default(0)
@@ -306,7 +310,7 @@ model User {
   // Spy Game - Commented out for now
   // spyGamePlayers SpyGamePlayer[]
   
-  @@map("User")
+  @@map("users")
 }
 
 model LiveExam {
@@ -829,6 +833,7 @@ model StudyPartnerProfile {
   updatedAt         DateTime @updatedAt
 
   @@index([isActive])
+  @@index([isActive, updatedAt])
   @@map("StudyPartnerProfile")
 }
 

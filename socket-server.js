@@ -26,24 +26,20 @@ async function initializeRedis() {
     redis = Redis.createClient(redisConfig);
 
     redis.on('connect', () => {
-      console.log('✅ Redis connected successfully');
-      redisConnected = true;
+redisConnected = true;
     });
 
     redis.on('error', (err) => {
-      console.log('❌ Redis connection error:', err.message);
-      redisConnected = false;
+redisConnected = false;
     });
 
     redis.on('end', () => {
-      console.log('🔌 Redis connection ended');
-      redisConnected = false;
+redisConnected = false;
     });
 
     await redis.connect();
   } catch (error) {
-    console.log('❌ Failed to connect to Redis, using memory fallback:', error.message);
-    redisConnected = false;
+redisConnected = false;
   }
 }
 
@@ -53,12 +49,8 @@ initializeRedis();
 // Test database connection
 async function testDatabaseConnection() {
   try {
-    console.log('🔍 Testing database connection...');
-    const userCount = await prisma.user.count();
-    console.log(`✅ Database connected successfully. Total users: ${userCount}`);
-  } catch (error) {
-    console.error('❌ Database connection failed:', error);
-  }
+const userCount = await prisma.user.count();
+} catch {}
 }
 
 // Test database on startup
@@ -206,7 +198,7 @@ function computeLiveQuizQuestionEndsAt(session) {
 async function ensureLiveQuizCategoryLoop(categoryId, io) {
   if (liveQuizCategoryLoops.has(categoryId)) return;
   liveQuizCategoryLoops.set(categoryId, { timeout: null, sessionId: null });
-  scheduleLiveQuizTick(categoryId, io).catch((e) => console.error('[LiveQuiz] schedule error:', e));
+  scheduleLiveQuizTick(categoryId, io).catch(() => {});
 }
 
 async function scheduleLiveQuizTick(categoryId, io) {
@@ -228,8 +220,7 @@ async function scheduleLiveQuizTick(categoryId, io) {
   try {
     session = await getOrCreatePlayingLiveQuizSession(categoryId);
   } catch (e) {
-    console.error('[LiveQuiz] failed to get/create session:', e?.message || e);
-    // try again later
+// try again later
     state.timeout = setTimeout(() => scheduleLiveQuizTick(categoryId, io), 5000);
     return;
   }
@@ -242,10 +233,8 @@ async function scheduleLiveQuizTick(categoryId, io) {
   state.timeout = setTimeout(async () => {
     try {
       await advanceLiveQuiz(categoryId, io);
-    } catch (e) {
-      console.error('[LiveQuiz] advance error:', e?.message || e);
-    } finally {
-      scheduleLiveQuizTick(categoryId, io).catch((e) => console.error('[LiveQuiz] reschedule error:', e));
+    } catch {} finally {
+      scheduleLiveQuizTick(categoryId, io).catch(() => {});
     }
   }, delayMs);
 }
@@ -311,9 +300,7 @@ async function advanceLiveQuiz(categoryId, io) {
             })
           )
       );
-    } catch (e) {
-      console.error('[LiveQuiz] failed to upsert participants for new round:', e?.message || e);
-    }
+    } catch {}
 
     const question = await getLiveQuizQuestion(newSession, 0);
     const fullLeaderboard = await getLiveQuizLeaderboard(newSession.id);
@@ -375,18 +362,15 @@ class QueueManager {
         // Use Redis
         await redis.lPush(`queue:${quizId}`, JSON.stringify(playerData));
         await redis.expire(`queue:${quizId}`, 300); // 5 minutes TTL
-        console.log(`✅ Player ${userId} added to Redis queue for quiz ${quizId}`);
-      } else {
+} else {
         // Fallback to memory
         if (!waitingPlayers.has(quizId)) {
           waitingPlayers.set(quizId, []);
         }
         waitingPlayers.get(quizId).push(playerData);
-        console.log(`✅ Player ${userId} added to memory queue for quiz ${quizId}`);
-      }
+}
     } catch (error) {
-      console.log('❌ Redis error, using memory fallback:', error.message);
-      // Fallback to memory
+// Fallback to memory
       if (!waitingPlayers.has(quizId)) {
         waitingPlayers.set(quizId, []);
       }
@@ -405,8 +389,7 @@ class QueueManager {
         return waitingPlayers.get(quizId) || [];
       }
     } catch (error) {
-      console.log('❌ Redis error, using memory fallback:', error.message);
-      return waitingPlayers.get(quizId) || [];
+return waitingPlayers.get(quizId) || [];
     }
   }
 
@@ -437,8 +420,7 @@ class QueueManager {
         }
       }
     } catch (error) {
-      console.log('❌ Redis error, using memory fallback:', error.message);
-      // Fallback to memory
+// Fallback to memory
       const players = waitingPlayers.get(quizId);
       if (players) {
         const index = players.findIndex(p => p.socketId === playerData.socketId);
@@ -457,8 +439,7 @@ class QueueManager {
         return (waitingPlayers.get(quizId) || []).length;
       }
     } catch (error) {
-      console.log('❌ Redis error, using memory fallback:', error.message);
-      return (waitingPlayers.get(quizId) || []).length;
+return (waitingPlayers.get(quizId) || []).length;
     }
   }
 }
@@ -486,8 +467,7 @@ function cleanupMemory() {
         const socket = io.sockets.sockets.get(socketId);
         if (!socket || !socket.connected) {
           delete userSockets[userId];
-          console.log(`🧹 Cleaned up disconnected user: ${userId}`);
-        }
+}
       });
 
       // Clean up old matches (older than 10 minutes) and stuck matches
@@ -506,9 +486,7 @@ function cleanupMemory() {
       });
       
       matchesToDelete.forEach(({ matchId, match, reason, age }) => {
-        console.log(`🧹 Cleaning up ${reason} match: ${matchId} (age: ${age}s)`);
-        console.log(`   - Player1: ${match.player1Id}, Player2: ${match.player2Id}, Status: ${match.status || 'unknown'}`);
-        playerToMatchId.delete(match.player1Id);
+playerToMatchId.delete(match.player1Id);
         playerToMatchId.delete(match.player2Id);
         activeMatches.delete(matchId);
       });
@@ -517,74 +495,51 @@ function cleanupMemory() {
       privateRooms.forEach((room, roomCode) => {
         if (now - (room.createdAt || now) > 1800000) { // 30 minutes
           privateRooms.delete(roomCode);
-          console.log(`🧹 Cleaned up old private room: ${roomCode}`);
-        }
+}
       });
 
-      console.log(`🧹 Memory cleanup completed. Active matches: ${activeMatches.size}, Private rooms: ${privateRooms.size}`);
-      console.log(`   - Total connections: ${io.engine.clientsCount}`);
-      
-      // Log active matches for debugging
+// Log active matches for debugging
       if (activeMatches.size > 0) {
-        console.log('📋 Current active matches:');
-        activeMatches.forEach((match, matchId) => {
+activeMatches.forEach((match, matchId) => {
           const matchStartTime = match.startTime || match.createdAt || Date.now();
           const age = Math.round((Date.now() - matchStartTime) / 1000);
-          console.log(`   - ${matchId}: P1=${match.player1Id?.substring(0, 8)}..., P2=${match.player2Id?.substring(0, 8)}..., Status=${match.status || 'unknown'}, Age=${age}s`);
-        });
+});
       }
       
       // Memory usage warning
       const totalConnections = io.engine.clientsCount;
       if (totalConnections > 1500) {
-        console.log(`⚠️ High connection count: ${totalConnections}. Consider scaling.`);
-      }
+}
       
-    } catch (error) {
-      console.error('❌ Error during memory cleanup:', error);
-    }
+    } catch {}
   }, 30000); // Every 30 seconds for high load
 }
 
 // Debug function to clear all active matches
 function clearAllActiveMatches() {
-  console.log('🧪 DEBUG: Clearing all active matches...');
-  console.log('   - Before clearing:', Array.from(activeMatches.keys()));
-  
-  const clearedCount = activeMatches.size;
+const clearedCount = activeMatches.size;
   activeMatches.clear();
   playerToMatchId.clear();
   
-  console.log(`   - Cleared ${clearedCount} active matches`);
-  console.log('   - After clearing:', Array.from(activeMatches.keys()));
-  console.log('✅ All active matches cleared');
 }
 
 // Start memory cleanup
 cleanupMemory();
 
 io.on('connection', (socket) => {
-  console.log('🔗 Client connected:', socket.id);
-  console.log('   - Time:', new Date().toISOString());
-  console.log('   - Total connections:', io.engine.clientsCount);
-
-  socket.on('register_user', (userId) => {
+socket.on('register_user', (userId) => {
     if (userId) {
       userSockets[userId] = socket.id;
       socket.userId = userId; // Store userId in socket object
-      console.log(`User ${userId} registered with socket ${socket.id}`);
-      
-      // Update socket IDs in active matches if this user is in a match
+// Update socket IDs in active matches if this user is in a match
       activeMatches.forEach((match, matchId) => {
         if (match.player1Id === userId) {
           if (match.player1SocketId !== socket.id) {
-            console.log(`Updating player 1 socket ID in match ${matchId}: ${match.player1SocketId} -> ${socket.id}`);
-            match.player1SocketId = socket.id;
+match.player1SocketId = socket.id;
           }
         } else if (match.player2Id === userId) {
           if (match.player2SocketId !== socket.id) {
-            console.log(`Updating player 2 socket ID in match ${matchId}: ${match.player2SocketId} -> ${socket.id}`);
-            match.player2SocketId = socket.id;
+match.player2SocketId = socket.id;
           }
         }
       });
@@ -593,28 +548,15 @@ io.on('connection', (socket) => {
 
   // Battle Quiz Events
   socket.on('join_matchmaking', async (data) => {
-    console.log('🎮 join_matchmaking event received');
-    console.log('   - Socket ID:', socket.id);
-    console.log('   - Data:', JSON.stringify(data, null, 2));
-    console.log('   - Socket userId:', socket.userId);
-    console.log('   - UserSockets mapping:', Object.keys(userSockets));
-
-    const { categoryId, mode, amount } = data;
+const { categoryId, mode, amount } = data;
     const userId = socket.userId;
 
     if (!userId) {
-      console.log('❌ No user ID found for socket:', socket.id);
-      console.log('   - Available userSockets:', userSockets);
-      socket.emit('matchmaking_error', { message: 'User not authenticated' });
+socket.emit('matchmaking_error', { message: 'User not authenticated' });
       return;
     }
 
-    console.log('   - User ID:', userId);
-    console.log('   - Category ID:', categoryId);
-    console.log('   - Mode:', mode);
-    console.log('   - Amount:', amount);
-
-    // Get user details
+// Get user details
     let user;
     try {
       user = await prisma.user.findUnique({
@@ -622,21 +564,16 @@ io.on('connection', (socket) => {
         select: { id: true, name: true, wallet: true }
       });
     } catch (error) {
-      console.error('❌ Error fetching user:', error);
-      socket.emit('matchmaking_error', { message: 'Error fetching user details' });
+socket.emit('matchmaking_error', { message: 'Error fetching user details' });
       return;
     }
 
     if (!user) {
-      console.log('❌ User not found:', userId);
-      socket.emit('matchmaking_error', { message: 'User not found' });
+socket.emit('matchmaking_error', { message: 'User not found' });
       return;
     }
 
-    console.log('   - User:', user.name);
-    console.log('   - Wallet balance:', user.wallet);
-
-    // Find or create battle quiz
+// Find or create battle quiz
     let battleQuiz;
     let entryFee = 10; // Default entry fee
 
@@ -665,20 +602,15 @@ io.on('connection', (socket) => {
         
         if (battleQuiz) {
           entryFee = battleQuiz.entryAmount;
-          console.log(`✅ Found active battle quiz for category: ${battleQuiz.title}`);
-          console.log(`   - Entry fee: ₹${entryFee}`);
-        } else if (amount) {
+} else if (amount) {
           // Create new battle quiz with specified amount
-          console.log(`⚠️ No active battle quiz found for category: ${categoryId} with amount: ${amount}, creating new one`);
-          
-          // Get category details
+// Get category details
           const category = await prisma.questionCategory.findUnique({
             where: { id: categoryId }
           });
 
           if (!category) {
-            console.log('❌ Category not found:', categoryId);
-            socket.emit('matchmaking_error', { message: 'Category not found' });
+socket.emit('matchmaking_error', { message: 'Category not found' });
             return;
           }
 
@@ -706,16 +638,11 @@ io.on('connection', (socket) => {
           });
 
           entryFee = battleQuiz.entryAmount;
-          console.log(`✅ Created new battle quiz: ${battleQuiz.title}`);
-          console.log(`   - Entry fee: ₹${entryFee}`);
-        } else {
-          console.log(`⚠️ No active battle quiz found for category: ${categoryId}, using default`);
-        }
+}
       }
       
     } catch (error) {
-      console.error('❌ Error fetching battle quiz:', error);
-      socket.emit('matchmaking_error', { message: 'Error fetching battle quiz details' });
+socket.emit('matchmaking_error', { message: 'Error fetching battle quiz details' });
       return;
     }
     
@@ -727,18 +654,12 @@ io.on('connection', (socket) => {
       });
       
       if (!user) {
-        console.log('❌ User not found:', userId);
-        socket.emit('matchmaking_error', { message: 'User not found' });
+socket.emit('matchmaking_error', { message: 'User not found' });
         return;
       }
       
-      console.log(`💰 User wallet check: ${user.name} (${userId})`);
-      console.log(`   - Current balance: ₹${user.wallet}`);
-      console.log(`   - Required entry fee: ₹${entryFee}`);
-      
-      if (user.wallet < entryFee) {
-        console.log('❌ Insufficient balance for user:', userId);
-        socket.emit('matchmaking_error', { 
+if (user.wallet < entryFee) {
+socket.emit('matchmaking_error', { 
           message: `Insufficient balance. Required: ₹${entryFee}, Available: ₹${user.wallet}`,
           requiredAmount: entryFee,
           availableBalance: user.wallet
@@ -746,27 +667,21 @@ io.on('connection', (socket) => {
         return;
       }
       
-      console.log('✅ Sufficient balance confirmed');
-      
-    } catch (error) {
-      console.error('❌ Error checking wallet balance:', error);
-      socket.emit('matchmaking_error', { message: 'Error checking wallet balance' });
+} catch (error) {
+socket.emit('matchmaking_error', { message: 'Error checking wallet balance' });
       return;
     }
     
     // Use quizId or categoryId for queue
     const queueId = battleQuiz?.id || categoryId || 'general';
-    console.log('Using queueId:', queueId);
-    
-    // Remove from previous queue if user joined different category earlier (prevents ghost entries)
+// Remove from previous queue if user joined different category earlier (prevents ghost entries)
     const prevQueueId = socket.joinedQueueId;
     if (prevQueueId && prevQueueId !== queueId) {
       const prevPlayers = await queueManager.getQueue(prevQueueId);
       const prevPlayer = prevPlayers.find(p => p.socketId === socket.id);
       if (prevPlayer) {
         await queueManager.removeFromQueue(prevQueueId, prevPlayer);
-        console.log(`Removed from previous queue ${prevQueueId} before joining ${queueId}`);
-      }
+}
     }
     
     const player = {
@@ -788,9 +703,7 @@ io.on('connection', (socket) => {
     
     // Get queue length for logging
     const queueLength = await queueManager.getQueueLength(queueId);
-    console.log(`Player added to queue. Queue size for ${queueId}:`, queueLength);
-    
-    socket.join(`quiz_${queueId}`);
+socket.join(`quiz_${queueId}`);
     socket.joinedQueueId = queueId; // Store for correct cleanup on cancel/disconnect
     
     // Send matchmaking update
@@ -804,21 +717,17 @@ io.on('connection', (socket) => {
     
     // Try to match players
     tryMatchPlayers(queueId).catch(error => {
-      console.error('Error in tryMatchPlayers:', error);
-    });
+});
   });
 
   socket.on('cancel_matchmaking', async () => {
-    console.log(`User ${socket.id} cancelled matchmaking`);
-    
-    // Remove from the correct queue (stored when joining)
+// Remove from the correct queue (stored when joining)
     const queueId = socket.joinedQueueId || 'general';
     const players = await queueManager.getQueue(queueId);
     const playerToRemove = players.find(p => p.socketId === socket.id);
     if (playerToRemove) {
       await queueManager.removeFromQueue(queueId, playerToRemove);
-      console.log(`Removed player from quiz ${queueId}`);
-    }
+}
     socket.joinedQueueId = null;
     
     socket.emit('matchmaking_cancelled');
@@ -826,9 +735,7 @@ io.on('connection', (socket) => {
 
   socket.on('create_private_room', (data) => {
     const { userId, quizData, roomCode } = data;
-    console.log(`Creating private room ${roomCode} for user ${userId}`);
-    
-    const room = {
+const room = {
       roomCode,
       creator: userId,
       players: [{
@@ -848,21 +755,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join_private_room', async (data) => {
-    console.log('🎮 join_private_room event received on server');
-    console.log('   - Full data:', data);
-    console.log('   - Socket ID:', socket.id);
-    console.log('   - Socket userId:', socket.userId);
-    
-    const { userId, roomCode, quizData } = data;
-    console.log(`User ${userId} joining private room ${roomCode}`);
-    
-    // First check if room exists in memory
+const { userId, roomCode, quizData } = data;
+// First check if room exists in memory
     let room = privateRooms.get(roomCode);
     
     // If not in memory, check database
     if (!room) {
-      console.log(`Room ${roomCode} not found in memory, checking database...`);
-      try {
+try {
         const dbRoom = await prisma.battleQuiz.findUnique({
           where: { roomCode, isPrivate: true },
           include: {
@@ -878,24 +777,11 @@ io.on('connection', (socket) => {
         });
         
         if (!dbRoom) {
-          console.log(`Room ${roomCode} not found in database`);
-          socket.emit('room_error', { message: 'Room not found' });
+socket.emit('room_error', { message: 'Room not found' });
           return;
         }
         
-        console.log(`Room ${roomCode} found in database, creating in memory`);
-        
-        console.log(`Database room participants:`, dbRoom.participants);
-        console.log(`Room creator:`, dbRoom.createdById);
-        console.log(`Room creator type:`, typeof dbRoom.createdById);
-        console.log(`Database room data:`, {
-          id: dbRoom.id,
-          roomCode: dbRoom.roomCode,
-          createdById: dbRoom.createdById,
-          participants: dbRoom.participants.map(p => p.userId)
-        });
-        
-        // Create room in memory from database
+// Create room in memory from database
         room = {
           roomCode: dbRoom.roomCode,
           creator: dbRoom.createdById,
@@ -918,18 +804,10 @@ io.on('connection', (socket) => {
           dbRoomId: dbRoom.id
         };
         
-        console.log(`Created room in memory:`, {
-          roomCode: room.roomCode,
-          creator: room.creator,
-          players: room.players.map(p => p.userId),
-          maxPlayers: room.maxPlayers
-        });
-        
-        privateRooms.set(roomCode, room);
+privateRooms.set(roomCode, room);
         
       } catch (error) {
-        console.error('Error checking database for room:', error);
-        socket.emit('room_error', { message: 'Error finding room' });
+socket.emit('room_error', { message: 'Error finding room' });
         return;
       }
     }
@@ -939,8 +817,7 @@ io.on('connection', (socket) => {
     if (existingPlayer) {
       // Update socket ID if reconnecting
       existingPlayer.socketId = socket.id;
-      console.log(`User ${userId} reconnected to room ${roomCode}`);
-    } else {
+} else {
       // Add new player
       if (room.players.length >= room.maxPlayers) {
         socket.emit('room_error', { message: 'Room is full' });
@@ -958,10 +835,8 @@ io.on('connection', (socket) => {
               answers: []
             }
           });
-          console.log(`User ${userId} added to database participants`);
-        } catch (error) {
-          console.error('Error adding user to database:', error);
-          // Continue anyway, just log the error
+} catch (error) {
+// Continue anyway, just log the error
         }
       }
       
@@ -972,21 +847,11 @@ io.on('connection', (socket) => {
         quizData: quizData || room.quizData
       });
       
-      console.log(`User ${userId} joined room ${roomCode}`);
-      console.log(`Room ${roomCode} now has ${room.players.length} players:`, room.players.map(p => p.userId));
-    }
+}
     
     socket.join(`room_${roomCode}`);
     
-    console.log(`Sending room_joined event to user ${userId}:`);
-    console.log(`   - Room players:`, room.players.map(p => p.userId));
-    console.log(`   - Room creator:`, room.creator);
-    console.log(`   - Current user ID:`, userId);
-    console.log(`   - User is host:`, userId === room.creator);
-    console.log(`   - Room creator type:`, typeof room.creator);
-    console.log(`   - User ID type:`, typeof userId);
-    
-    const roomJoinedData = {
+const roomJoinedData = {
       room: {
         roomCode: room.roomCode,
         host: room.players.find(p => p.userId === room.creator) ? {
@@ -1014,9 +879,7 @@ io.on('connection', (socket) => {
       isHost: userId === room.creator
     };
     
-    console.log(`   - Room joined data:`, roomJoinedData);
-    
-    // Send room joined event to the user
+// Send room joined event to the user
     socket.emit('room_joined', roomJoinedData);
     
     // Notify other players about the new player
@@ -1054,200 +917,101 @@ io.on('connection', (socket) => {
     // Start game if room is full
     if (room.players.length >= room.maxPlayers) {
       startPrivateRoomGame(roomCode).catch(error => {
-        console.error('Error in startPrivateRoomGame:', error);
-      });
+});
     }
   });
 
   socket.on('start_private_game', async (data) => {
-    console.log('🎮 start_private_game event received');
-    console.log('   - Room code:', data.roomCode);
-    console.log('   - Socket ID:', socket.id);
-    
-    const { roomCode } = data;
+const { roomCode } = data;
     const room = privateRooms.get(roomCode);
     
     if (!room) {
-      console.log('❌ Room not found:', roomCode);
-      socket.emit('room_error', { message: 'Room not found' });
+socket.emit('room_error', { message: 'Room not found' });
       return;
     }
     
     // Check if user is the host
     if (room.creator !== socket.userId) {
-      console.log('❌ User is not the host');
-      socket.emit('room_error', { message: 'Only the host can start the game' });
+socket.emit('room_error', { message: 'Only the host can start the game' });
       return;
     }
     
     // Check if enough players
     if (room.players.length < 2) {
-      console.log('❌ Not enough players:', room.players.length);
-      socket.emit('room_error', { message: 'Need at least 2 players to start' });
+socket.emit('room_error', { message: 'Need at least 2 players to start' });
       return;
     }
     
-    console.log('✅ Starting private game for room:', roomCode);
-    console.log('   - Players:', room.players.map(p => p.userId));
-    console.log('   - Question count:', room.quizData.questionCount);
-    console.log('   - Time per question:', room.quizData.timePerQuestion);
-    
-    // Start the game
+// Start the game
     try {
       await startPrivateRoomGame(roomCode);
     } catch (error) {
-      console.error('❌ Error starting private game:', error);
-      socket.emit('room_error', { message: 'Failed to start game' });
+socket.emit('room_error', { message: 'Failed to start game' });
     }
   });
 
   socket.on('answer_question', (data) => {
-    console.log('🎯 answer_question event received on server');
-    console.log('   - Socket ID:', socket.id);
-    console.log('   - Event data:', data);
-    console.log('   - Full data object:', JSON.stringify(data, null, 2));
-    
-    // SECURITY: Use socket.userId - never trust userId from client
+// SECURITY: Use socket.userId - never trust userId from client
     const userId = socket.userId;
     const { matchId, questionIndex, answer, timeSpent } = data;
     if (!userId) {
-      console.log('❌ answer_question rejected - user not registered');
-      return;
+return;
     }
-    console.log(`User ${userId} answered question ${questionIndex} in match ${matchId}`);
-    console.log('Answer data:', { answer, timeSpent });
-    console.log('Answer type:', typeof answer);
-    console.log('Answer value:', answer);
-    
-    const match = activeMatches.get(matchId);
+const match = activeMatches.get(matchId);
     if (!match) {
-      console.log('❌ Match not found:', matchId);
-      console.log('Available matches:', Array.from(activeMatches.keys()));
-      return;
+return;
     }
     
-    console.log('✅ Match found, current status:', match.status);
-    console.log('Current question index:', match.currentQuestion);
-    console.log('Total questions:', match.totalQuestions);
-    console.log('Match details:', {
-      player1Id: match.player1Id,
-      player2Id: match.player2Id,
-      player1SocketId: match.player1SocketId,
-      player2SocketId: match.player2SocketId
-    });
-    
-    // Get the question to verify the correct answer
+// Get the question to verify the correct answer
     const question = match.questions[questionIndex];
     if (question) {
-      console.log('Question details:');
-      console.log('   - Question text:', question.text);
-      console.log('   - Options:', question.options);
-      console.log('   - Correct answer (index):', question.correct);
-      console.log('   - Correct answer (text):', question.options[question.correct]);
-    } else {
-      console.log('❌ Question not found for index:', questionIndex);
-      console.log('Available questions:', match.questions.length);
-    }
+}
     
     // Record answer
-    console.log('📝 Recording answer:');
-    console.log('   - User ID:', userId);
-    console.log('   - Player 1 ID:', match.player1Id);
-    console.log('   - Player 2 ID:', match.player2Id);
-    console.log('   - Is Player 1?', match.player1Id === userId);
-    console.log('   - Is Player 2?', match.player2Id === userId);
-    
-    if (match.player1Id === userId) {
+if (match.player1Id === userId) {
       if (match.player1Answers[questionIndex]) {
-        console.log('⚠️ Player 1 already answered question', questionIndex, '- ignoring duplicate');
-        return;
+return;
       }
       match.player1Answers[questionIndex] = { answer, timeSpent, timestamp: Date.now() };
-      console.log('✅ Player 1 answer recorded for question', questionIndex);
-      console.log('   - Answer:', answer);
-      console.log('   - Time spent:', timeSpent);
-      console.log('   - Answer type:', typeof answer);
-      console.log('   - All player 1 answers now:', match.player1Answers);
-    } else if (match.player2Id === userId) {
+} else if (match.player2Id === userId) {
       if (match.player2Answers[questionIndex]) {
-        console.log('⚠️ Player 2 already answered question', questionIndex, '- ignoring duplicate');
-        return;
+return;
       }
       match.player2Answers[questionIndex] = { answer, timeSpent, timestamp: Date.now() };
-      console.log('✅ Player 2 answer recorded for question', questionIndex);
-      console.log('   - Answer:', answer);
-      console.log('   - Time spent:', timeSpent);
-      console.log('   - Answer type:', typeof answer);
-      console.log('   - All player 2 answers now:', match.player2Answers);
-    } else {
-      console.log('❌ User ID not found in match players');
-      console.log('   - Available player IDs:', [match.player1Id, match.player2Id]);
-      console.log('   - Current user ID:', userId);
-    }
+}
     
     // Notify opponent that this player answered
     const opponentSocketId = match.player1Id === userId ? match.player2SocketId : match.player1SocketId;
-    console.log('Notifying opponent at socket:', opponentSocketId);
-    
-    const opponentSocket = io.sockets.sockets.get(opponentSocketId);
+const opponentSocket = io.sockets.sockets.get(opponentSocketId);
     if (opponentSocket && opponentSocket.connected) {
       opponentSocket.emit('opponent_answered', { 
         questionIndex,
         answer: answer // Send the specific answer
       });
-      console.log('opponent_answered event sent to:', opponentSocketId, 'with answer:', answer);
-    } else {
-      console.log('Opponent socket not found or disconnected:', opponentSocketId);
-    }
+}
     
     // Check if both players answered
     const p1Answered = match.player1Answers[questionIndex];
     const p2Answered = match.player2Answers[questionIndex];
-    console.log('📊 Answer status check:');
-    console.log('   - Question index:', questionIndex);
-    console.log('   - Player 1 ID:', match.player1Id);
-    console.log('   - Player 2 ID:', match.player2Id);
-    console.log('   - Player 1 socket ID:', match.player1SocketId);
-    console.log('   - Player 2 socket ID:', match.player2SocketId);
-    console.log('   - Current socket ID:', socket.id);
-    console.log('   - Player 1 answered:', !!p1Answered, p1Answered);
-    console.log('   - Player 2 answered:', !!p2Answered, p2Answered);
-    console.log('   - All player 1 answers:', match.player1Answers);
-    console.log('   - All player 2 answers:', match.player2Answers);
-    
-    if (p1Answered && p2Answered) {
-      console.log('✅ Both players answered question', questionIndex);
-      
-      // Clear the current question timer since both players answered
+if (p1Answered && p2Answered) {
+// Clear the current question timer since both players answered
       if (match.questionTimer) {
         clearTimeout(match.questionTimer);
-        console.log(`⏰ Cleared timer for question ${questionIndex}`);
-      }
+}
       
-      console.log('📊 Question progression check:');
-      console.log(`   - Current question index: ${questionIndex}`);
-      console.log(`   - Total questions: ${match.totalQuestions}`);
-      console.log(`   - Questions array length: ${match.questions.length}`);
-      console.log(`   - Condition check: ${questionIndex} < ${match.totalQuestions - 1} = ${questionIndex < match.totalQuestions - 1}`);
-      
-      // Move to next question or end game
+// Move to next question or end game
       setTimeout(() => {
         if (questionIndex < match.totalQuestions - 1) {
           match.currentQuestion = questionIndex + 1;
           const nextQuestion = match.questions[match.currentQuestion];
-          console.log('🔄 Moving to next question:', match.currentQuestion);
-          console.log('Next question:', nextQuestion);
-          console.log('Question text:', nextQuestion.text.substring(0, 50) + '...');
-          
-          // Get the actual socket objects
+// Get the actual socket objects
           const player1Socket = io.sockets.sockets.get(match.player1SocketId);
           const player2Socket = io.sockets.sockets.get(match.player2SocketId);
           
           const { player1Score, player2Score } = calculateScoresUpTo(match, questionIndex);
           const timeLimit = (match.timePerQuestion ?? 15);
           if (player1Socket && player1Socket.connected) {
-            console.log('Sending next_question to player 1:', match.player1SocketId);
-            player1Socket.emit('next_question', {
+player1Socket.emit('next_question', {
               questionIndex: match.currentQuestion,
               question: nextQuestion,
               player1Score,
@@ -1257,13 +1021,10 @@ io.on('connection', (socket) => {
               myPosition: 'player1',
               timeLimit
             });
-          } else {
-            console.log('Player 1 socket not found or disconnected:', match.player1SocketId);
           }
           
           if (player2Socket && player2Socket.connected) {
-            console.log('Sending next_question to player 2:', match.player2SocketId);
-            player2Socket.emit('next_question', {
+player2Socket.emit('next_question', {
               questionIndex: match.currentQuestion,
               question: nextQuestion,
               player1Score,
@@ -1273,22 +1034,15 @@ io.on('connection', (socket) => {
               myPosition: 'player2',
               timeLimit
             });
-          } else {
-            console.log('Player 2 socket not found or disconnected:', match.player2SocketId);
           }
           
           // Start timer for next question
           startQuestionTimer(matchId, match.currentQuestion, timeLimit);
           
         } else {
-          console.log('🏁 All questions answered, ending match');
-          endMatch(matchId);
+endMatch(matchId);
         }
       }, 1000); // 1 second delay between questions to ensure client is ready
-    } else {
-      console.log('⏳ Waiting for other player to answer...');
-      console.log('   - Player 1 answered:', !!p1Answered);
-      console.log('   - Player 2 answered:', !!p2Answered);
     }
   });
 
@@ -1297,8 +1051,7 @@ io.on('connection', (socket) => {
     const playerToRemove = players.find(p => p.socketId === socket.id);
     if (playerToRemove) {
       await queueManager.removeFromQueue(quizId, playerToRemove);
-      console.log(`Player left battle queue for quiz ${quizId}`);
-    }
+}
     socket.leave(`quiz_${quizId}`);
   });
 
@@ -1316,8 +1069,7 @@ io.on('connection', (socket) => {
     const roomSet = io.sockets.adapter.rooms.get(room);
     const playingCount = roomSet ? roomSet.size : 0;
     io.to(room).emit('live_quiz_playing_count', { sessionId, playingCount });
-    console.log(`📺 Live Quiz: socket ${socket.id} joined session ${sessionId}, playingCount=${playingCount}`);
-  });
+});
   socket.on('live_quiz_leave', (data) => {
     const sessionId = data?.sessionId || socket.liveQuizSessionId;
     if (sessionId) {
@@ -1327,23 +1079,20 @@ io.on('connection', (socket) => {
       const roomSet = io.sockets.adapter.rooms.get(room);
       const playingCount = roomSet ? roomSet.size : 0;
       io.to(room).emit('live_quiz_playing_count', { sessionId, playingCount });
-      console.log(`📺 Live Quiz: socket ${socket.id} left session ${sessionId}, playingCount=${playingCount}`);
-    }
+}
   });
   socket.on('live_quiz_broadcast_leaderboard', (data) => {
     const { sessionId, leaderboard, playingCount } = data || {};
     if (!sessionId) return;
     const room = LIVE_QUIZ_PREFIX + sessionId;
     io.to(room).emit('live_quiz_leaderboard', { sessionId, leaderboard, playingCount });
-    console.log(`📺 Live Quiz: broadcast leaderboard to session ${sessionId}`);
-  });
+});
   socket.on('live_quiz_broadcast_next_question', (data) => {
     const { sessionId, currentQuestion, session } = data || {};
     if (!sessionId) return;
     const room = LIVE_QUIZ_PREFIX + sessionId;
     io.to(room).emit('live_quiz_next_question', { sessionId, currentQuestion, session });
-    console.log(`📺 Live Quiz: broadcast next question to session ${sessionId}, index=${currentQuestion?.questionIndex ?? '?'}`);
-  });
+});
 
   // Always-on: join category room, server pushes questions/timer
   socket.on('live_quiz_join_category', async (data) => {
@@ -1352,9 +1101,7 @@ io.on('connection', (socket) => {
     const room = LIVE_QUIZ_CAT_PREFIX + categoryId;
     socket.join(room);
     socket.liveQuizCategoryId = categoryId;
-    console.log(`📺 Live Quiz: socket ${socket.id} joined category ${categoryId}`);
-
-    try {
+try {
       const session = await getOrCreatePlayingLiveQuizSession(categoryId);
       socket.liveQuizSessionId = session.id;
 
@@ -1394,8 +1141,7 @@ io.on('connection', (socket) => {
       io.to(room).emit('live_quiz_playing_count', { categoryId, playingCount });
       await ensureLiveQuizCategoryLoop(categoryId, io);
     } catch (e) {
-      console.error('[LiveQuiz] join_category failed:', e?.message || e);
-      socket.emit('room_error', { message: 'Failed to join live quiz' });
+socket.emit('room_error', { message: 'Failed to join live quiz' });
     }
   });
 
@@ -1414,13 +1160,12 @@ io.on('connection', (socket) => {
           data: { lastSeenAt: new Date(0) }
         });
       }
-    } catch (_) {}
+    } catch {}
 
     const leaderboard = await getLiveQuizLeaderboard(socket.liveQuizSessionId).catch(() => []);
     const playingCount = leaderboard.length;
     io.to(room).emit('live_quiz_playing_count', { categoryId, playingCount });
-    console.log(`📺 Live Quiz: socket ${socket.id} left category ${categoryId}, playingCount=${playingCount}`);
-  });
+});
 
   socket.on('live_quiz_refresh_leaderboard', async (data) => {
     const { categoryId, sessionId } = data || {};
@@ -1447,9 +1192,7 @@ io.on('connection', (socket) => {
           categoryId: cid,
           allRanks
         });
-      } catch (e) {
-        console.error('[LiveQuiz] refresh leaderboard failed:', e?.message || e);
-      }
+      } catch {}
     }, LIVE_QUIZ_REFRESH_DEBOUNCE_MS);
 
     liveQuizRefreshDebounce.set(debounceKey, { timeoutId, categoryId: cid });
@@ -1458,13 +1201,11 @@ io.on('connection', (socket) => {
   // Chat Events
   socket.on('join_chat', (chatId) => {
     socket.join(chatId);
-    console.log(`Socket ${socket.id} joined chat ${chatId}`);
-  });
+});
 
   // Enhanced Message Notifications
   socket.on('private_message', async (data) => {
-    console.log('📨 Received private_message event:', data);
-    const { message } = data;
+const { message } = data;
     
     // Handle both object and string formats for sender/receiver
     const receiverId = message.receiver?.id || message.receiverId;
@@ -1516,16 +1257,8 @@ io.on('connection', (socket) => {
         message.imageUrl = message.imageData;
         delete message.imageData; // Remove raw data to save bandwidth
 
-        console.log('✅ Image processed successfully:', {
-          format: imageFormat,
-          size: `${(imageSize / (1024 * 1024)).toFixed(2)}MB`,
-          sender: senderId,
-          receiver: receiverId
-        });
-
-      } catch (error) {
-        console.error('❌ Error processing image message:', error);
-        socket.emit('message_error', { 
+} catch (error) {
+socket.emit('message_error', { 
           error: 'Failed to process image. Please try again with a different image.',
           details: error.message
         });
@@ -1535,19 +1268,14 @@ io.on('connection', (socket) => {
     
     // Validate that we have both IDs
     if (!receiverId || !senderId) {
-      console.error('❌ Missing sender or receiver ID in private_message event:', { senderId, receiverId, message });
-      return;
+return;
     }
     
     // Create chat room ID for this conversation
     const chatId = [senderId, receiverId].sort().join('-');
-    console.log(`🔗 Chat room ID: ${chatId}`);
-
-    // Send message to the chat room (both sender and receiver will receive it if they are in this room)
+// Send message to the chat room (both sender and receiver will receive it if they are in this room)
     io.to(chatId).emit('new_message', message);
-    console.log(`✅ Message sent to chat room: ${chatId}`);
-    
-    // Send notification to the receiver's individual socket if they are online and not in the chat room
+// Send notification to the receiver's individual socket if they are online and not in the chat room
     const receiverSocketId = userSockets[receiverId];
     if (receiverSocketId) {
       // Check if the receiver's socket is already in the chat room
@@ -1559,21 +1287,14 @@ io.on('connection', (socket) => {
           message: message,
           unreadCount: 1
         });
-        console.log(`🔔 Notification sent to receiver ${receiverId} (not in chat room)`);
-      } else {
-        console.log(`ℹ️ Receiver ${receiverId} is in chat room, no separate notification needed.`);
-      }
-    } else {
-      console.log(`⚠️ User ${receiverId} is not connected, message will be delivered on next login.`);
+}
     }
   });
 
   // Message Read Status
   socket.on('mark_message_read', (data) => {
     const { messageId, readerId } = data;
-    console.log(`Marking message ${messageId} as read by ${readerId}`);
-    
-    // Emit to sender that message was read
+// Emit to sender that message was read
     const senderSocketId = userSockets[data.senderId];
     if (senderSocketId) {
       io.to(senderSocketId).emit('message_read_status', {
@@ -1601,32 +1322,22 @@ io.on('connection', (socket) => {
 
   socket.on('get_match_status', (data) => {
     const { matchId } = data;
-    console.log(`User requesting match status for: ${matchId}`);
-    console.log('Active matches:', Array.from(activeMatches.keys()));
-    
-    const match = activeMatches.get(matchId);
+const match = activeMatches.get(matchId);
     if (!match) {
-      console.log('Match not found, sending error');
-      socket.emit('match_not_found', { matchId });
+socket.emit('match_not_found', { matchId });
       return;
     }
     
-    console.log('Match found, status:', match.status);
-    console.log('Current question index:', match.currentQuestion);
-    console.log('Total questions:', match.totalQuestions);
-    
-    // Update socket IDs if they have changed
+// Update socket IDs if they have changed
     const user = socket.userId;
     if (user) {
       if (match.player1Id === user) {
         if (match.player1SocketId !== socket.id) {
-          console.log(`Updating player 1 socket ID: ${match.player1SocketId} -> ${socket.id}`);
-          match.player1SocketId = socket.id;
+match.player1SocketId = socket.id;
         }
       } else if (match.player2Id === user) {
         if (match.player2SocketId !== socket.id) {
-          console.log(`Updating player 2 socket ID: ${match.player2SocketId} -> ${socket.id}`);
-          match.player2SocketId = socket.id;
+match.player2SocketId = socket.id;
         }
       }
     }
@@ -1634,16 +1345,14 @@ io.on('connection', (socket) => {
     // Send current match status
     if (match.status === 'playing') {
       const currentQuestion = match.questions[match.currentQuestion];
-      console.log('Sending current question:', currentQuestion);
-      socket.emit('match_started', {
+socket.emit('match_started', {
         matchId,
         questionIndex: match.currentQuestion,
         question: currentQuestion,
         timeLimit: 15
       });
     } else if (match.status === 'finished') {
-      console.log('Match is finished, sending results');
-      // Calculate final results
+// Calculate final results
       let player1Score = 0;
       let player2Score = 0;
       
@@ -1711,37 +1420,25 @@ io.on('connection', (socket) => {
       };
       
       if (player1Socket && player1Socket.connected) {
-        console.log('Sending match_ended to player 1:', match.player1SocketId);
-        player1Socket.emit('match_ended', {
+player1Socket.emit('match_ended', {
           ...matchResult,
           myScore: player1Score,
           opponentScore: player2Score,
           myPosition: 'player1'
         });
-      } else {
-        console.log('Player 1 socket not found or disconnected:', match.player1SocketId);
       }
       
       if (player2Socket && player2Socket.connected) {
-        console.log('Sending match_ended to player 2:', match.player2SocketId);
-        player2Socket.emit('match_ended', {
+player2Socket.emit('match_ended', {
           ...matchResult,
           myScore: player2Score,
           opponentScore: player1Score,
           myPosition: 'player2'
         });
-      } else {
-        console.log('Player 2 socket not found or disconnected:', match.player2SocketId);
       }
       
-      console.log('✅ Match ended successfully');
-      console.log('   - Player 1 Score:', player1Score);
-      console.log('   - Player 2 Score:', player2Score);
-      console.log('   - Winner:', winner);
-      console.log('   - Is Draw:', player1Score === player2Score);
-    } else {
-      console.log('Match status is:', match.status, '- sending match_started anyway');
-      // If match is in 'starting' status, send the first question
+} else {
+// If match is in 'starting' status, send the first question
       const firstQuestion = match.questions[0];
       socket.emit('match_started', {
         matchId,
@@ -1753,17 +1450,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('ping', () => {
-    console.log('🏓 Received ping from socket:', socket.id);
-    socket.emit('pong');
-    console.log('🏓 Sent pong to socket:', socket.id);
-  });
+socket.emit('pong');
+});
 
   // Timetable reminder functionality
   socket.on('start_timetable_reminders', async (data) => {
     const { userId } = data;
-    console.log(`⏰ Starting timetable reminders for user ${userId}`);
-    
-    // Clear existing interval if any
+// Clear existing interval if any
     if (timetableReminderIntervals.has(userId)) {
       clearInterval(timetableReminderIntervals.get(userId));
     }
@@ -1772,9 +1465,7 @@ io.on('connection', (socket) => {
     const interval = setInterval(async () => {
       try {
         await checkTimetableReminders(userId);
-      } catch (error) {
-        console.error(`❌ Error checking timetable reminders for user ${userId}:`, error);
-      }
+      } catch {}
     }, 5 * 60 * 1000); // 5 minutes
     
     timetableReminderIntervals.set(userId, interval);
@@ -1787,9 +1478,7 @@ io.on('connection', (socket) => {
 
   socket.on('stop_timetable_reminders', (data) => {
     const { userId } = data;
-    console.log(`⏰ Stopping timetable reminders for user ${userId}`);
-    
-    if (timetableReminderIntervals.has(userId)) {
+if (timetableReminderIntervals.has(userId)) {
       clearInterval(timetableReminderIntervals.get(userId));
       timetableReminderIntervals.delete(userId);
     }
@@ -1800,9 +1489,7 @@ io.on('connection', (socket) => {
   // Live exam auto-end functionality
   socket.on('setup_exam_auto_end', async (data) => {
     const { examId, endTime } = data;
-    console.log(`⏰ Setting up auto-end for exam ${examId} at ${endTime}`);
-    
-    try {
+try {
       // Clear any existing interval for this exam
       if (liveExamAutoEndIntervals.has(examId)) {
         clearInterval(liveExamAutoEndIntervals.get(examId));
@@ -1814,15 +1501,13 @@ io.on('connection', (socket) => {
       const timeUntilEnd = endTimeDate.getTime() - now.getTime();
       
       if (timeUntilEnd <= 0) {
-        console.log(`   - Exam ${examId} has already ended, ending immediately`);
-        await checkAndEndExpiredExams();
+await checkAndEndExpiredExams();
         return;
       }
       
       // Set up timer for this specific exam
       const timer = setTimeout(async () => {
-        console.log(`⏰ Auto-ending exam ${examId}`);
-        await checkAndEndExpiredExams();
+await checkAndEndExpiredExams();
         
         // Clear the interval reference
         if (liveExamAutoEndIntervals.has(examId)) {
@@ -1831,17 +1516,14 @@ io.on('connection', (socket) => {
       }, timeUntilEnd);
       
       liveExamAutoEndIntervals.set(examId, timer);
-      console.log(`   - Auto-end timer set for exam ${examId} in ${Math.floor(timeUntilEnd / 1000)} seconds`);
-      
-      socket.emit('exam_auto_end_setup', { 
+socket.emit('exam_auto_end_setup', { 
         examId, 
         success: true, 
         timeUntilEnd: Math.floor(timeUntilEnd / 1000) 
       });
       
     } catch (error) {
-      console.error(`❌ Error setting up auto-end for exam ${examId}:`, error);
-      socket.emit('exam_auto_end_setup', { 
+socket.emit('exam_auto_end_setup', { 
         examId, 
         success: false, 
         error: error.message 
@@ -1851,27 +1533,17 @@ io.on('connection', (socket) => {
 
   socket.on('cancel_exam_auto_end', (data) => {
     const { examId } = data;
-    console.log(`⏰ Cancelling auto-end for exam ${examId}`);
-    
-    if (liveExamAutoEndIntervals.has(examId)) {
+if (liveExamAutoEndIntervals.has(examId)) {
       clearTimeout(liveExamAutoEndIntervals.get(examId));
       liveExamAutoEndIntervals.delete(examId);
-      console.log(`   - Auto-end cancelled for exam ${examId}`);
-    }
+}
     
     socket.emit('exam_auto_end_cancelled', { examId, success: true });
   });
 
   // Test event to verify socket communication
   socket.on('test_answer', (data) => {
-    console.log('🧪 Test answer event received:');
-    console.log('   - Socket ID:', socket.id);
-    console.log('   - User ID:', socket.userId);
-    console.log('   - Data:', data);
-    console.log('   - Data type:', typeof data);
-    console.log('   - Data stringified:', JSON.stringify(data, null, 2));
-    
-    // Send back a test response
+// Send back a test response
     socket.emit('test_answer_response', {
       received: data,
       timestamp: new Date().toISOString(),
@@ -1881,27 +1553,21 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', async () => {
-    console.log('🔌 Client disconnected:', socket.id);
-    console.log('   - Time:', new Date().toISOString());
-    console.log('   - Total connections:', io.engine.clientsCount);
-
-    // Live Quiz: leave rooms and update playing count
+// Live Quiz: leave rooms and update playing count
     if (socket.liveQuizSessionId) {
       const room = LIVE_QUIZ_PREFIX + socket.liveQuizSessionId;
       socket.leave(room);
       const roomSet = io.sockets.adapter.rooms.get(room);
       const playingCount = roomSet ? roomSet.size : 0;
       io.to(room).emit('live_quiz_playing_count', { sessionId: socket.liveQuizSessionId, playingCount });
-      console.log(`📺 Live Quiz: socket left session ${socket.liveQuizSessionId}, playingCount=${playingCount}`);
-    }
+}
     if (socket.liveQuizCategoryId) {
       const catRoom = LIVE_QUIZ_CAT_PREFIX + socket.liveQuizCategoryId;
       socket.leave(catRoom);
       const roomSet = io.sockets.adapter.rooms.get(catRoom);
       const playingCount = roomSet ? roomSet.size : 0;
       io.to(catRoom).emit('live_quiz_playing_count', { categoryId: socket.liveQuizCategoryId, playingCount });
-      console.log(`📺 Live Quiz: socket left category ${socket.liveQuizCategoryId}, playingCount=${playingCount}`);
-    }
+}
     // Mark inactive quickly for leaderboard purposes
     try {
       if (socket.userId && socket.liveQuizSessionId) {
@@ -1910,7 +1576,7 @@ io.on('connection', (socket) => {
           data: { lastSeenAt: new Date(0) }
         });
       }
-    } catch (_) {}
+    } catch {}
     
     // Get userId - from mapping or socket (socket.userId set by register_user)
     let userId = Object.keys(userSockets).find(key => userSockets[key] === socket.id);
@@ -1922,21 +1588,17 @@ io.on('connection', (socket) => {
       if (match && typeof match === 'object') {
         const matchId = match.id;
         const opponentId = match.player1Id === userId ? match.player2Id : match.player1Id;
-        console.log(`🏴 Player ${userId} disconnected during match - forfeit. Opponent ${opponentId} wins`);
-        endMatch(matchId, { forfeitWinner: opponentId });
+endMatch(matchId, { forfeitWinner: opponentId });
       }
     }
     
     if (userId) {
       delete userSockets[userId];
-      console.log(`User ${userId} disconnected`);
-      
-      // Clean up timetable reminder interval
+// Clean up timetable reminder interval
       if (timetableReminderIntervals.has(userId)) {
         clearInterval(timetableReminderIntervals.get(userId));
         timetableReminderIntervals.delete(userId);
-        console.log(`🧹 Cleaned up timetable reminder interval for user ${userId}`);
-      }
+}
     }
     
     // Remove from correct queue (stored when joining)
@@ -1945,8 +1607,7 @@ io.on('connection', (socket) => {
     const playerToRemove = players.find(p => p.socketId === socket.id);
     if (playerToRemove) {
       await queueManager.removeFromQueue(queueId, playerToRemove);
-      console.log(`Removed disconnected player from quiz ${queueId}`);
-    }
+}
   });
 
   // Debug: Clear stuck matches for a user
@@ -1957,8 +1618,7 @@ io.on('connection', (socket) => {
       return;
     }
     
-    console.log(`🧪 DEBUG: Clearing matches for user ${userId}`);
-    const matchesToDelete = [];
+const matchesToDelete = [];
     activeMatches.forEach((match, matchId) => {
       if (typeof match === 'object' && (match.player1Id === userId || match.player2Id === userId)) {
         matchesToDelete.push({ matchId, match });
@@ -1969,8 +1629,7 @@ io.on('connection', (socket) => {
       playerToMatchId.delete(match.player1Id);
       playerToMatchId.delete(match.player2Id);
       activeMatches.delete(matchId);
-      console.log(`🗑️ Deleted match ${matchId} for user ${userId}`);
-    });
+});
     
     socket.emit('debug_result', {
       success: true,
@@ -1996,30 +1655,23 @@ io.on('connection', (socket) => {
       matches: matchesInfo
     });
     
-    console.log(`📋 DEBUG: Active matches info sent. Total: ${activeMatches.size}`);
-  });
+});
 
   // Test wallet update endpoint
   socket.on('test_wallet_update', async (data) => {
     const { userId, amount } = data;
-    console.log(`🧪 Testing wallet update for user ${userId} with amount ${amount}`);
-    
-    try {
+try {
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { id: true, name: true, wallet: true }
       });
       
-      console.log(`💰 Current wallet:`, user);
-      
-      const updatedUser = await prisma.user.update({
+const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: { wallet: { increment: amount } }
       });
       
-      console.log(`✅ Wallet updated: ${user?.wallet} → ${updatedUser.wallet}`);
-      
-      socket.emit('test_wallet_result', {
+socket.emit('test_wallet_result', {
         success: true,
         oldBalance: user?.wallet,
         newBalance: updatedUser.wallet,
@@ -2027,8 +1679,7 @@ io.on('connection', (socket) => {
       });
       
     } catch (error) {
-      console.error('❌ Test wallet update failed:', error);
-      socket.emit('test_wallet_result', {
+socket.emit('test_wallet_result', {
         success: false,
         error: error.message
       });
@@ -2037,8 +1688,7 @@ io.on('connection', (socket) => {
 
   // Debug events for active matches
   socket.on('debug_clear_matches', () => {
-    console.log('🧪 DEBUG: Clearing all active matches via socket event');
-    clearAllActiveMatches();
+clearAllActiveMatches();
     socket.emit('debug_result', { 
       message: 'All active matches cleared',
       activeMatchesCount: activeMatches.size 
@@ -2046,10 +1696,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('debug_show_matches', () => {
-    console.log('🧪 DEBUG: Showing current active matches');
-    const matches = Array.from(activeMatches.keys());
-    console.log('   - Active matches:', matches);
-    socket.emit('debug_result', { 
+const matches = Array.from(activeMatches.keys());
+socket.emit('debug_result', { 
       message: 'Current active matches',
       activeMatches: matches,
       count: matches.length 
@@ -2059,9 +1707,7 @@ io.on('connection', (socket) => {
   // Debug events for questions and categories
   socket.on('debug_check_category', async (data) => {
     const { categoryId } = data;
-    console.log('🧪 DEBUG: Checking category questions for:', categoryId);
-    
-    try {
+try {
       // Check category
       const category = await prisma.questionCategory.findUnique({
         where: { id: categoryId },
@@ -2101,8 +1747,7 @@ io.on('connection', (socket) => {
       });
       
     } catch (error) {
-      console.error('❌ Error checking category:', error);
-      socket.emit('debug_result', { 
+socket.emit('debug_result', { 
         message: 'Error checking category',
         error: error.message,
         errorType: 'category_check'
@@ -2113,9 +1758,7 @@ io.on('connection', (socket) => {
   // Debug events for transactions
   socket.on('debug_check_transactions', async (data) => {
     const { userId } = data;
-    console.log('🧪 DEBUG: Checking transactions for user:', userId);
-    
-    try {
+try {
       // Get user details
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -2147,8 +1790,7 @@ io.on('connection', (socket) => {
       });
       
     } catch (error) {
-      console.error('❌ Error checking transactions:', error);
-      socket.emit('debug_result', { 
+socket.emit('debug_result', { 
         message: 'Error checking transactions',
         error: error.message,
         errorType: 'transaction_check'
@@ -2159,9 +1801,7 @@ io.on('connection', (socket) => {
   // Debug events for category questions
   socket.on('debug_check_category_questions', async (data) => {
     const { categoryId } = data;
-    console.log('🧪 DEBUG: Checking questions in category:', categoryId);
-    
-    try {
+try {
       // Get category details
       const category = await prisma.questionCategory.findUnique({
         where: { id: categoryId },
@@ -2218,8 +1858,7 @@ io.on('connection', (socket) => {
       });
       
     } catch (error) {
-      console.error('❌ Error checking category questions:', error);
-      socket.emit('debug_result', { 
+socket.emit('debug_result', { 
         message: 'Error checking category questions',
         error: error.message,
         errorType: 'category_questions_check'
@@ -2229,9 +1868,7 @@ io.on('connection', (socket) => {
 
   // Debug event to check all categories and their question counts
   socket.on('debug_check_all_categories', async () => {
-    console.log('🧪 DEBUG: Checking all categories and their questions');
-    
-    try {
+try {
       // Get all categories with question counts
       const categories = await prisma.questionCategory.findMany({
         select: {
@@ -2282,8 +1919,7 @@ io.on('connection', (socket) => {
       });
       
     } catch (error) {
-      console.error('❌ Error checking all categories:', error);
-      socket.emit('debug_result', { 
+socket.emit('debug_result', { 
         message: 'Error checking all categories',
         error: error.message,
         errorType: 'all_categories_check'
@@ -2294,9 +1930,7 @@ io.on('connection', (socket) => {
   // Debug event to check questions in a specific category with isActive details
   socket.on('debug_check_category_details', async (data) => {
     const { categoryId } = data;
-    console.log('🧪 DEBUG: Checking detailed questions in category:', categoryId);
-    
-    try {
+try {
       // Get category details
       const category = await prisma.questionCategory.findUnique({
         where: { id: categoryId },
@@ -2340,8 +1974,7 @@ io.on('connection', (socket) => {
       });
       
     } catch (error) {
-      console.error('❌ Error checking category details:', error);
-      socket.emit('debug_result', { 
+socket.emit('debug_result', { 
         message: 'Error checking category details',
         error: error.message,
         errorType: 'category_details_check'
@@ -2364,9 +1997,7 @@ io.on('connection', (socket) => {
       const roomSockets = io.sockets.adapter.rooms.get(room) || new Set();
       const peers = Array.from(roomSockets).filter((id) => id !== socket.id);
       socket.emit('webrtc_peers', { peers });
-    } catch (error) {
-      console.error('Error in webrtc_join:', error);
-    }
+    } catch {}
   });
 
   // Chat message handler (for other features, not spy game)
@@ -2390,8 +2021,7 @@ io.on('connection', (socket) => {
       type: 'chat'
     });
     
-    console.log(`💬 Chat message from ${player.name}: ${message}`);
-  });
+});
 
   // Typing indicators
   socket.on('typing', (data) => {
@@ -2433,8 +2063,7 @@ io.on('connection', (socket) => {
     
     // Check if it's the player's turn
     if (gameData.currentTurn !== gameData.players.findIndex(p => p.userId === player.userId)) {
-      console.log(`❌ Not ${player.name}'s turn to describe`);
-      return;
+return;
     }
     
     // Store the description
@@ -2448,9 +2077,7 @@ io.on('connection', (socket) => {
       currentTurn: gameData.currentTurn
     });
     
-    console.log(`📝 Description from ${player.name}: ${description}`);
-    
-    // Move to next player
+// Move to next player
     const nextTurn = gameData.currentTurn + 1;
     if (nextTurn < gameData.players.length) {
       gameData.currentTurn = nextTurn;
@@ -2499,9 +2126,7 @@ io.on('connection', (socket) => {
   // Get spy game data by room code
   socket.on('get_spy_game_data', async (data) => {
     const { roomCode, userId } = data;
-    console.log(`🔍 get_spy_game_data event received for room code: ${roomCode}`);
-    
-    try {
+try {
       // Find game by room code
       const game = await prisma.spyGame.findUnique({
         where: { roomCode },
@@ -2509,8 +2134,7 @@ io.on('connection', (socket) => {
       });
       
       if (!game) {
-        console.log(`❌ Game not found with room code: ${roomCode}`);
-        socket.emit('spy_game_error', { message: 'Game not found' });
+socket.emit('spy_game_error', { message: 'Game not found' });
         return;
       }
       
@@ -2535,14 +2159,12 @@ io.on('connection', (socket) => {
           currentTurn: game.currentTurn
         };
         spyGames.set(game.id, gameData);
-        console.log(`🆕 Created game data from database for room: ${roomCode}`);
-      }
+}
       
       // Check if user is already in the game
       const existingPlayer = gameData.players.find(p => p.userId === userId);
       if (!existingPlayer) {
-        console.log(`❌ User ${userId} not found in game ${roomCode}`);
-        socket.emit('spy_game_error', { message: 'You are not in this game' });
+socket.emit('spy_game_error', { message: 'You are not in this game' });
         return;
       }
       
@@ -2564,15 +2186,11 @@ io.on('connection', (socket) => {
       if (gameData.currentPhase === 'VOTING') {
         try {
           socket.emit('voting_started', { players: gameData.players });
-          console.log(`🗳️ Sent voting_started via get_spy_game_data to user ${userId}`);
-        } catch {}
+} catch {}
       }
       
-      console.log(`✅ Sent game data to user ${userId} for room ${roomCode}`);
-      
-    } catch (error) {
-      console.error('❌ Error getting spy game data:', error);
-      socket.emit('spy_game_error', { message: 'Failed to get game data: ' + error.message });
+} catch (error) {
+socket.emit('spy_game_error', { message: 'Failed to get game data: ' + error.message });
     }
   });
 
@@ -2739,7 +2357,7 @@ io.on('connection', (socket) => {
                   }
                 }, 1000);
               }, 5000);
-            } catch (e) {}
+            } catch {}
           }, 12000);
         }
         // Wait for category vote to complete
@@ -2773,10 +2391,7 @@ io.on('connection', (socket) => {
       // Clear any previous votes for this game (fresh round)
       try {
         await prisma.spyGameVote.deleteMany({ where: { gameId } });
-        console.log(`🧹 Cleared previous votes for game ${gameId}`);
-      } catch (e) {
-        console.log('⚠️ Could not clear previous votes (may be none):', e?.message || e);
-      }
+} catch {}
       
       // Update game status
       await prisma.spyGame.update({
@@ -2792,11 +2407,8 @@ io.on('connection', (socket) => {
       gameData.currentTurn = 0;
       
       // Send words to players
-      console.log(`🎮 Sending words to ${gameData.players.length} players`);
-      gameData.players.forEach((player, index) => {
-        console.log(`🎮 Player ${player.userId} (socket: ${player.socketId}) - Word: ${playerWords[index].word}, IsSpy: ${playerWords[index].isSpy}`);
-        
-        // Resolve the most up-to-date socket for this player
+gameData.players.forEach((player, index) => {
+// Resolve the most up-to-date socket for this player
         let targetSocket = null;
         if (player.socketId) {
           targetSocket = io.sockets.sockets.get(player.socketId);
@@ -2821,24 +2433,15 @@ io.on('connection', (socket) => {
               isSpy: playerWords[index].isSpy,
               gameData
             });
-            console.log(`✅ Sent word to player ${player.userId}`);
-          } else {
-            console.log(`❌ Socket not found for player ${player.userId} (socketId: ${player.socketId})`);
-        }
+}
       });
       
       // Fallback: Send to all players in the room
-      console.log(`🎮 Broadcasting game start to all players in room spy_game_${gameId}`);
-      
-      // Get all sockets in the room
+// Get all sockets in the room
       const roomSockets = io.sockets.adapter.rooms.get(`spy_game_${gameId}`);
       if (roomSockets) {
-        console.log(`🎮 Found ${roomSockets.size} sockets in room spy_game_${gameId}`);
-        roomSockets.forEach(socketId => {
-          console.log(`🎮 Socket in room: ${socketId}`);
-        });
-      } else {
-        console.log(`❌ No sockets found in room spy_game_${gameId}`);
+roomSockets.forEach(socketId => {
+});
       }
       
       io.to(`spy_game_${gameId}`).emit('spy_game_started_broadcast', {
@@ -2846,9 +2449,7 @@ io.on('connection', (socket) => {
         playerWords
       });
       
-      console.log(`🎮 Spy game ${gameId} started`);
-      
-      // Start description phase after 5 seconds
+// Start description phase after 5 seconds
       setTimeout(() => {
         gameData.currentPhase = 'DESCRIBING';
         gameData.currentTurn = 0;
@@ -2875,8 +2476,7 @@ io.on('connection', (socket) => {
           // Refresh current sockets in room for debugging
           try {
             const room = io.sockets.adapter.rooms.get(`spy_game_${gameId}`) || new Set();
-            console.log(`🎯 Running turn ${turnIndex}. Room sockets:`, Array.from(room));
-          } catch {}
+} catch {}
           gameData.currentTurn = turnIndex;
           gameData.timeLeft = 10;
           io.to(`spy_game_${gameId}`).emit('turn_started', { gameId: gameId, currentTurn: turnIndex, timeLeft: 10 });
@@ -2903,8 +2503,7 @@ io.on('connection', (socket) => {
           const perPlayerMs = 11000; // 10s turn + buffer
           gameData.votingWatchdog = setTimeout(() => {
             if (gameData.currentPhase !== 'VOTING') {
-              console.log('⚠️ Watchdog forcing voting phase for game', gameId);
-              gameData.currentPhase = 'VOTING';
+gameData.currentPhase = 'VOTING';
               io.to(`spy_game_${gameId}`).emit('voting_started', { players: gameData.players });
             }
           }, gameData.players.length * perPlayerMs + bufferMs);
@@ -2912,8 +2511,7 @@ io.on('connection', (socket) => {
       }, 5000);
       
     } catch (error) {
-      console.error('Error starting spy game:', error);
-      socket.emit('spy_game_error', { message: 'Failed to start game' });
+socket.emit('spy_game_error', { message: 'Failed to start game' });
     }
   });
 
@@ -2947,8 +2545,7 @@ io.on('connection', (socket) => {
     
     // Check if it's the player's turn
     if (gameData.currentTurn !== gameData.players.findIndex(p => p.userId === player.userId)) {
-      console.log(`❌ Not ${player.name}'s turn to describe`);
-      return;
+return;
     }
     
     // Store the description
@@ -2962,8 +2559,7 @@ io.on('connection', (socket) => {
       currentTurn: gameData.currentTurn
     });
     
-    console.log(`📝 Description from ${player.name}: ${description}`);
-    // Do not auto-advance here; the generic turn runner controls progression
+// Do not auto-advance here; the generic turn runner controls progression
   });
 
   socket.on('submit_vote', async (data) => {
@@ -2974,12 +2570,9 @@ io.on('connection', (socket) => {
     
     try {
       if (!socket.userId) {
-        console.log('❌ submit_vote: Missing socket.userId; vote ignored');
-        return;
+return;
       }
-      console.log(`🗳️ submit_vote received - voter: ${socket.userId}, votedFor: ${votedForId}, gameId: ${gameId}`);
-      
-      // Save vote to database
+// Save vote to database
       const existing = await prisma.spyGameVote.findFirst({
         where: { gameId, voterId: socket.userId }
       });
@@ -2988,13 +2581,11 @@ io.on('connection', (socket) => {
           where: { id: existing.id },
           data: { votedForId }
         });
-        console.log(`🔁 Updated vote for voter ${socket.userId} -> ${votedForId}`);
-      } else {
+} else {
         await prisma.spyGameVote.create({
           data: { gameId, voterId: socket.userId, votedForId }
         });
-        console.log(`✅ Created vote for voter ${socket.userId} -> ${votedForId}`);
-      }
+}
       
       // Notify all players about the vote
       io.to(`spy_game_${gameId}`).emit('vote_submitted', {
@@ -3008,15 +2599,12 @@ io.on('connection', (socket) => {
       });
       const uniqueVoters = new Set(votes.map(v => v.voterId)).size;
       const expectedVoters = gameData.players.length;
-      console.log(`🧮 Votes tally - uniqueVoters: ${uniqueVoters}/${expectedVoters}, totalRows: ${votes.length}`);
-      if (uniqueVoters >= expectedVoters) {
+if (uniqueVoters >= expectedVoters) {
         // End game and reveal results
         await endSpyGame(gameId);
       }
       
-    } catch (error) {
-      console.error('Error submitting vote:', error);
-    }
+    } catch {}
   });
 
   socket.on('webrtc_join', (data) => {
@@ -3034,7 +2622,7 @@ io.on('connection', (socket) => {
 
       // Notify others that this user joined
       socket.to(room).emit('webrtc_user_joined', { socketId: socket.id });
-    } catch (e) {}
+    } catch {}
   });
 
   socket.on('webrtc_offer', (data) => {
@@ -3068,8 +2656,7 @@ io.on('connection', (socket) => {
 // Helper Functions
 async function endSpyGame(gameId) {
   try {
-    console.log(`🏁 endSpyGame called for gameId=${gameId}`);
-    const gameData = spyGames.get(gameId);
+const gameData = spyGames.get(gameId);
     if (!gameData) return;
 
     // Fetch all votes for this game
@@ -3128,8 +2715,7 @@ async function endSpyGame(gameId) {
     };
 
     // Broadcast results to room and directly to each player socket as a fallback
-    console.log(`📣 Emitting spy_game_ended to room spy_game_${gameId} with winner=${winner}, votedOut=${votedOutUserId}, spy=${spyUserId}`);
-    io.to(`spy_game_${gameId}`).emit('spy_game_ended', payload);
+io.to(`spy_game_${gameId}`).emit('spy_game_ended', payload);
     for (const player of gameData.players) {
       if (player.socketId) {
         try { io.to(player.socketId).emit('spy_game_ended', payload); } catch {}
@@ -3138,15 +2724,12 @@ async function endSpyGame(gameId) {
 
     // Schedule cleanup after reveal so clients can see results
     scheduleSpyGameCleanup(gameId, 12000);
-  } catch (error) {
-    console.error('❌ Error ending spy game:', error);
-  }
+  } catch {}
 }
 
 function scheduleSpyGameCleanup(gameId, delayMs = 10000) {
   try {
-    console.log(`🧹 Scheduling cleanup for game ${gameId} in ${delayMs}ms`);
-    setTimeout(() => {
+setTimeout(() => {
       try {
         const gameData = spyGames.get(gameId);
         const room = `spy_game_${gameId}`;
@@ -3164,87 +2747,64 @@ function scheduleSpyGameCleanup(gameId, delayMs = 10000) {
 
         // Remove game from memory
         spyGames.delete(gameId);
-        console.log(`🧼 Cleaned up game ${gameId}. Active games in memory: ${spyGames.size}`);
-      } catch (e) {
-        console.log('⚠️ Cleanup error:', e?.message || e);
-      }
+} catch {}
     }, delayMs);
-  } catch (e) {
-    console.log('⚠️ Failed to schedule cleanup:', e?.message || e);
-  }
+  } catch {}
 }
 async function generateQuestions(quizData) {
-  console.log('🔍 Generating questions for quiz data:', quizData);
-  
-  try {
+try {
     const { categoryId, questionCount = 5 } = quizData;
     
-    console.log(`🔍 Looking for questions in category: ${categoryId}`);
-    console.log(`🔍 Question count needed: ${questionCount}`);
-    
-    // First check if category exists
+// First check if category exists
     const category = await prisma.questionCategory.findUnique({
       where: { id: categoryId },
       select: { id: true, name: true }
     });
     
     if (!category) {
-      console.log(`❌ Category not found: ${categoryId}`);
-      throw new Error(`Category ${categoryId} not found`);
+throw new Error(`Category ${categoryId} not found`);
     }
     
-    console.log(`✅ Category found: ${category.name} (${category.id})`);
-    
-    // Try QuestionBankItem first
-    console.log(`🔍 Checking QuestionBankItem table...`);
-    let totalQuestions = await prisma.questionBankItem.count({
+// Try QuestionBankItem first
+let totalQuestions = await prisma.questionBankItem.count({
       where: {
         categoryId: categoryId,
         isActive: true
       }
     });
     
-    console.log(`📊 Total questions in QuestionBankItem (isActive=true): ${totalQuestions}`);
-    
-    // If no active questions found, check all questions regardless of isActive status
+// If no active questions found, check all questions regardless of isActive status
     if (totalQuestions === 0) {
-      console.log(`🔍 No active questions found, checking all questions in QuestionBankItem...`);
-      totalQuestions = await prisma.questionBankItem.count({
+totalQuestions = await prisma.questionBankItem.count({
         where: {
           categoryId: categoryId
         }
       });
-      console.log(`📊 Total questions in QuestionBankItem (all): ${totalQuestions}`);
-    }
+}
     
     let questions = [];
     let sourceTable = 'QuestionBankItem';
     
     if (totalQuestions === 0) {
       // Try Question table as fallback
-      console.log(`🔍 No questions in QuestionBankItem, checking Question table...`);
-      totalQuestions = await prisma.question.count({
+totalQuestions = await prisma.question.count({
         where: {
           categoryId: categoryId
         }
       });
       
-      console.log(`📊 Total questions in Question table: ${totalQuestions}`);
-      sourceTable = 'Question';
+sourceTable = 'Question';
     }
     
     if (totalQuestions === 0) {
-      console.log(`❌ No questions found in either table for category ${category.name}`);
-      throw new Error(`No questions found for category ${category.name}`);
+throw new Error(`No questions found for category ${category.name}`);
     }
     
     // Fetch questions from the appropriate table
     if (sourceTable === 'QuestionBankItem') {
       if (totalQuestions <= questionCount) {
         // If we have fewer questions than needed, take all
-        console.log(`📝 Taking all ${totalQuestions} questions from QuestionBankItem`);
-        
-        // First try to get active questions
+// First try to get active questions
         questions = await prisma.questionBankItem.findMany({
           where: {
             categoryId: categoryId,
@@ -3261,8 +2821,7 @@ async function generateQuestions(quizData) {
         
         // If no active questions, get all questions
         if (questions.length === 0) {
-          console.log(`📝 No active questions, taking all questions from QuestionBankItem`);
-          questions = await prisma.questionBankItem.findMany({
+questions = await prisma.questionBankItem.findMany({
             where: {
               categoryId: categoryId
             },
@@ -3277,9 +2836,7 @@ async function generateQuestions(quizData) {
         }
       } else {
         // Use random selection for variety
-        console.log(`📝 Selecting ${questionCount} random questions from ${totalQuestions} available in QuestionBankItem`);
-        
-        // First try to get random active questions
+// First try to get random active questions
         questions = await prisma.$queryRaw`
           SELECT id, text, options, correct, isActive
           FROM QuestionBankItem 
@@ -3290,8 +2847,7 @@ async function generateQuestions(quizData) {
         
         // If no active questions found, get random questions regardless of isActive
         if (questions.length === 0) {
-          console.log(`📝 No active questions found, selecting random questions regardless of isActive status`);
-          questions = await prisma.$queryRaw`
+questions = await prisma.$queryRaw`
             SELECT id, text, options, correct, isActive
             FROM QuestionBankItem 
             WHERE categoryId = ${categoryId} 
@@ -3304,8 +2860,7 @@ async function generateQuestions(quizData) {
       // Use Question table
       if (totalQuestions <= questionCount) {
         // If we have fewer questions than needed, take all
-        console.log(`📝 Taking all ${totalQuestions} questions from Question table`);
-        questions = await prisma.question.findMany({
+questions = await prisma.question.findMany({
           where: {
             categoryId: categoryId
           },
@@ -3318,9 +2873,7 @@ async function generateQuestions(quizData) {
         });
       } else {
         // Use random selection for variety
-        console.log(`📝 Selecting ${questionCount} random questions from ${totalQuestions} available in Question table`);
-        
-        // Get random questions using raw SQL for better randomization
+// Get random questions using raw SQL for better randomization
         questions = await prisma.$queryRaw`
           SELECT id, text, options, correctAnswer 
           FROM Question 
@@ -3331,16 +2884,6 @@ async function generateQuestions(quizData) {
       }
     }
     
-    console.log(`✅ Found ${questions.length} questions from ${sourceTable} for category ${category.name}`);
-    
-    // Log first few questions for debugging
-    questions.slice(0, 3).forEach((q, index) => {
-      console.log(`📝 Question ${index + 1} (from ${sourceTable}):`);
-      console.log(`   - Text: ${q.text.substring(0, 100)}...`);
-      console.log(`   - Options: ${JSON.stringify(q.options)}`);
-      console.log(`   - Correct Answer: ${sourceTable === 'QuestionBankItem' ? q.correct : q.correctAnswer}`);
-    });
-    
     // Transform questions to match expected format
     const transformedQuestions = questions.map((q, index) => ({
       id: q.id,
@@ -3350,22 +2893,10 @@ async function generateQuestions(quizData) {
       questionIndex: index
     }));
     
-    console.log('📝 Transformed questions:', transformedQuestions.map(q => ({
-      text: q.text.substring(0, 50) + '...',
-      options: q.options,
-      correct: q.correct
-    })));
-    
-    return transformedQuestions;
+return transformedQuestions;
     
   } catch (error) {
-    console.error('❌ Error generating questions:', error);
-    console.error('❌ Error details:', {
-      message: error.message,
-      stack: error.stack
-    });
-    
-    // Fallback: Return sample questions
+// Fallback: Return sample questions
     const fallbackQuestions = [
       {
         id: 'fallback_1',
@@ -3404,9 +2935,7 @@ async function generateQuestions(quizData) {
       }
     ];
     
-    console.log('⚠️ Using fallback questions due to error');
-    console.log('⚠️ Fallback questions:', fallbackQuestions);
-    return fallbackQuestions;
+return fallbackQuestions;
   }
 }
 
@@ -3419,34 +2948,21 @@ async function tryMatchPlayers(quizId) {
   
   try {
     const players = await queueManager.getQueue(quizId);
-    console.log(`Trying to match players for quizId: ${quizId}`);
-    console.log('Players in queue:', players);
-    
-    if (!players || players.length < 2) {
-      console.log(`Not enough players to match. Players: ${players?.length || 0}`);
-      return;
+if (!players || players.length < 2) {
+return;
     }
     
     // Sort by join time (FIFO)
   players.sort((a, b) => a.joinedAt - b.joinedAt);
-  console.log('Sorted players:', players.map(p => ({ userId: p.userId, joinedAt: p.joinedAt })));
-  
-  while (players.length >= 2) {
+while (players.length >= 2) {
     const player1 = players.shift();
     const player2 = players.shift();
     
-    console.log(`Matching players ${player1.userId} and ${player2.userId} for quiz ${quizId}`);
-    
-    // Check if same user is trying to match with themselves
+// Check if same user is trying to match with themselves
     if (player1.userId === player2.userId) {
-      console.log(`⚠️ WARNING: Same user ${player1.userId} matched with themselves!`);
-      console.log(`   - Socket 1: ${player1.socketId}`);
-      console.log(`   - Socket 2: ${player2.socketId}`);
-      
-      // Put player2 back in queue and continue with next player
+// Put player2 back in queue and continue with next player
       players.unshift(player2);
-      console.log(`🔄 Put second player back in queue due to same user match`);
-      continue;
+continue;
     }
     
     // Check if either player is already in an active match
@@ -3454,26 +2970,18 @@ async function tryMatchPlayers(quizId) {
     const player2InMatch = isPlayerInActiveMatch(player2.userId);
     
     if (player1InMatch || player2InMatch) {
-      console.log(`⚠️ WARNING: Player already in active match!`);
-      console.log(`   - Player 1 (${player1.userId}) in match: ${player1InMatch}`);
-      console.log(`   - Player 2 (${player2.userId}) in match: ${player2InMatch}`);
-      
-      if (player1InMatch) {
-        console.log(`   - Player 1's match: ${playerToMatchId.get(player1.userId)}`);
-      }
+if (player1InMatch) {
+}
       if (player2InMatch) {
-        console.log(`   - Player 2's match: ${playerToMatchId.get(player2.userId)}`);
-      }
+}
       
       // Remove active match players from queue instead of putting them back
       if (player1InMatch) {
         await queueManager.removeFromQueue(quizId, player1);
-        console.log(`🗑️ Removed player 1 (${player1.userId}) from queue - already in active match`);
-      }
+}
       if (player2InMatch) {
         await queueManager.removeFromQueue(quizId, player2);
-        console.log(`🗑️ Removed player 2 (${player2.userId}) from queue - already in active match`);
-      }
+}
       
       // Only put non-active players back in queue
       if (!player1InMatch) {
@@ -3483,8 +2991,7 @@ async function tryMatchPlayers(quizId) {
         players.unshift(player2);
       }
       
-      console.log(`🔄 Processed active match conflict - continuing with next players`);
-      continue;
+continue;
     }
     
     const entryFee = player1.quizData.entryFee || 10;
@@ -3499,12 +3006,10 @@ async function tryMatchPlayers(quizId) {
       p1Wallet = u1?.wallet ?? 0;
       p2Wallet = u2?.wallet ?? 0;
     } catch (e) {
-      console.error('❌ Error fetching wallet for balance check:', e);
-      continue; // Keep both in queue, try next pair
+continue; // Keep both in queue, try next pair
     }
     if (p1Wallet < entryFee || p2Wallet < entryFee) {
-      console.log(`⚠️ Insufficient balance before match - P1: ₹${p1Wallet}, P2: ₹${p2Wallet}, required: ₹${entryFee}`);
-      const player1Socket = io.sockets.sockets.get(player1.socketId);
+const player1Socket = io.sockets.sockets.get(player1.socketId);
       const player2Socket = io.sockets.sockets.get(player2.socketId);
       if (player1Socket?.connected) player1Socket.emit('matchmaking_error', { message: 'Insufficient balance. Please recharge and try again.' });
       if (player2Socket?.connected) player2Socket.emit('matchmaking_error', { message: 'Insufficient balance. Please recharge and try again.' });
@@ -3519,9 +3024,7 @@ async function tryMatchPlayers(quizId) {
     await queueManager.removeFromQueue(quizId, player2);
     
     // Deduct entry fees from both players
-    console.log(`💰 Deducting entry fees: ₹${entryFee} from each player`);
-    
-    try {
+try {
       // Use transaction to ensure data consistency
       await prisma.$transaction(async (tx) => {
         // Deduct from player 1
@@ -3555,11 +3058,8 @@ async function tryMatchPlayers(quizId) {
         });
       });
       
-      console.log('✅ Entry fees deducted successfully');
-      
-    } catch (error) {
-      console.error('❌ Error deducting entry fees:', error);
-      // Refund if there was an error
+} catch (error) {
+// Refund if there was an error
       try {
         await prisma.user.update({
           where: { id: player1.userId },
@@ -3569,33 +3069,20 @@ async function tryMatchPlayers(quizId) {
           where: { id: player2.userId },
           data: { wallet: { increment: entryFee } }
         });
-        console.log('💰 Entry fees refunded due to error');
-      } catch (refundError) {
-        console.error('❌ Error refunding entry fees:', refundError);
-      }
+} catch {}
       
       // Put players back in queue
       await queueManager.addToQueue(player1.userId, quizId, player1);
       await queueManager.addToQueue(player2.userId, quizId, player2);
       
-      console.log('❌ Failed to process entry fees, players returned to queue');
-      return;
+return;
     }
     
     // Create match
     const matchId = `match_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    console.log('Generating questions for match with quiz data:', player1.quizData);
-    const questions = await generateQuestions(player1.quizData);
-    console.log('Generated questions:', questions);
-    
-    console.log('📊 Creating match with details:');
-    console.log(`   - Player 1 quiz data:`, player1.quizData);
-    console.log(`   - Question count from quiz data: ${player1.quizData.questionCount}`);
-    console.log(`   - Questions array length: ${questions.length}`);
-    console.log(`   - Entry fee: ${entryFee}`);
-    
-    const match = {
+const questions = await generateQuestions(player1.quizData);
+const match = {
       id: matchId,
       quizId,
       player1Id: player1.userId,
@@ -3615,65 +3102,32 @@ async function tryMatchPlayers(quizId) {
       totalPrizePool: entryFee * 2 // Total pool from both players
     };
     
-    console.log(`✅ Match created with ${match.totalQuestions} total questions`);
-    console.log('Match object details:');
-    console.log('   - Match ID:', match.id);
-    console.log('   - Player 1 ID:', match.player1Id);
-    console.log('   - Player 2 ID:', match.player2Id);
-    console.log('   - Player 1 Socket ID:', match.player1SocketId);
-    console.log('   - Player 2 Socket ID:', match.player2SocketId);
-    console.log('   - Total Questions:', match.totalQuestions);
-    console.log('   - Questions array length:', match.questions.length);
-    console.log('   - First question sample:', match.questions[0] ? {
-      text: match.questions[0].text.substring(0, 50) + '...',
-      options: match.questions[0].options,
-      correct: match.questions[0].correct
-    } : 'No questions');
-    
-    activeMatches.set(matchId, match);
+activeMatches.set(matchId, match);
     playerToMatchId.set(player1.userId, matchId);
     playerToMatchId.set(player2.userId, matchId);
     
-    console.log('Match created:', matchId);
-    console.log('Match details:', {
-      id: match.id,
-      status: match.status,
-      player1Id: match.player1Id,
-      player2Id: match.player2Id,
-      totalQuestions: match.totalQuestions,
-      questionsCount: match.questions.length
-    });
-    console.log('Active matches after creation:', Array.from(activeMatches.keys()));
-    
-    // Notify players with the events the frontend expects
+// Notify players with the events the frontend expects
     const player1Socket = io.sockets.sockets.get(player1.socketId);
     const player2Socket = io.sockets.sockets.get(player2.socketId);
     
     if (player1Socket && player1Socket.connected) {
-      console.log('Sending opponent_found to player1:', player1.socketId);
-      player1Socket.emit('opponent_found', { 
+player1Socket.emit('opponent_found', { 
         opponent: { id: player2.userId, name: `Player ${player2.userId.slice(-4)}` },
         category: player1.quizData.categoryId
       });
-    } else {
-      console.log('Player 1 socket not found or disconnected:', player1.socketId);
     }
     
     if (player2Socket && player2Socket.connected) {
-      console.log('Sending opponent_found to player2:', player2.socketId);
-      player2Socket.emit('opponent_found', { 
+player2Socket.emit('opponent_found', { 
         opponent: { id: player1.userId, name: `Player ${player1.userId.slice(-4)}` },
         category: player2.quizData.categoryId
       });
-    } else {
-      console.log('Player 2 socket not found or disconnected:', player2.socketId);
     }
     
     // Start match after 3 seconds
     setTimeout(() => {
       // Send match starting event
-      console.log('Sending match_starting to both players');
-      const player1Socket = io.sockets.sockets.get(player1.socketId);
+const player1Socket = io.sockets.sockets.get(player1.socketId);
       const player2Socket = io.sockets.sockets.get(player2.socketId);
       
       if (player1Socket && player1Socket.connected) {
@@ -3685,8 +3139,7 @@ async function tryMatchPlayers(quizId) {
       
       setTimeout(() => {
         // Send match ready event
-        console.log('Sending match_ready to both players');
-        if (player1Socket && player1Socket.connected) {
+if (player1Socket && player1Socket.connected) {
           player1Socket.emit('match_ready', { matchId });
         }
         if (player2Socket && player2Socket.connected) {
@@ -3695,8 +3148,7 @@ async function tryMatchPlayers(quizId) {
         
         // Start the actual match after a short delay
         setTimeout(() => {
-          console.log('Starting actual match after countdown');
-          startMatch(matchId);
+startMatch(matchId);
         }, 1000);
       }, 3000);
     }, 2000);
@@ -3711,20 +3163,13 @@ function startMatch(matchId) {
   if (!match) return;
   
   match.status = 'playing';
-  console.log(`Starting match ${matchId}`);
-  
-  // Join both players to match room
+// Join both players to match room
   io.sockets.sockets.get(match.player1SocketId)?.join(`match_${matchId}`);
   io.sockets.sockets.get(match.player2SocketId)?.join(`match_${matchId}`);
   
   // Send first question to both players
   const firstQuestion = match.questions[0];
-  console.log('Sending first question to players:', firstQuestion);
-  console.log('Question text:', firstQuestion.text);
-  console.log('Question options:', firstQuestion.options);
-  console.log('Correct answer:', firstQuestion.correct);
-  
-  const matchStartedData = {
+const matchStartedData = {
     matchId,
     questionIndex: 0,
     question: firstQuestion,
@@ -3735,30 +3180,21 @@ function startMatch(matchId) {
     opponentScore: 0
   };
   
-  console.log('Sending match_started event with data:', matchStartedData);
-  
-  // Get the actual socket objects and emit directly
+// Get the actual socket objects and emit directly
   const player1Socket = io.sockets.sockets.get(match.player1SocketId);
   const player2Socket = io.sockets.sockets.get(match.player2SocketId);
   
   if (player1Socket && player1Socket.connected) {
-    console.log('Sending match_started to player 1:', match.player1SocketId);
-    player1Socket.emit('match_started', matchStartedData);
-  } else {
-    console.log('Player 1 socket not found or disconnected:', match.player1SocketId);
+player1Socket.emit('match_started', matchStartedData);
   }
   
   if (player2Socket && player2Socket.connected) {
-    console.log('Sending match_started to player 2:', match.player2SocketId);
-    player2Socket.emit('match_started', matchStartedData);
-  } else {
-    console.log('Player 2 socket not found or disconnected:', match.player2SocketId);
+player2Socket.emit('match_started', matchStartedData);
   }
   
   // Start timeout for first question
   startQuestionTimer(matchId, 0, 15);
   
-  console.log(`Match ${matchId} started with first question`);
 }
 
 // New function to handle question timers
@@ -3766,36 +3202,23 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
   const match = activeMatches.get(matchId);
   if (!match) return;
   
-  console.log(`⏰ Starting timer for question ${questionIndex} in match ${matchId}`);
-  console.log(`   - Time limit: ${timeLimit} seconds`);
-  console.log(`   - Player 1: ${match.player1Id}`);
-  console.log(`   - Player 2: ${match.player2Id}`);
-  
-  // Set timeout for this question
+// Set timeout for this question
   match.questionTimer = setTimeout(() => {
     // Clear timer ref immediately - callback is running
     match.questionTimer = null;
     
-    console.log(`⏰ Time's up for question ${questionIndex} in match ${matchId}`);
-    
-    // Re-validate match still exists (could have ended via disconnect/forfeit)
+// Re-validate match still exists (could have ended via disconnect/forfeit)
     if (!activeMatches.has(matchId)) {
-      console.log('⏰ Match no longer active, skipping timeout handling');
-      return;
+return;
     }
     
     // Check if both players have answered
     const p1Answered = match.player1Answers[questionIndex];
     const p2Answered = match.player2Answers[questionIndex];
     
-    console.log(`📊 Timeout check for question ${questionIndex}:`);
-    console.log(`   - Player 1 answered: ${!!p1Answered}`);
-    console.log(`   - Player 2 answered: ${!!p2Answered}`);
-    
-    // If player 1 hasn't answered, mark as timeout
+// If player 1 hasn't answered, mark as timeout
     if (!p1Answered) {
-      console.log(`⏰ Player 1 (${match.player1Id}) timed out on question ${questionIndex}`);
-      match.player1Answers[questionIndex] = { 
+match.player1Answers[questionIndex] = { 
         answer: null, 
         timeSpent: timeLimit, 
         timestamp: Date.now(),
@@ -3810,14 +3233,12 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
           answer: null,
           timedOut: true
         });
-        console.log(`📤 Sent timeout notification to player 2`);
-      }
+}
     }
     
     // If player 2 hasn't answered, mark as timeout
     if (!p2Answered) {
-      console.log(`⏰ Player 2 (${match.player2Id}) timed out on question ${questionIndex}`);
-      match.player2Answers[questionIndex] = { 
+match.player2Answers[questionIndex] = { 
         answer: null, 
         timeSpent: timeLimit, 
         timestamp: Date.now(),
@@ -3832,8 +3253,7 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
           answer: null,
           timedOut: true
         });
-        console.log(`📤 Sent timeout notification to player 1`);
-      }
+}
     }
     
     // Move to next question or end game (shorter delay so frontend gets next question sooner)
@@ -3844,14 +3264,11 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
         match.currentQuestion = questionIndex + 1;
         const nextQuestion = match.questions?.[match.currentQuestion];
         if (!nextQuestion) {
-          console.log('❌ Next question not found, ending match');
-          endMatch(matchId);
+endMatch(matchId);
           return;
         }
         
-        console.log('🔄 Moving to next question after timeout:', match.currentQuestion);
-        
-        const { player1Score, player2Score } = calculateScoresUpTo(match, questionIndex);
+const { player1Score, player2Score } = calculateScoresUpTo(match, questionIndex);
         const nextTimeLimit = match.timePerQuestion ?? 15;
         const player1Socket = io.sockets.sockets.get(match.player1SocketId);
         const player2Socket = io.sockets.sockets.get(match.player2SocketId);
@@ -3866,40 +3283,32 @@ function startQuestionTimer(matchId, questionIndex, timeLimit) {
         };
         
         if (player1Socket && player1Socket.connected) {
-          console.log('Sending next_question to player 1 after timeout');
-          player1Socket.emit('next_question', {
+player1Socket.emit('next_question', {
             ...nextQuestionPayload,
             myScore: player1Score,
             opponentScore: player2Score,
             myPosition: 'player1'
           });
-        } else {
-          console.log('Player 1 socket not found or disconnected after timeout');
         }
         
         if (player2Socket && player2Socket.connected) {
-          console.log('Sending next_question to player 2 after timeout');
-          player2Socket.emit('next_question', {
+player2Socket.emit('next_question', {
             ...nextQuestionPayload,
             myScore: player2Score,
             opponentScore: player1Score,
             myPosition: 'player2'
           });
-        } else {
-          console.log('Player 2 socket not found or disconnected after timeout');
         }
         
         startQuestionTimer(matchId, match.currentQuestion, nextTimeLimit);
         
       } else {
-        console.log('🏁 All questions completed after timeout, ending match');
-        endMatch(matchId);
+endMatch(matchId);
       }
     }, 500); // 500ms delay - faster transition to next question
     
   }, timeLimit * 1000); // Convert seconds to milliseconds
   
-  console.log(`⏰ Timer set for question ${questionIndex} - ${timeLimit} seconds`);
 }
 
 async function startPrivateRoomGame(roomCode) {
@@ -3930,7 +3339,6 @@ async function startPrivateRoomGame(roomCode) {
     timeLimit: room.quizData.timePerQuestion || 15
   });
   
-  console.log(`Private room game started: ${roomCode}`);
 }
 
 // Helper: calculate scores from answers up to (and including) questionIndex
@@ -3973,34 +3381,20 @@ function calculateScoresUpTo(match, upToIndex) {
 async function endMatch(matchId, options = {}) {
   const match = activeMatches.get(matchId);
   if (!match) {
-    console.log('❌ Match not found for ending:', matchId);
-    return;
+return;
   }
   
   const { forfeitWinner } = options;
-  console.log(`🏁 Ending match ${matchId}${forfeitWinner ? ' (forfeit)' : ''}`);
-  
-  // Calculate scores
+// Calculate scores
   let player1Score = 0;
   let player2Score = 0;
   
-  console.log('🔍 Detailed answer analysis:');
-  console.log('   - Match questions:', match.questions);
-  console.log('   - Player 1 answers:', match.player1Answers);
-  console.log('   - Player 2 answers:', match.player2Answers);
-  
-  for (let i = 0; i < match.totalQuestions; i++) {
+for (let i = 0; i < match.totalQuestions; i++) {
     const p1Answer = match.player1Answers[i];
     const p2Answer = match.player2Answers[i];
     const question = match.questions[i];
     
-    console.log(`\n📝 Question ${i + 1} analysis:`);
-    console.log('   - Question:', question.text.substring(0, 50) + '...');
-    console.log('   - Correct answer:', question.correct);
-    console.log('   - Player 1 answer:', p1Answer);
-    console.log('   - Player 2 answer:', p2Answer);
-    
-    // Check player 1 answer
+// Check player 1 answer
     if (p1Answer && !p1Answer.timedOut) {
       let p1Correct = false;
       
@@ -4018,12 +3412,7 @@ async function endMatch(matchId, options = {}) {
       
       if (p1Correct) {
         player1Score += 10;
-        console.log('   ✅ Player 1 correct (+10 points)');
-      } else {
-        console.log('   ❌ Player 1 incorrect');
-      }
-    } else {
-      console.log('   ⏰ Player 1 timed out or no answer');
+}
     }
     
     // Check player 2 answer
@@ -4044,38 +3433,21 @@ async function endMatch(matchId, options = {}) {
       
       if (p2Correct) {
         player2Score += 10;
-        console.log('   ✅ Player 2 correct (+10 points)');
-      } else {
-        console.log('   ❌ Player 2 incorrect');
-      }
-    } else {
-      console.log('   ⏰ Player 2 timed out or no answer');
+}
     }
   }
   
-  console.log(`\n🏆 Final Scores:`);
-  console.log(`   - Player 1 (${match.player1Id}): ${player1Score}`);
-  console.log(`   - Player 2 (${match.player2Id}): ${player2Score}`);
-  
-  // Forfeit overrides: disconnected player's opponent wins
+// Forfeit overrides: disconnected player's opponent wins
   const winner = forfeitWinner || (player1Score > player2Score ? match.player1Id : 
                 player2Score > player1Score ? match.player2Id : null);
   
-  console.log(`   - Winner: ${winner || 'Draw'}${forfeitWinner ? ' (forfeit)' : ''}`);
-  
-  // Update wallet for winner (if not a draw, or forfeit)
+// Update wallet for winner (if not a draw, or forfeit)
   if (winner && (player1Score !== player2Score || forfeitWinner)) {
     const totalPrizePool = (match.entryFee || 10) * 2; // Both players' entry fees
     const winnerPrize = Math.floor(totalPrizePool * 0.8); // Winner gets 80%
     const appCommission = totalPrizePool - winnerPrize; // App gets 20%
     
-    console.log(`💰 Prize distribution:`);
-    console.log(`   - Total Prize Pool: ₹${totalPrizePool} (₹${match.entryFee} × 2 players)`);
-    console.log(`   - Winner Prize (80%): ₹${winnerPrize}`);
-    console.log(`   - App Commission (20%): ₹${appCommission}`);
-    console.log(`   - Example: ₹20 total → Winner gets ₹16, App gets ₹4`);
-    
-    try {
+try {
       await prisma.$transaction(async (tx) => {
         // Add 80% prize to winner's wallet
         await tx.user.update({
@@ -4098,16 +3470,9 @@ async function endMatch(matchId, options = {}) {
         // The difference between total pool and winner prize is the app commission
       });
       
-      console.log(`✅ Winner ${winner} received ₹${winnerPrize} (80% of ₹${totalPrizePool})`);
-      console.log(`💰 App commission: ₹${appCommission} (20% of ₹${totalPrizePool})`);
-      
-    } catch (error) {
-      console.error('❌ Error updating winner wallet:', error);
-    }
+} catch {}
   } else if (player1Score === player2Score && !forfeitWinner) {
-    console.log(`🤝 Draw - refunding entry fees to both players`);
-    
-    try {
+try {
       const refundAmount = match.entryFee || 10;
       await prisma.$transaction(async (tx) => {
         // Refund to player 1
@@ -4141,11 +3506,7 @@ async function endMatch(matchId, options = {}) {
         });
       });
       
-      console.log(`✅ Both players refunded ₹${refundAmount} each`);
-      
-    } catch (error) {
-      console.error('❌ Error refunding draw match:', error);
-    }
+} catch {}
   }
   
   // Send match results to both players
@@ -4162,27 +3523,21 @@ async function endMatch(matchId, options = {}) {
   };
   
   if (player1Socket && player1Socket.connected) {
-    console.log('📤 Sending match_ended to player 1:', match.player1SocketId);
-    player1Socket.emit('match_ended', {
+player1Socket.emit('match_ended', {
       ...matchResult,
       myScore: player1Score,
       opponentScore: player2Score,
       myPosition: 'player1'
     });
-  } else {
-    console.log('❌ Player 1 socket not found or disconnected:', match.player1SocketId);
   }
   
   if (player2Socket && player2Socket.connected) {
-    console.log('📤 Sending match_ended to player 2:', match.player2SocketId);
-    player2Socket.emit('match_ended', {
+player2Socket.emit('match_ended', {
       ...matchResult,
       myScore: player2Score,
       opponentScore: player1Score,
       myPosition: 'player2'
     });
-  } else {
-    console.log('❌ Player 2 socket not found or disconnected:', match.player2SocketId);
   }
   
   // Full cleanup: clear timer, leave room, remove from tracking
@@ -4192,12 +3547,10 @@ async function endMatch(matchId, options = {}) {
   }
   try {
     io.in(`match_${matchId}`).socketsLeave(`match_${matchId}`);
-  } catch (e) {}
+  } catch {}
   playerToMatchId.delete(match.player1Id);
   playerToMatchId.delete(match.player2Id);
   const deleted = activeMatches.delete(matchId);
-  console.log(`🗑️ Match ${matchId} fully cleaned. Active matches: ${activeMatches.size}`);
-  
 }
 
 // Start HTTP server
@@ -4205,7 +3558,4 @@ async function endMatch(matchId, options = {}) {
 // Note: Don't use PORT env variable as it conflicts with Next.js on Railway
 const SOCKET_PORT = process.env.SOCKET_PORT || 3001;
 httpServer.listen(SOCKET_PORT, () => {
-  console.log(`🚀 Socket server running on port ${SOCKET_PORT}`);
-  console.log(`🔗 WebSocket URL: ws://localhost:${SOCKET_PORT}/api/socket`);
-  console.log(`🌐 HTTP URL: http://localhost:${SOCKET_PORT}`);
 });

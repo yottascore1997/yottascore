@@ -89,9 +89,7 @@ export async function DELETE(
       updatedQuizzes: updatedQuizzes.count
     });
   } catch (error: any) {
-    console.error('Error deleting category:', error);
-    
-    if (error.code === 'P2003') {
+if (error.code === 'P2003') {
       return NextResponse.json({ 
         error: 'Cannot delete category. It has related records that need to be removed first.'
       }, { status: 400 });

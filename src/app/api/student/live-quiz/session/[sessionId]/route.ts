@@ -108,8 +108,7 @@ export async function GET(
       myEntry,
     });
   } catch (e) {
-    console.error('Live quiz session get error:', e);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

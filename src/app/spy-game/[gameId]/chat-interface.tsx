@@ -311,16 +311,13 @@ export default function ChatInterface({
       try {
         // Simple glare handling: ignore offers when not stable
         if (pc.signalingState !== 'stable') {
-          console.warn('Ignoring offer due to non-stable state:', pc.signalingState);
-          return;
+return;
         }
         await pc.setRemoteDescription(new RTCSessionDescription(sdp));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         socket.emit('webrtc_answer', { targetSocketId: from, sdp: answer });
-      } catch (e) {
-        console.error('Error handling offer:', e);
-      }
+      } catch {}
     };
 
     const handleAnswer = async ({ from, sdp }: { from: string; sdp: RTCSessionDescriptionInit }) => {
@@ -328,17 +325,14 @@ export default function ChatInterface({
       try {
         // Only accept answer if we have a local offer pending
         if (pc.signalingState !== 'have-local-offer') {
-          console.warn('Ignoring answer in state:', pc.signalingState);
-          return;
+return;
         }
         // Avoid setting the same remote description again
         if (pc.currentRemoteDescription && pc.currentRemoteDescription.sdp === (sdp as any).sdp) {
           return;
         }
         await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-      } catch (e) {
-        console.error('Error handling answer:', e);
-      }
+      } catch {}
     };
 
     const handleCandidate = async ({ from, candidate }: { from: string; candidate: RTCIceCandidateInit }) => {
@@ -472,9 +466,9 @@ export default function ChatInterface({
         setDailyCall(call);
         call.on('joined-meeting', () => { setIsDailyJoined(true); try { toast.success('Voice connected'); } catch {} });
         call.on('left-meeting', () => setIsDailyJoined(false));
-        call.on('error', (e: any) => { try { console.error('Daily error', e); toast.error('Voice error'); } catch {} });
+        call.on('error', (e: any) => { try { toast.error('Voice error'); } catch {} });
       } catch (e) {
-        try { console.error('Failed to load Daily SDK', e); toast.error('Unable to init voice'); } catch {}
+        try { toast.error('Unable to init voice'); } catch {}
       }
     })();
     return () => {
@@ -526,7 +520,7 @@ export default function ChatInterface({
       // Gate mic initially by turn/voice toggle
       dailyCall.setLocalAudio(isMyTurn && isVoiceEnabled);
     } catch (e) {
-      try { console.error('Daily join failed', e); toast.error('Voice join failed'); } catch {}
+      try { toast.error('Voice join failed'); } catch {}
     }
   };
 

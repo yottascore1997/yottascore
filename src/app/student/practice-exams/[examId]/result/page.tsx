@@ -165,9 +165,7 @@ export default function PracticeExamResultPage() {
         setImprovementData(data)
         setShowImproveModal(true)
       }
-    } catch (err) {
-      console.error('Failed to fetch improvement suggestions:', err)
-    }
+    } catch {}
   }
 
   const getScoreColor = (score: number) => {

@@ -57,41 +57,27 @@ export default function SpyGamePage() {
   }, []);
 
   useEffect(() => {
-    console.log('🔧 Setting up Spy Game socket listeners...');
-    console.log('Socket available:', !!socket);
-    console.log('Socket connected:', isConnected);
-    
-    if (!socket || !isConnected) {
-      console.log('❌ Socket not ready, skipping listener setup');
-      return;
+if (!socket || !isConnected) {
+return;
     }
 
     // Spy Game Socket Events
     socket.on('spy_game_created', (data: { gameId: string; roomCode: string; game: SpyGame }) => {
-      console.log('✅ Spy game created successfully:', data);
-      
-      // Clear the timeout
+// Clear the timeout
       if (createTimeoutRef.current) {
         clearTimeout(createTimeoutRef.current);
         createTimeoutRef.current = null;
       }
       
-      console.log('🎯 Setting game state...');
-      setGame(data.game);
-      console.log('🎯 Setting isCreating to false...');
-      setIsCreating(false);
-      console.log('🎯 Showing success toast...');
-      toast.success(`Game created! Room code: ${data.roomCode}`);
-      console.log('🎯 Navigating to game room...');
-      // Pass the room code as a query parameter
+setGame(data.game);
+setIsCreating(false);
+toast.success(`Game created! Room code: ${data.roomCode}`);
+// Pass the room code as a query parameter
       router.push(`/spy-game/${data.gameId}?roomCode=${data.roomCode}`);
-      console.log('🎯 Navigation initiated');
-    });
+});
 
     socket.on('spy_game_error', (data: { message: string }) => {
-      console.log('❌ Spy game error:', data.message);
-      
-      // Clear the timeout
+// Clear the timeout
       if (createTimeoutRef.current) {
         clearTimeout(createTimeoutRef.current);
         createTimeoutRef.current = null;
@@ -103,16 +89,12 @@ export default function SpyGamePage() {
     });
 
     socket.on('player_joined_spy_game', (data: { player: any; game: SpyGame }) => {
-      console.log('👥 Player joined spy game:', data);
-      setGame(data.game);
+setGame(data.game);
       toast.success(`${data.player.name} joined the game!`);
     });
 
     socket.on('spy_game_joined', (data: { gameId: string; game: SpyGame }) => {
-      console.log('✅ Successfully joined spy game:', data);
-      console.log('✅ Game data received:', JSON.stringify(data, null, 2));
-      
-      // Clear the join timeout
+// Clear the join timeout
       if (joinTimeoutRef.current) {
         clearTimeout(joinTimeoutRef.current);
         joinTimeoutRef.current = null;
@@ -121,19 +103,14 @@ export default function SpyGamePage() {
       setIsJoining(false);
       setGame(data.game);
       toast.success(`Successfully joined game! Room code: ${data.game.roomCode}`);
-      console.log('🎯 Navigating to game room after join...');
-      console.log('🎯 Game data received:', data);
-      alert(`Joining game: ${data.gameId} with room code: ${data.game.roomCode}`);
+alert(`Joining game: ${data.gameId} with room code: ${data.game.roomCode}`);
       // Store the game data in sessionStorage so the game room page can access it
       sessionStorage.setItem('spyGameData', JSON.stringify(data.game));
       router.push(`/spy-game/${data.gameId}?roomCode=${data.game.roomCode}`);
-      console.log('🎯 Navigation initiated for join');
-    });
+});
 
     socket.on('spy_game_join_error', (data: { message: string }) => {
-      console.log('❌ Failed to join spy game:', data.message);
-      
-      // Clear the join timeout
+// Clear the join timeout
       if (joinTimeoutRef.current) {
         clearTimeout(joinTimeoutRef.current);
         joinTimeoutRef.current = null;
@@ -144,17 +121,13 @@ export default function SpyGamePage() {
     });
 
     // Test socket connection
-    console.log('🏓 Testing socket connection...');
-    socket.emit('ping');
+socket.emit('ping');
     
     socket.on('pong', () => {
-      console.log('✅ Socket connection working!');
-    });
+});
 
     return () => {
-      console.log('🧹 Cleaning up Spy Game socket listeners');
-      
-      // Clear any pending timeouts
+// Clear any pending timeouts
       if (createTimeoutRef.current) {
         clearTimeout(createTimeoutRef.current);
       }
@@ -192,44 +165,31 @@ export default function SpyGamePage() {
         router.push('/auth/login');
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
-      router.push('/auth/login');
+router.push('/auth/login');
     }
   };
 
   const createGame = () => {
-    console.log('🎮 Create game clicked');
-    console.log('Socket connected:', isConnected);
-    console.log('User:', user);
-    
-    if (!socket) {
-      console.log('❌ Socket not available');
-      toast.error('Socket connection not available');
+if (!socket) {
+toast.error('Socket connection not available');
       return;
     }
     
     if (!isConnected) {
-      console.log('❌ Socket not connected');
-      toast.error('Not connected to server. Please refresh the page.');
+toast.error('Not connected to server. Please refresh the page.');
       return;
     }
     
     if (!user) {
-      console.log('❌ User not available');
-      toast.error('User not authenticated');
+toast.error('User not authenticated');
       return;
     }
 
-    console.log('✅ All checks passed, creating game...');
-    console.log('Game settings:', { maxPlayers, wordPack, userId: user.id });
-    
-    console.log('🎯 Setting isCreating to true...');
-    setIsCreating(true);
+setIsCreating(true);
     
     // Set a timeout to prevent stuck loading state
     const timeout = setTimeout(() => {
-      console.log('⏰ Create game timeout - resetting state');
-      // Only reset if we're still creating (game wasn't created successfully)
+// Only reset if we're still creating (game wasn't created successfully)
       if (isCreating) {
         setIsCreating(false);
         toast.error('Game creation timed out. Please try again.');
@@ -239,16 +199,13 @@ export default function SpyGamePage() {
     createTimeoutRef.current = timeout;
     
     // Emit the create game event
-    console.log('📤 Emitting create_spy_game event...');
-    socket.emit('create_spy_game', {
+socket.emit('create_spy_game', {
       userId: user.id,
       maxPlayers,
       wordPack
     });
     
-    console.log('📤 create_spy_game event emitted');
-    console.log('⏳ Waiting for server response...');
-  };
+};
 
   const joinGame = () => {
     if (!socket || !isConnected || !user) {
@@ -265,8 +222,7 @@ export default function SpyGamePage() {
     
     // Set a timeout for join operation
     const timeout = setTimeout(() => {
-      console.log('⏰ Join game timeout - resetting state');
-      setIsJoining(false);
+setIsJoining(false);
       toast.error('Join game timed out. Please try again.');
     }, 10000); // 10 seconds timeout
     
@@ -319,11 +275,7 @@ export default function SpyGamePage() {
         <div className="text-center mb-8">
           <button
             onClick={() => {
-              console.log('🧪 Test button clicked');
-              console.log('Socket:', socket);
-              console.log('Is Connected:', isConnected);
-              console.log('User:', user);
-              alert(`Socket: ${!!socket}, Connected: ${isConnected}, User: ${!!user}`);
+alert(`Socket: ${!!socket}, Connected: ${isConnected}, User: ${!!user}`);
             }}
             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg mr-4"
           >
@@ -332,8 +284,7 @@ export default function SpyGamePage() {
           
           <button
             onClick={() => {
-              console.log('🎮 Simple create game test');
-              if (!socket) {
+if (!socket) {
                 alert('❌ Socket not available');
                 return;
               }
@@ -346,8 +297,7 @@ export default function SpyGamePage() {
                 return;
               }
               
-              console.log('✅ All checks passed, testing create game...');
-              socket.emit('create_spy_game', {
+socket.emit('create_spy_game', {
                 userId: user.id,
                 maxPlayers: 6,
                 wordPack: 'default'

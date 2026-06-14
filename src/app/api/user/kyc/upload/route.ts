@@ -93,11 +93,8 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('KYC upload error:', error);
-    
-    if (error instanceof z.ZodError) {
-      console.error('Validation error:', error.errors);
-      return NextResponse.json({ 
+if (error instanceof z.ZodError) {
+return NextResponse.json({ 
         error: 'Invalid request data', 
         details: error.errors 
       }, { status: 400 });
@@ -105,14 +102,11 @@ export async function POST(request: NextRequest) {
 
     // Log more details for debugging
     if (error instanceof Error) {
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    }
+}
 
     // Check for Prisma errors
     if ((error as any).code) {
-      console.error('Prisma error code:', (error as any).code);
-      return NextResponse.json({ 
+return NextResponse.json({ 
         error: 'Database error', 
         code: (error as any).code 
       }, { status: 500 });
@@ -160,7 +154,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('KYC fetch error:', error);
-    return new NextResponse('Internal server error', { status: 500 });
+return new NextResponse('Internal server error', { status: 500 });
   }
 } 

@@ -362,8 +362,7 @@ export async function POST(request: Request, { params }: { params: { examId: str
         };
       }
     } catch (rankPreviewError) {
-      console.error('Error calculating rank preview:', rankPreviewError);
-      // Don't fail the entire request if rank preview fails
+// Don't fail the entire request if rank preview fails
       rankPreview = {
         hasEnoughData: false,
         message: 'Unable to calculate rank preview at this time'

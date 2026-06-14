@@ -52,9 +52,7 @@ export default function BlogsPage() {
         })
         setAllTags(Array.from(tags))
       }
-    } catch (error) {
-      console.error('Error fetching blogs:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }

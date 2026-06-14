@@ -61,9 +61,7 @@ export default function CreatePracticeExamPage() {
           setSelectedCategoryId(data[0].id);
         }
       }
-    } catch (err) {
-      console.error("Failed to fetch categories:", err);
-    }
+    } catch {}
   };
 
   const handleImportFromQuestionBank = async () => {
@@ -286,8 +284,7 @@ export default function CreatePracticeExamPage() {
           
           if (errors.length > 0) {
             const errorMsg = `Imported ${importedQuestions.length} questions, but ${errors.length} row(s) had errors:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... and ${errors.length - 5} more errors` : ''}`;
-            console.warn('Import errors:', errors);
-            setError(errorMsg);
+setError(errorMsg);
             setTimeout(() => setError(null), 8000);
           } else {
             setTimeout(() => setSuccess(null), 3000);
@@ -300,8 +297,7 @@ export default function CreatePracticeExamPage() {
           setTimeout(() => setError(null), 8000);
         }
       } catch (err) {
-        console.error('Excel import error:', err);
-        setError(`Error reading Excel file: ${err instanceof Error ? err.message : 'Please check the format and try again.'}`);
+setError(`Error reading Excel file: ${err instanceof Error ? err.message : 'Please check the format and try again.'}`);
         setTimeout(() => setError(null), 5000);
       }
     };

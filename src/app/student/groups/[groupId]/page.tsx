@@ -83,9 +83,7 @@ export default function GroupDetailPage() {
         try {
           const payload = JSON.parse(atob(token.split('.')[1]))
           setCurrentUserId(payload.userId)
-        } catch (error) {
-          console.error('Error decoding token:', error)
-        }
+        } catch {}
       }
     }
   }, [groupId])
@@ -110,9 +108,7 @@ export default function GroupDetailPage() {
 
       const data = await response.json()
       setGroup(data)
-    } catch (error) {
-      console.error('Error fetching group details:', error)
-    }
+    } catch {}
   }
 
   const fetchGroupPosts = async () => {
@@ -135,9 +131,7 @@ export default function GroupDetailPage() {
 
       const data = await response.json()
       setPosts(data)
-    } catch (error) {
-      console.error('Error fetching group posts:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }
@@ -162,9 +156,7 @@ export default function GroupDetailPage() {
 
       const data = await response.json()
       setMessages(data)
-    } catch (error) {
-      console.error('Error fetching group messages:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }
@@ -189,9 +181,7 @@ export default function GroupDetailPage() {
 
       const data = await response.json()
       setEvents(data)
-    } catch (error) {
-      console.error('Error fetching group events:', error)
-    }
+    } catch {}
   }
 
   const handleCreatePost = async (e: React.FormEvent) => {
@@ -228,8 +218,7 @@ export default function GroupDetailPage() {
       
       fetchGroupPosts()
     } catch (error) {
-      console.error('Error creating post:', error)
-      alert('Failed to create post. Please try again.')
+alert('Failed to create post. Please try again.')
     } finally {
       setCreating(false)
     }
@@ -267,8 +256,7 @@ export default function GroupDetailPage() {
       setNewMessage('')
       fetchGroupMessages()
     } catch (error) {
-      console.error('Error sending message:', error)
-      alert('Failed to send message. Please try again.')
+alert('Failed to send message. Please try again.')
     } finally {
       setCreating(false)
     }
@@ -314,8 +302,7 @@ export default function GroupDetailPage() {
       
       fetchGroupEvents()
     } catch (error) {
-      console.error('Error creating event:', error)
-      alert('Failed to create event. Please try again.')
+alert('Failed to create event. Please try again.')
     } finally {
       setCreatingEvent(false)
     }
@@ -349,8 +336,7 @@ export default function GroupDetailPage() {
       fetchGroupEvents()
       alert('Event deleted successfully')
     } catch (error) {
-      console.error('Error deleting event:', error)
-      alert(error instanceof Error ? error.message : 'Failed to delete event. Please try again.')
+alert(error instanceof Error ? error.message : 'Failed to delete event. Please try again.')
     }
   }
 

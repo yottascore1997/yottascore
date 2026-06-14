@@ -10,12 +10,9 @@ export async function GET(
   { params }: { params: { postId: string } }
 ) {
   try {
-    console.log('[COMMENTS_GET] Starting request for postId:', params.postId)
-    
-    const authHeader = req.headers.get('authorization')
+const authHeader = req.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('[COMMENTS_GET] No valid auth header')
-      return new NextResponse('Unauthorized', { status: 401 })
+return new NextResponse('Unauthorized', { status: 401 })
     }
 
     const token = authHeader.split(' ')[1]
@@ -24,30 +21,25 @@ export async function GET(
     try {
       decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
     } catch (jwtError) {
-      console.log('[COMMENTS_GET] JWT verification failed:', jwtError)
-      return new NextResponse('Invalid token', { status: 401 })
+return new NextResponse('Invalid token', { status: 401 })
     }
 
     if (decoded.role !== 'STUDENT') {
-      console.log('[COMMENTS_GET] Invalid role:', decoded.role)
-      return new NextResponse('Forbidden', { status: 403 })
+return new NextResponse('Forbidden', { status: 403 })
     }
 
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
 
-    console.log('[COMMENTS_GET] Fetching comments for postId:', params.postId)
-
-    // First check if the post exists
+// First check if the post exists
     const postExists = await prisma.post.findUnique({
       where: { id: params.postId },
       select: { id: true }
     })
 
     if (!postExists) {
-      console.log('[COMMENTS_GET] Post not found:', params.postId)
-      return new NextResponse('Post not found', { status: 404 })
+return new NextResponse('Post not found', { status: 404 })
     }
 
     const comments = await prisma.comment.findMany({
@@ -71,19 +63,15 @@ export async function GET(
       take: limit
     })
 
-    console.log('[COMMENTS_GET] Successfully fetched', comments.length, 'comments')
-    return NextResponse.json(comments)
+return NextResponse.json(comments)
   } catch (error) {
-    console.error('[COMMENTS_GET] Detailed error:', error)
-    
-    if (error instanceof jwt.JsonWebTokenError) {
+if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
     
     // Check if it's a Prisma error
     if (error && typeof error === 'object' && 'code' in error) {
-      console.error('[COMMENTS_GET] Prisma error code:', (error as any).code)
-    }
+}
     
     return new NextResponse('Internal Error', { status: 500 })
   }
@@ -158,8 +146,7 @@ export async function POST(
         }
       }
     } catch (socketError) {
-      console.error('Socket notification error:', socketError)
-      // Don't fail the request if socket notification fails
+// Don't fail the request if socket notification fails
     }
 
     return NextResponse.json(comment)
@@ -167,7 +154,6 @@ export async function POST(
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[COMMENTS_POST]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 } 

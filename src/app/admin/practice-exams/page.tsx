@@ -93,8 +93,7 @@ export default function AdminPracticeExamsPage() {
           alert(errorData.error || errorData.message || 'Failed to delete exam. Please try again.');
         }
       } catch (error: any) {
-        console.error('Failed to delete exam:', error);
-        alert('Failed to delete exam. Please check your connection and try again.');
+alert('Failed to delete exam. Please check your connection and try again.');
       }
     }
   };

@@ -87,9 +87,7 @@ export default function StoryViewer({
         },
         body: JSON.stringify({ storyId })
       })
-    } catch (error) {
-      console.error('Error marking story as viewed:', error)
-    }
+    } catch {}
   }
 
   const startProgressTimer = () => {
@@ -163,8 +161,7 @@ export default function StoryViewer({
         }
       })
     } catch (error) {
-      console.error('Error toggling like:', error)
-      // Revert on error
+// Revert on error
       setIsLiked(!newLikeState)
       setLikeCount(prev => !newLikeState ? prev + 1 : prev - 1)
     }
@@ -180,9 +177,7 @@ export default function StoryViewer({
       
       // Show success message (you can add a toast notification here)
       alert('Story link copied to clipboard!')
-    } catch (error) {
-      console.error('Error sharing story:', error)
-    }
+    } catch {}
   }
 
   const handleVideoLoad = () => {

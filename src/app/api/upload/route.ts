@@ -20,22 +20,14 @@ const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN;
 export async function POST(request: NextRequest) {
   try {
     // Debug: Log environment variables (without exposing values)
-    console.log('[Upload] Environment check:', {
-      hasPHPUrl: !!PHP_UPLOAD_URL,
-      hasUploadToken: !!UPLOAD_TOKEN,
-      phpUrl: PHP_UPLOAD_URL?.substring(0, 30) + '...',
-      tokenLength: UPLOAD_TOKEN?.length || 0
-    });
-
-    // Get token from Authorization header or X-Upload-Token header
+// Get token from Authorization header or X-Upload-Token header
     const authHeader = request.headers.get('Authorization');
     const uploadToken = request.headers.get('X-Upload-Token');
     
     const token = authHeader?.replace('Bearer ', '') || uploadToken;
     
     if (!token) {
-      console.error('[Upload] No token provided');
-      return NextResponse.json(
+return NextResponse.json(
         { error: 'Unauthorized. No token provided.' },
         { status: 401 }
       );
@@ -50,14 +42,10 @@ export async function POST(request: NextRequest) {
     const decodedToken = await verifyToken(token);
     if (decodedToken) {
       isValid = true;
-      console.log('[Upload] Token validated as JWT');
-    } else if (UPLOAD_TOKEN && token === UPLOAD_TOKEN) {
+} else if (UPLOAD_TOKEN && token === UPLOAD_TOKEN) {
       // If JWT verification fails, check if it's the UPLOAD_TOKEN
       isValid = true;
-      console.log('[Upload] Token validated as UPLOAD_TOKEN');
-    } else {
-      console.error('[Upload] Token validation failed - JWT invalid and UPLOAD_TOKEN mismatch');
-    }
+}
     
     if (!isValid) {
       return NextResponse.json(
@@ -96,27 +84,12 @@ export async function POST(request: NextRequest) {
                         PHP_UPLOAD_URL !== 'https://yourdomain.com/upload.php' &&
                         PHP_UPLOAD_URL.includes('upload.php');
     
-    console.log('[Upload] Config check:', {
-      hasUploadToken: !!UPLOAD_TOKEN,
-      phpUploadUrl: PHP_UPLOAD_URL,
-      usePHPUpload,
-      fileSize: file.size,
-      fileName: file.name
-    });
-    
-    if (usePHPUpload) {
+if (usePHPUpload) {
       // Forward file to PHP endpoint using FormData
       const buffer = Buffer.from(await file.arrayBuffer());
 
       try {
-        console.log('[Upload] Forwarding to PHP endpoint:', PHP_UPLOAD_URL);
-        console.log('[Upload] File details:', {
-          name: file.name,
-          type: file.type,
-          size: buffer.length
-        });
-        
-        // For Node.js, we need to manually construct multipart/form-data
+// For Node.js, we need to manually construct multipart/form-data
         // Since native FormData in Node.js might have issues with external endpoints
         const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2, 15)}`;
         const formDataParts: Buffer[] = [];
@@ -148,13 +121,9 @@ export async function POST(request: NextRequest) {
           // signal: AbortSignal.timeout(30000), // 30 second timeout
         });
 
-        console.log('[Upload] PHP response status:', phpResponse.status);
-
-        if (!phpResponse.ok) {
+if (!phpResponse.ok) {
           const errorText = await phpResponse.text();
-          console.error('[Upload] PHP endpoint error response:', errorText);
-          
-          let errorData;
+let errorData;
           try {
             errorData = JSON.parse(errorText);
           } catch {
@@ -168,9 +137,7 @@ export async function POST(request: NextRequest) {
         }
 
         const phpResult = await phpResponse.json();
-        console.log('[Upload] PHP upload successful:', phpResult);
-
-        const imageUrl = normalizeUploadUrl(phpResult.url) || phpResult.url;
+const imageUrl = normalizeUploadUrl(phpResult.url) || phpResult.url;
         return NextResponse.json({
           success: true,
           url: imageUrl,
@@ -179,14 +146,7 @@ export async function POST(request: NextRequest) {
           type: file.type,
         });
       } catch (phpError: any) {
-        console.error('[Upload] PHP forwarding error:', {
-          message: phpError.message,
-          code: phpError.code,
-          cause: phpError.cause,
-          endpoint: PHP_UPLOAD_URL
-        });
-        
-        // Check if it's a DNS resolution error
+// Check if it's a DNS resolution error
         if (phpError.code === 'ENOTFOUND') {
           return NextResponse.json(
             { 
@@ -244,8 +204,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   } catch (error) {
-    console.error('[Upload] Unexpected error:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Failed to upload file' },
       { status: 500 }
     );

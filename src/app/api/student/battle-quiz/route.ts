@@ -140,9 +140,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    console.log(`Found ${categories.length} categories with active battle quizzes:`, categories.map(c => ({ name: c.name, questionCount: c._count.questions })));
-
-    return NextResponse.json(categories.map((cat: any) => ({
+return NextResponse.json(categories.map((cat: any) => ({
       id: cat.id,
       name: cat.name,
       color: cat.color,
@@ -150,8 +148,7 @@ export async function GET(request: NextRequest) {
     })));
 
   } catch (error) {
-    console.error('Error in battle quiz API:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
@@ -213,8 +210,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating private room:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

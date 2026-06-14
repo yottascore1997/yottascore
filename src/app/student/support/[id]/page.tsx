@@ -100,12 +100,8 @@ export default function TicketDetailPage() {
       if (response.ok) {
         const data = await response.json();
         setTicket(data);
-      } else {
-        console.error('Error fetching ticket');
       }
-    } catch (error) {
-      console.error('Error fetching ticket:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -143,8 +139,7 @@ export default function TicketDetailPage() {
         alert(error.error || 'Failed to upload file');
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      alert('Failed to upload file');
+alert('Failed to upload file');
     } finally {
       setUploading(false);
     }
@@ -195,12 +190,8 @@ export default function TicketDetailPage() {
         setReplyContent('');
         setAttachments([]);
         fetchTicket(); // Refresh the ticket data
-      } else {
-        console.error('Error sending reply');
       }
-    } catch (error) {
-      console.error('Error sending reply:', error);
-    } finally {
+    } catch {} finally {
       setSendingReply(false);
     }
   };

@@ -57,9 +57,7 @@ export default function AdminSuccessStoriesPage() {
         const data = await res.json()
         setList(data)
       }
-    } catch (e) {
-      console.error(e)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }

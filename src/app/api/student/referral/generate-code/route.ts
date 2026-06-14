@@ -63,8 +63,7 @@ export const POST = withCORS(async (req: NextRequest) => {
     });
 
   } catch (error) {
-    console.error('Error generating referral code:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }
     );

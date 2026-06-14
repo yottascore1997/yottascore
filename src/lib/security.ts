@@ -20,7 +20,6 @@ export function isIPBlocked(ip: string): boolean {
  */
 export function blockIP(ip: string, reason?: string) {
   blockedIPs.add(ip);
-  console.warn(`🚫 IP blocked: ${ip}. Reason: ${reason || 'Suspicious activity'}`);
 }
 
 /**
@@ -55,31 +54,81 @@ export function getClientIP(req: Request): string {
   return ip;
 }
 
+function getAllowedOrigins(): string[] {
+  const fromEnv = [
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.APP_URL,
+    process.env.ALLOWED_ORIGINS,
+  ]
+    .filter(Boolean)
+    .flatMap((value) => value!.split(',').map((v) => v.trim()))
+    .filter(Boolean)
+
+  return [
+    ...fromEnv,
+    'https://yottascore.com',
+    'https://www.yottascore.com',
+    'https://examindia.vercel.app',
+  ]
+}
+
+function normalizeOrigin(value: string): string | null {
+  try {
+    const url = new URL(value.startsWith('http') ? value : `https://${value}`)
+    return url.origin
+  } catch {
+    return null
+  }
+}
+
+function hostsMatch(a: string, b: string): boolean {
+  const left = a.toLowerCase()
+  const right = b.toLowerCase()
+  return left === right || left === `www.${right}` || `www.${left}` === right
+}
+
 /**
  * Validate request origin (prevent CSRF)
  */
 export function validateOrigin(req: Request): boolean {
-  const origin = req.headers.get('origin');
-  const referer = req.headers.get('referer');
-  
-  // In production, validate against allowed domains
-  if (process.env.NODE_ENV === 'production') {
-    const allowedDomains = [
-      process.env.NEXT_PUBLIC_APP_URL,
-      'https://examindia.vercel.app',
-      // Add your production domains
-    ].filter(Boolean);
-    
-    if (!origin && !referer) {
-      return false; // No origin/referer in production is suspicious
-    }
-    
-    const requestOrigin = origin || referer || '';
-    return allowedDomains.some(domain => requestOrigin.startsWith(domain as string));
+  if (process.env.NODE_ENV !== 'production') {
+    return true
   }
-  
-  // In development, allow localhost
-  return true;
+
+  const origin = req.headers.get('origin')
+  const referer = req.headers.get('referer')
+  const requestOrigin = origin || referer
+
+  if (!requestOrigin) {
+    return false
+  }
+
+  const requestOriginNormalized = normalizeOrigin(requestOrigin)
+  if (!requestOriginNormalized) {
+    return false
+  }
+
+  const host =
+    req.headers.get('x-forwarded-host')?.split(',')[0]?.trim() ||
+    req.headers.get('host')?.split(',')[0]?.trim()
+
+  if (host) {
+    try {
+      const originHost = new URL(requestOriginNormalized).host
+      if (hostsMatch(originHost, host)) {
+        return true
+      }
+    } catch {
+      // fall through to allow-list
+    }
+  }
+
+  const allowedOrigins = getAllowedOrigins()
+    .map((entry) => normalizeOrigin(entry))
+    .filter((entry): entry is string => !!entry)
+
+  return allowedOrigins.includes(requestOriginNormalized)
 }
 
 /**
@@ -94,14 +143,7 @@ export function logSecurityEvent(event: {
 }) {
   const timestamp = new Date().toISOString();
   
-  console.log(`🔒 [SECURITY] ${timestamp} - ${event.type}`, {
-    ip: event.ip,
-    phoneNumber: event.phoneNumber ? `***${event.phoneNumber.slice(-4)}` : undefined,
-    success: event.success,
-    message: event.message,
-  });
-  
-  // In production, send to monitoring service (e.g., Sentry, DataDog)
+// In production, send to monitoring service (e.g., Sentry, DataDog)
   if (process.env.NODE_ENV === 'production' && !event.success) {
     // TODO: Send to monitoring service
     // sentry.captureMessage('Security event', { level: 'warning', extra: event });

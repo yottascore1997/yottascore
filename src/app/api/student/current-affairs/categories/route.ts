@@ -30,7 +30,6 @@ export async function GET(req: NextRequest) {
     const categories = result.map((r) => r.category)
     return NextResponse.json(categories)
   } catch (e) {
-    console.error('[CA_CATEGORIES]', e)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

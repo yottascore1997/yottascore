@@ -66,8 +66,7 @@ export async function GET(
       verificationUrl,
     });
   } catch (error) {
-    console.error('Certificate fetch error:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

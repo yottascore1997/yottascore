@@ -31,7 +31,6 @@ export async function GET(
 
     return NextResponse.json({ ...exam, myAttempts })
   } catch (error) {
-    console.error('[PYQ] Detail error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

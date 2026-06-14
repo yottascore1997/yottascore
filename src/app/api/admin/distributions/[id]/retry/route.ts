@@ -71,12 +71,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         where: { id },
         data: { status: 'FAILED', lastError: String(procErr), lastAttemptAt: new Date() }
       });
-      console.error(`Error processing distribution ${id}:`, procErr);
-      return NextResponse.json({ error: 'Processing failed' }, { status: 500 });
+return NextResponse.json({ error: 'Processing failed' }, { status: 500 });
     }
   } catch (err) {
-    console.error('Error in retry endpoint:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

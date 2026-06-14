@@ -28,7 +28,6 @@ export async function GET(request: Request, { params }: { params: { examId: stri
     });
     return NextResponse.json(attempt);
   } catch (error) {
-    console.error('Error fetching attempts:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

@@ -57,16 +57,14 @@ export default function CommentSection({ postId, initialComments = [], onComment
       })
 
       if (!response.ok) {
-        console.error('Failed to fetch comments:', response.status, response.statusText)
-        // Keep existing comments if any, don't clear them
+// Keep existing comments if any, don't clear them
         return
       }
 
       const data = await response.json()
       setComments(data)
     } catch (error) {
-      console.error('Error fetching comments:', error)
-      // Keep existing comments if any, don't clear them
+// Keep existing comments if any, don't clear them
     } finally {
       setLoading(false)
     }
@@ -103,9 +101,7 @@ export default function CommentSection({ postId, initialComments = [], onComment
       setComments(prev => [newCommentData, ...prev])
       setNewComment('')
       onCommentAdded?.()
-    } catch (error) {
-      console.error('Error adding comment:', error)
-    } finally {
+    } catch {} finally {
       setSubmitting(false)
     }
   }

@@ -78,7 +78,6 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Template generation error:', error);
-    return NextResponse.json({ error: 'Failed to generate template' }, { status: 500 });
+return NextResponse.json({ error: 'Failed to generate template' }, { status: 500 });
   }
 } 

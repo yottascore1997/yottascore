@@ -110,8 +110,7 @@ export async function POST(req: Request) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[PUSH_NOTIFICATION_POST]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }
 
@@ -178,7 +177,6 @@ export async function GET(req: Request) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[PUSH_NOTIFICATION_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

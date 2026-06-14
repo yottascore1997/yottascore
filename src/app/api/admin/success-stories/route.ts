@@ -16,17 +16,14 @@ async function uploadFile(file: File): Promise<string | null> {
     const isVideo = file.type.startsWith('video/')
     const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE
     if (file.size > maxSize) {
-      console.error('File too large:', file.size, 'max:', maxSize)
-      return null
+return null
     }
     const allowed = isVideo ? ALLOWED_VIDEO_TYPES : ALLOWED_IMAGE_TYPES
     if (!allowed.includes(file.type)) {
-      console.error('Invalid file type:', file.type)
-      return null
+return null
     }
     if (!UPLOAD_TOKEN || !PHP_UPLOAD_URL?.includes('upload.php')) {
-      console.warn('PHP upload not configured')
-      return null
+return null
     }
     const buffer = Buffer.from(await file.arrayBuffer())
     const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2, 15)}`
@@ -53,11 +50,9 @@ async function uploadFile(file: File): Promise<string | null> {
       return normalizeUploadUrl(uploadData.url) ?? uploadData.url ?? null
     }
     const errorData = await uploadResponse.json().catch(() => ({}))
-    console.error('PHP upload error:', errorData)
-    return null
+return null
   } catch (e) {
-    console.error('Upload file error:', e)
-    return null
+return null
   }
 }
 
@@ -84,8 +79,7 @@ export async function GET(req: NextRequest) {
     if (e instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
-    console.error('[SUCCESS_STORIES_GET]', e)
-    return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
   }
 }
 
@@ -155,7 +149,6 @@ export async function POST(req: NextRequest) {
     if (e instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
-    console.error('[SUCCESS_STORIES_POST]', e)
-    return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
   }
 }

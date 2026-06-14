@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withCORS } from '@/lib/cors';
 import { validateAndFormatPhone, isTestPhoneNumber } from '@/lib/phone-validation';
+import { isDummyLoginEnabled, isDummyPhoneNumber } from '@/lib/dummy-auth';
 import { checkOTPRateLimit, checkIPRateLimit } from '@/lib/rate-limiter';
 import { getClientIP, validateOrigin, logSecurityEvent, isIPBlocked } from '@/lib/security';
 
@@ -23,9 +24,7 @@ const handler = async (req: NextRequest) => {
 
     // Get client IP
     const ip = getClientIP(req);
-    console.log('📱 OTP request for:', phoneNumber, 'from IP:', ip);
-
-    // Check if IP is blocked
+// Check if IP is blocked
     if (isIPBlocked(ip)) {
       logSecurityEvent({
         type: 'ip_block',
@@ -71,8 +70,7 @@ const handler = async (req: NextRequest) => {
     // Check IP rate limit
     const ipLimit = checkIPRateLimit(ip);
     if (!ipLimit.allowed) {
-      console.warn(`🚫 IP rate limit exceeded for ${ip}`);
-      return NextResponse.json(
+return NextResponse.json(
         { success: false, error: ipLimit.message },
         { status: 429 }
       );
@@ -81,8 +79,7 @@ const handler = async (req: NextRequest) => {
     // Check phone number rate limit
     const phoneLimit = checkOTPRateLimit(formattedPhone);
     if (!phoneLimit.allowed) {
-      console.warn(`🚫 Phone rate limit exceeded for ${formattedPhone}`);
-      return NextResponse.json(
+return NextResponse.json(
         { success: false, error: phoneLimit.message },
         { status: 429 }
       );
@@ -96,28 +93,29 @@ const handler = async (req: NextRequest) => {
       );
     }
 
+    const isDummy = isDummyLoginEnabled() && isDummyPhoneNumber(formattedPhone);
+
     // All validations passed
-    console.log('✅ OTP request validated for:', formattedPhone);
-    
-    // Log security event
+// Log security event
     logSecurityEvent({
       type: 'otp_send',
       ip,
       phoneNumber: formattedPhone,
       success: true,
-      message: 'OTP request validated',
+      message: isDummy ? 'Dummy OTP login requested' : 'OTP request validated',
     });
     
     return NextResponse.json({
       success: true,
-      message: 'Validation passed. Proceed with OTP send.',
+      message: isDummy
+        ? 'Dummy login enabled. Use OTP 123456.'
+        : 'Validation passed. Proceed with OTP send.',
       phoneNumber: formattedPhone,
+      isDummy,
     });
 
   } catch (error: any) {
-    console.error('❌ Send OTP error:', error);
-    
-    // Log failed attempt
+// Log failed attempt
     const ip = getClientIP(req);
     logSecurityEvent({
       type: 'otp_send',

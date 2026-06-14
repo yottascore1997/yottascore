@@ -4,14 +4,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Users, UserCircle, Heart, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
+import { prefetchDiscovery } from '@/lib/study-partner-discovery-cache';
 
 export default function StudyPartnerPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<{ bio: string | null } | null>(null);
   const [matchesCount, setMatchesCount] = useState(0);
   const [whoLikedCount, setWhoLikedCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -19,34 +20,34 @@ export default function StudyPartnerPage() {
       router.push('/auth/login');
       return;
     }
+
+    let cancelled = false;
+    prefetchDiscovery(token);
+
     (async () => {
       try {
-        const [profileRes, matchesRes, whoRes] = await Promise.all([
-          fetch('/api/student/study-partner/profile', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/student/study-partner/matches', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/student/study-partner/who-liked-you', { headers: { Authorization: `Bearer ${token}` } }),
-        ]);
-        if (profileRes.ok) setProfile(await profileRes.json());
-        if (matchesRes.ok) {
-          const m = await matchesRes.json();
-          setMatchesCount(Array.isArray(m) ? m.length : 0);
+        const res = await fetchWithTimeout(
+          '/api/student/study-partner/summary',
+          { headers: { Authorization: `Bearer ${token}` } },
+          12000
+        );
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          setProfile(data.profile ?? null);
+          setMatchesCount(data.matchesCount ?? 0);
+          setWhoLikedCount(data.whoLikedCount ?? 0);
         }
-        if (whoRes.ok) {
-          const w = await whoRes.json();
-          setWhoLikedCount(Array.isArray(w) ? w.length : 0);
-        }
-      } catch (_) {}
-      setLoading(false);
+      } catch {
+        // Show hub UI even if stats fail
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
     })();
-  }, [router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-500 border-t-transparent" />
-      </div>
-    );
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   return (
     <div className="max-w-lg mx-auto p-4">
@@ -63,7 +64,11 @@ export default function StudyPartnerPage() {
               <div>
                 <p className="font-semibold text-gray-900">My profile</p>
                 <p className="text-sm text-gray-500">
-                  {profile?.bio ? 'Profile filled' : 'Add bio, subjects, exam, study time'}
+                  {statsLoading
+                    ? 'Loading...'
+                    : profile?.bio
+                      ? 'Profile filled'
+                      : 'Add bio, subjects, exam, study time'}
                 </p>
               </div>
             </div>
@@ -95,7 +100,9 @@ export default function StudyPartnerPage() {
               <div>
                 <p className="font-semibold text-gray-900">Matches</p>
                 <p className="text-sm text-gray-500">
-                  {matchesCount} {matchesCount === 1 ? 'match' : 'matches'}
+                  {statsLoading
+                    ? '...'
+                    : `${matchesCount} ${matchesCount === 1 ? 'match' : 'matches'}`}
                 </p>
               </div>
             </div>
@@ -103,7 +110,7 @@ export default function StudyPartnerPage() {
           </div>
         </Link>
 
-        {whoLikedCount > 0 && (
+        {!statsLoading && whoLikedCount > 0 && (
           <Link href="/student/study-partner/who-liked-you">
             <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 flex items-center justify-between">
               <div>

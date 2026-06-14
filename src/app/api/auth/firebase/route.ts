@@ -7,9 +7,7 @@ import { getClientIP, logSecurityEvent } from '@/lib/security';
 // Firebase ID token verification
 async function verifyFirebaseToken(idToken: string) {
   try {
-    console.log('🔍 Verifying Firebase token...');
-    
-    // Check if Admin SDK is available
+// Check if Admin SDK is available
     const hasAdminSDK = process.env.FIREBASE_PRIVATE_KEY && 
                         process.env.FIREBASE_CLIENT_EMAIL && 
                         process.env.FIREBASE_PROJECT_ID;
@@ -20,26 +18,24 @@ async function verifyFirebaseToken(idToken: string) {
     }
     
     if (hasAdminSDK) {
-      // Use Admin SDK for secure verification
-      const { adminAuth, isAdminSDKInitialized } = await import('@/lib/firebase-admin');
-      
-      if (!isAdminSDKInitialized() || !adminAuth) {
+      const { adminAuth, isAdminSDKInitialized } = await import('@/lib/firebase-admin')
+
+      if (!isAdminSDKInitialized()) {
         if (process.env.NODE_ENV === 'production') {
-          throw new Error('Firebase Admin SDK not initialized');
+          throw new Error(
+            'Firebase Admin SDK not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY on the server.'
+          )
         }
-        console.warn('⚠️ Admin SDK not initialized, falling back to decode');
       } else {
-        console.log('🔐 Verifying token with Firebase Admin SDK (SECURE)...');
-        const decodedToken = await adminAuth.verifyIdToken(idToken, true); // checkRevoked = true
-        
-        console.log('✅ Token verified with Admin SDK');
+        const decodedToken = await adminAuth.verifyIdToken(idToken, true)
+
         return {
           uid: decodedToken.uid,
           email: decodedToken.email || '',
           phone_number: decodedToken.phone_number || '',
           name: decodedToken.name || `User ${decodedToken.phone_number || 'Unknown'}`,
-          firebase: decodedToken.firebase
-        };
+          firebase: decodedToken.firebase,
+        }
       }
     }
     
@@ -48,8 +44,7 @@ async function verifyFirebaseToken(idToken: string) {
       throw new Error('Insecure token verification not allowed in production');
     }
     
-    console.warn('⚠️ DEVELOPMENT MODE: Using basic token decode (INSECURE)');
-    const decoded = jwt.decode(idToken) as any;
+const decoded = jwt.decode(idToken) as any;
     
     if (!decoded || !decoded.sub) {
       throw new Error('Invalid token structure');
@@ -68,11 +63,9 @@ async function verifyFirebaseToken(idToken: string) {
       firebase: decoded.firebase
     };
     
-    console.log('✅ Token decoded successfully (DEV mode):', result);
-    return result;
+return result;
   } catch (error: any) {
-    console.error('❌ Token verification error:', error);
-    throw new Error(`Token verification failed: ${error.message}`);
+throw new Error(`Token verification failed: ${error.message}`);
   }
 }
 
@@ -80,17 +73,11 @@ const handler = async (req: NextRequest) => {
   const ip = getClientIP(req);
   
   try {
-    console.log('🔥 Firebase auth API called from IP:', ip);
-    
-    const body = await req.json();
-    console.log('📝 Request body keys:', Object.keys(body));
-    
-    const { idToken } = body;
+const body = await req.json();
+const { idToken } = body;
 
     if (!idToken) {
-      console.log('❌ No ID token provided');
-      
-      logSecurityEvent({
+logSecurityEvent({
         type: 'login_fail',
         ip,
         success: false,
@@ -103,15 +90,11 @@ const handler = async (req: NextRequest) => {
       );
     }
     
-    console.log('🔑 ID token received, length:', idToken.length);
-
-    // Verify the Firebase ID token
+// Verify the Firebase ID token
     const decodedToken = await verifyFirebaseToken(idToken);
     const { uid, email, phone_number, name } = decodedToken;
 
-    console.log('🔍 Looking for user with:', { uid, phone_number, email });
-    
-    // Check if user exists in our database by Firebase UID or phone number
+// Check if user exists in our database by Firebase UID or phone number
     let user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -122,13 +105,9 @@ const handler = async (req: NextRequest) => {
       },
     });
     
-    console.log('👤 User found:', user ? 'Yes' : 'No');
-
-    // If user doesn't exist, create a new one
+// If user doesn't exist, create a new one
     if (!user) {
-      console.log('👤 Creating new user...');
-      
-      // Generate unique username
+// Generate unique username
       const username = `user_${uid.substring(0, 8)}`;
       
       try {
@@ -145,15 +124,11 @@ const handler = async (req: NextRequest) => {
           },
         });
         
-        console.log(`✅ New user created via Firebase: ${user.id} (${user.phoneNumber})`);
-      } catch (createError: any) {
-        console.error('❌ Error creating user:', createError);
-        throw new Error(`Failed to create user: ${createError.message}`);
+} catch (createError: any) {
+throw new Error(`Failed to create user: ${createError.message}`);
       }
     } else {
-      console.log('👤 User exists, updating if needed...');
-      
-      // Update existing user with Firebase UID if not already set
+// Update existing user with Firebase UID if not already set
       if (user.id !== uid) {
         try {
           user = await prisma.user.update({
@@ -164,18 +139,14 @@ const handler = async (req: NextRequest) => {
               email: email || user.email
             }
           });
-          console.log(`✅ Existing user linked to Firebase: ${user.id} (${user.phoneNumber})`);
-        } catch (updateError: any) {
-          console.error('❌ Error updating user:', updateError);
-          throw new Error(`Failed to update user: ${updateError.message}`);
+} catch (updateError: any) {
+throw new Error(`Failed to update user: ${updateError.message}`);
         }
       }
     }
 
     // Generate JWT token for our app
-    console.log('🔑 Generating JWT token...');
-    
-    const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
     const token = jwt.sign(
       { 
         userId: user.id, 
@@ -186,9 +157,7 @@ const handler = async (req: NextRequest) => {
       { expiresIn: '7d' }
     );
     
-    console.log('✅ JWT token generated');
-
-    const response = {
+const response = {
       token,
       user: {
         id: user.id,
@@ -200,14 +169,7 @@ const handler = async (req: NextRequest) => {
       },
     };
     
-    console.log('🎉 Firebase auth successful:', {
-      userId: user.id,
-      name: user.name,
-      phoneNumber: user.phoneNumber,
-      role: user.role
-    });
-    
-    // Log successful login
+// Log successful login
     logSecurityEvent({
       type: 'login_success',
       ip,
@@ -219,9 +181,7 @@ const handler = async (req: NextRequest) => {
     return NextResponse.json(response);
 
   } catch (error: any) {
-    console.error('❌ Firebase auth error:', error);
-    
-    // Log failed login attempt
+// Log failed login attempt
     logSecurityEvent({
       type: 'login_fail',
       ip,

@@ -75,8 +75,7 @@ export async function POST(
           }
         }
       } catch (socketError) {
-        console.error('Socket notification error:', socketError)
-        // Don't fail the request if socket notification fails
+// Don't fail the request if socket notification fails
       }
 
       return NextResponse.json({ liked: true })
@@ -85,7 +84,6 @@ export async function POST(
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[POST_LIKE]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 } 

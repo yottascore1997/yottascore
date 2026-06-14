@@ -133,8 +133,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Bulk import error:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       message: error.message || 'Failed to import questions.' 
     }, { status: 500 });
   }

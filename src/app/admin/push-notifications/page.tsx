@@ -90,9 +90,7 @@ function PushNotificationsPage() {
         const data = await response.json()
         setUsers(data.students || [])
       }
-    } catch (error) {
-      console.error('Error fetching users:', error)
-    }
+    } catch {}
   }
 
   const fetchNotificationHistory = async () => {
@@ -110,9 +108,7 @@ function PushNotificationsPage() {
         const data = await response.json()
         setNotificationHistory(data.notifications || [])
       }
-    } catch (error) {
-      console.error('Error fetching notification history:', error)
-    }
+    } catch {}
   }
 
   const handleSendNotification = async () => {
@@ -176,8 +172,7 @@ function PushNotificationsPage() {
         alert(`❌ Error: ${error}`)
       }
     } catch (error) {
-      console.error('Error sending notification:', error)
-      alert('❌ Failed to send notification')
+alert('❌ Failed to send notification')
     } finally {
       setSending(false)
     }

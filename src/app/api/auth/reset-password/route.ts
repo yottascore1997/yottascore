@@ -63,8 +63,7 @@ const handler = async (req: Request) => {
 
     return NextResponse.json({ message: 'Password reset successfully. You can now sign in.' })
   } catch (error: unknown) {
-    console.error('[PASSWORD_RESET] Error:', error)
-    return NextResponse.json(
+return NextResponse.json(
       { message: 'Something went wrong. Please try again.' },
       { status: 500 }
     )

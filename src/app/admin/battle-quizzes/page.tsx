@@ -112,9 +112,7 @@ export default function AdminBattleQuizzes() {
           setForm(prev => ({ ...prev, categoryId: data[0].id }));
         }
       }
-    } catch (err) {
-      console.error("Failed to fetch categories:", err);
-    }
+    } catch {}
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -204,9 +202,7 @@ export default function AdminBattleQuizzes() {
       if (res.ok) {
         fetchQuizzes(); // Refresh the list
       }
-    } catch (err) {
-      console.error("Failed to toggle quiz status:", err);
-    }
+    } catch {}
   };
 
   const deleteQuiz = async (quizId: string) => {
@@ -227,9 +223,7 @@ export default function AdminBattleQuizzes() {
         setSuccess("Quiz deleted successfully!");
         fetchQuizzes(); // Refresh the list
       }
-    } catch (err) {
-      console.error("Failed to delete quiz:", err);
-    }
+    } catch {}
   };
 
   if (loading) {

@@ -13,16 +13,7 @@ export async function sendSupportNotification(data: NotificationData) {
   try {
     // In a real application, you would send an actual email here
     // For now, we'll just log the notification
-    console.log('📧 Support Notification:', {
-      to: data.to,
-      subject: data.subject,
-      body: data.body,
-      ticketId: data.ticketId,
-      ticketTitle: data.ticketTitle,
-      timestamp: new Date().toISOString(),
-    });
-
-    // You could integrate with services like:
+// You could integrate with services like:
     // - SendGrid
     // - AWS SES
     // - Nodemailer
@@ -31,8 +22,7 @@ export async function sendSupportNotification(data: NotificationData) {
 
     return { success: true, messageId: `mock-${Date.now()}` };
   } catch (error) {
-    console.error('Error sending notification:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 

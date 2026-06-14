@@ -198,13 +198,14 @@ export default function PrivacyPolicyPage() {
                 <p className="text-sm text-gray-700">Update or correct inaccurate information</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-4 bg-green-50 rounded-xl">
+            <Link href="/delete-account" className="flex items-start gap-3 p-4 bg-green-50 rounded-xl hover:bg-green-100 transition-colors">
               <FaCheckCircle className="text-green-600 text-xl mt-1" />
               <div>
                 <h3 className="font-bold text-gray-800 mb-1">Deletion</h3>
                 <p className="text-sm text-gray-700">Request deletion of your account and data</p>
+                <p className="text-sm text-green-700 font-semibold mt-1">Delete account →</p>
               </div>
-            </div>
+            </Link>
             <div className="flex items-start gap-3 p-4 bg-orange-50 rounded-xl">
               <FaCheckCircle className="text-orange-600 text-xl mt-1" />
               <div>
@@ -214,7 +215,13 @@ export default function PrivacyPolicyPage() {
             </div>
           </div>
           <p className="text-gray-700 leading-relaxed mt-6">
-            To exercise these rights, please contact us at <a href="mailto:privacy@yottascore.com" className="text-blue-600 font-semibold hover:underline">privacy@yottascore.com</a> or through our support system.
+            To delete your account online, visit our{' '}
+            <Link href="/delete-account" className="text-blue-600 font-semibold hover:underline">
+              account deletion page
+            </Link>
+            . For other requests, contact us at{' '}
+            <a href="mailto:privacy@yottascore.com" className="text-blue-600 font-semibold hover:underline">privacy@yottascore.com</a>{' '}
+            or through our support system.
           </p>
         </div>
 
@@ -298,6 +305,9 @@ export default function PrivacyPolicyPage() {
           <div className="flex justify-center gap-6 text-sm">
             <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
               Privacy Policy
+            </Link>
+            <Link href="/delete-account" className="text-gray-400 hover:text-white transition-colors">
+              Delete Account
             </Link>
             <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
               Terms of Service

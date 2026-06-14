@@ -13,32 +13,23 @@ function generateTicketId(): string {
 // GET - Fetch user's support tickets
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 [SUPPORT_TICKETS_GET] Starting request');
-    
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+const token = request.headers.get('authorization')?.replace('Bearer ', '');
     if (!token) {
-      console.log('❌ [SUPPORT_TICKETS_GET] No token provided');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('🔑 [SUPPORT_TICKETS_GET] Token found, verifying...');
-    const user = await verifyToken(token);
+const user = await verifyToken(token);
     if (!user) {
-      console.log('❌ [SUPPORT_TICKETS_GET] Invalid token');
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    console.log('✅ [SUPPORT_TICKETS_GET] User verified:', { userId: user.userId, role: user.role });
-
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    console.log('📋 [SUPPORT_TICKETS_GET] Query params:', { status, page, limit, skip });
-
-    let whereClause: any = {
+let whereClause: any = {
       userId: user.userId,
     };
 
@@ -46,10 +37,7 @@ export async function GET(request: NextRequest) {
       whereClause.status = status;
     }
 
-    console.log('🔍 [SUPPORT_TICKETS_GET] Where clause:', whereClause);
-    console.log('📊 [SUPPORT_TICKETS_GET] Fetching tickets from database...');
-
-    const tickets = await prisma.supportTicket.findMany({
+const tickets = await prisma.supportTicket.findMany({
       where: whereClause,
       include: {
         user: {
@@ -93,12 +81,8 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    console.log('✅ [SUPPORT_TICKETS_GET] Tickets fetched successfully:', tickets.length);
-
-    const total = await prisma.supportTicket.count({ where: whereClause });
-    console.log('📊 [SUPPORT_TICKETS_GET] Total tickets count:', total);
-
-    const response = { 
+const total = await prisma.supportTicket.count({ where: whereClause });
+const response = { 
       tickets,
       pagination: {
         page,
@@ -108,19 +92,11 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    console.log('🎉 [SUPPORT_TICKETS_GET] Response prepared successfully');
-    return NextResponse.json(response);
+return NextResponse.json(response);
   } catch (error) {
-    console.error('❌ [SUPPORT_TICKETS_GET] Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : 'Unknown'
-    });
-    
-    // Check if it's a Prisma error
+// Check if it's a Prisma error
     if (error && typeof error === 'object' && 'code' in error) {
-      console.error('🔍 [SUPPORT_TICKETS_GET] Prisma error code:', (error as any).code);
-    }
+}
     
     return NextResponse.json({ 
       error: 'Internal server error',
@@ -202,11 +178,9 @@ export async function POST(request: NextRequest) {
           ticket.title
         );
         await sendSupportNotification(notification);
-        console.log('✅ [SUPPORT_TICKETS_POST] Notification sent successfully');
-      }
+}
     } catch (notificationError) {
-      console.error('⚠️ [SUPPORT_TICKETS_POST] Notification failed (non-critical):', notificationError);
-      // Don't fail the entire request if notification fails
+// Don't fail the entire request if notification fails
     }
 
     return NextResponse.json({ 
@@ -214,7 +188,6 @@ export async function POST(request: NextRequest) {
       message: 'Support ticket created successfully' 
     });
   } catch (error) {
-    console.error('Error creating support ticket:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

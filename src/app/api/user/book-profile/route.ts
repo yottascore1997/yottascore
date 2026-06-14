@@ -60,8 +60,7 @@ export async function GET(request: NextRequest) {
       data: profile,
     });
   } catch (error) {
-    console.error('Error fetching book profile:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { success: false, error: 'Failed to fetch book profile' },
       { status: 500 }
     );
@@ -133,8 +132,7 @@ export async function POST(request: NextRequest) {
       message: existingProfile ? 'Profile updated successfully' : 'Profile created successfully',
     });
   } catch (error) {
-    console.error('Error updating book profile:', error);
-    if (error instanceof z.ZodError) {
+if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Validation error', details: error.errors },
         { status: 400 }

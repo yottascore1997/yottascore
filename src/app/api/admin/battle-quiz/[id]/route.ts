@@ -55,8 +55,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     return NextResponse.json(updatedQuiz);
   } catch (error: any) {
-    console.error('Battle Quiz update error:', error);
-    return NextResponse.json({ message: error.message || 'Failed to update quiz.' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Failed to update quiz.' }, { status: 500 });
   }
 }
 
@@ -101,7 +100,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     return NextResponse.json({ message: 'Quiz deleted successfully.' });
   } catch (error: any) {
-    console.error('Battle Quiz deletion error:', error);
-    return NextResponse.json({ message: error.message || 'Failed to delete quiz.' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Failed to delete quiz.' }, { status: 500 });
   }
 } 

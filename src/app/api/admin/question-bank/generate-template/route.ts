@@ -196,9 +196,7 @@ export async function POST(req: NextRequest) {
           }
         });
         savedQuestions.push(question);
-      } catch (dbError) {
-        console.error('Failed to save question:', dbError);
-      }
+      } catch {}
     }
 
     return NextResponse.json({
@@ -210,8 +208,7 @@ export async function POST(req: NextRequest) {
       method: 'template-based'
     });
   } catch (error: any) {
-    console.error('Template generation error:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       message: error.message || 'Failed to generate questions.' 
     }, { status: 500 });
   }

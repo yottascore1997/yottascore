@@ -45,12 +45,8 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
       
       if (data.success) {
         setBook(data.data);
-      } else {
-        console.error('Failed to fetch book:', data.error);
       }
-    } catch (error) {
-      console.error('Error fetching book:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -80,9 +76,7 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
       if (wishlistData.success) {
         setIsInWishlist(wishlistData.inWishlist);
       }
-    } catch (error) {
-      console.error('Error checking user interactions:', error);
-    }
+    } catch {}
   };
 
   const handleLike = async () => {
@@ -105,9 +99,7 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
       if (data.success) {
         setIsLiked(data.liked);
       }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
+    } catch {}
   };
 
   const handleWishlist = async () => {
@@ -130,9 +122,7 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
       if (data.success) {
         setIsInWishlist(!isInWishlist);
       }
-    } catch (error) {
-      console.error('Error toggling wishlist:', error);
-    }
+    } catch {}
   };
 
   const handleContactSeller = async () => {
@@ -176,8 +166,7 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
         alert('Failed to initiate contact. Please try again.');
       }
     } catch (error) {
-      console.error('Error contacting seller:', error);
-      alert('An error occurred. Please try again.');
+alert('An error occurred. Please try again.');
     }
   };
 

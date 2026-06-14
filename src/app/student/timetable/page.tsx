@@ -72,14 +72,12 @@ export default function TimetablePage() {
       })
 
       newSocket.on('connect', () => {
-        console.log('🔌 Timetable socket connected')
-        // Start timetable reminders
+// Start timetable reminders
         newSocket.emit('start_timetable_reminders', { userId: payload.userId })
       })
 
       newSocket.on('timetable_reminder', (data) => {
-        console.log('⏰ Timetable reminder received:', data)
-        // Show notification to user
+// Show notification to user
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification(data.subject, {
             body: `Your study session starts in ${Math.round((new Date(data.startTime).getTime() - Date.now()) / (1000 * 60))} minutes.${data.notes ? `\n\nNotes: ${data.notes}` : ''}`,
@@ -89,13 +87,10 @@ export default function TimetablePage() {
       })
 
       newSocket.on('disconnect', () => {
-        console.log('🔌 Timetable socket disconnected')
-      })
+})
 
       setSocket(newSocket)
-    } catch (error) {
-      console.error('Error initializing socket:', error)
-    }
+    } catch {}
   }
 
   const fetchTimetables = async () => {
@@ -262,15 +257,13 @@ export default function TimetablePage() {
       if (response.ok) {
         const result = await response.json()
         if (result.reminders && result.reminders.length > 0) {
-          console.log('Reminders sent:', result.reminders)
-          alert(`✅ ${result.reminders.length} reminders sent!`)
+alert(`✅ ${result.reminders.length} reminders sent!`)
         } else {
           alert('ℹ️ No upcoming reminders found')
         }
       }
     } catch (error) {
-      console.error('Error checking reminders:', error)
-      alert('❌ Error checking reminders')
+alert('❌ Error checking reminders')
     }
   }
 
@@ -293,8 +286,7 @@ export default function TimetablePage() {
         fetchTimetables()
       }
     } catch (error) {
-      console.error('Error resetting reminders:', error)
-      alert('❌ Error resetting reminders')
+alert('❌ Error resetting reminders')
     }
   }
 

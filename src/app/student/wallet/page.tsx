@@ -63,8 +63,7 @@ const WalletPage: React.FC = () => {
       const data: WalletData = await res.json();
       setWalletData(data);
     } catch (error: any) {
-      console.error('Error fetching wallet data:', error);
-      toast.error(error.message || 'Failed to load wallet data');
+toast.error(error.message || 'Failed to load wallet data');
     }
   };
 
@@ -80,9 +79,7 @@ const WalletPage: React.FC = () => {
         const data = await res.json();
         setKycStatus(data);
       }
-    } catch (error: any) {
-      console.error('Error fetching KYC status:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -138,8 +135,7 @@ const WalletPage: React.FC = () => {
       fetchWalletData();
     } catch (error: any) {
       toast.dismiss();
-      console.error('Error during deposit:', error);
-      toast.error(error.message || 'An error occurred during deposit.');
+toast.error(error.message || 'An error occurred during deposit.');
     } finally {
       setIsDepositing(false);
     }
@@ -167,8 +163,7 @@ const WalletPage: React.FC = () => {
       fetchWalletData();
     } catch (error: any) {
       toast.dismiss();
-      console.error('Error adding dummy balance:', error);
-      toast.error(error.message || 'An error occurred while adding dummy balance.');
+toast.error(error.message || 'An error occurred while adding dummy balance.');
     } finally {
       setIsAddingDummyBalance(false);
     }
@@ -206,8 +201,7 @@ const WalletPage: React.FC = () => {
       fetchWalletData();
     } catch (error: any) {
       toast.dismiss();
-      console.error('Error during withdrawal:', error);
-      toast.error(error.message || 'An error occurred during withdrawal.');
+toast.error(error.message || 'An error occurred during withdrawal.');
     } finally {
       setIsWithdrawing(false);
     }
@@ -220,8 +214,7 @@ const WalletPage: React.FC = () => {
   };
 
   const handleRazorpayError = (error: any) => {
-    console.error('Razorpay payment error:', error);
-  };
+};
 
   const handleRazorpayClose = () => {
     setShowRazorpayPayment(false);

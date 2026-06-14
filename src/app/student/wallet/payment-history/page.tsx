@@ -45,8 +45,7 @@ const PaymentHistoryPage: React.FC = () => {
       const data = await res.json();
       setTransactions(data.transactions || []);
     } catch (error: any) {
-      console.error('Error fetching payment history:', error);
-      toast.error(error.message || 'Failed to load payment history');
+toast.error(error.message || 'Failed to load payment history');
     } finally {
       setLoading(false);
     }

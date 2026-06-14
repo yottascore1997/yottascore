@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import jwt from 'jsonwebtoken'
-
-const prisma = new PrismaClient()
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
 // GET - Fetch pending posts for review
@@ -56,8 +54,7 @@ export async function GET(req: NextRequest) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[ADMIN_POSTS_REVIEW_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }
 
@@ -128,7 +125,6 @@ export async function POST(req: NextRequest) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[ADMIN_POSTS_REVIEW_POST]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

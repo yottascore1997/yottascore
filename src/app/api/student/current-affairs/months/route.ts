@@ -24,7 +24,6 @@ export async function GET(req: Request) {
     const list = months.map((m) => m.month)
     return NextResponse.json(list)
   } catch (e) {
-    console.error('[CA_MONTHS]', e)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

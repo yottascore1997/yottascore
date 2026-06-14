@@ -26,7 +26,6 @@ export async function GET(
 
     return NextResponse.json(blog)
   } catch (error) {
-    console.error('[BLOG_PUBLIC_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

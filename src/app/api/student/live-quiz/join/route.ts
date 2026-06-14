@@ -148,8 +148,7 @@ export async function POST(req: Request) {
       playingCount: participants.length,
     });
   } catch (e) {
-    console.error('Live quiz join error:', e);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

@@ -69,9 +69,7 @@ export default function SupportPage() {
         const data = await response.json();
         setTickets(data.tickets || []);
       }
-    } catch (error) {
-      console.error('Error fetching tickets:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -295,8 +293,7 @@ function CreateTicketModal({ onClose, onTicketCreated }: { onClose: () => void; 
         alert(error.error || 'Failed to upload file');
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      alert('Failed to upload file');
+alert('Failed to upload file');
     } finally {
       setUploading(false);
     }
@@ -345,12 +342,8 @@ function CreateTicketModal({ onClose, onTicketCreated }: { onClose: () => void; 
 
       if (response.ok) {
         onTicketCreated();
-      } else {
-        console.error('Error creating ticket');
       }
-    } catch (error) {
-      console.error('Error creating ticket:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import jwt from 'jsonwebtoken'
 
-const prisma = new PrismaClient()
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
 // GET - Fetch all visible posts (instantly visible, no approval needed)
@@ -20,20 +19,18 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Forbidden', { status: 403 })
     }
 
-    // Fetch all visible posts (exclude FLAGGED and REJECTED, posts are instantly visible)
     const posts = await prisma.post.findMany({
       where: {
-        status: 'APPROVED', // Show all visible posts (instantly visible, no approval needed)
-        isPrivate: false, // Public posts only
-        authorId: { not: decoded.userId }, // Exclude current user's posts
-        // Exclude posts from blocked users
+        status: 'APPROVED',
+        isPrivate: false,
+        authorId: { not: decoded.userId },
         author: {
           blockedBy: {
             none: {
-              blockerId: decoded.userId
-            }
-          }
-        }
+              blockerId: decoded.userId,
+            },
+          },
+        },
       },
       include: {
         author: {
@@ -42,55 +39,53 @@ export async function GET(req: NextRequest) {
             name: true,
             profilePhoto: true,
             course: true,
-            year: true
-          }
+            year: true,
+          },
         },
         _count: {
           select: {
             likes: true,
             comments: true,
             pollVotes: true,
-            questionAnswers: true
-          }
+            questionAnswers: true,
+          },
         },
         pollVotes: {
           where: { userId: decoded.userId },
-          select: { optionIndex: true }
+          select: { optionIndex: true },
         },
         questionAnswers: {
           where: { userId: decoded.userId },
-          select: { answer: true }
-        }
+          select: { answer: true },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     })
 
-    // Check if user has liked each post
-    const postsWithLikes = await Promise.all(
-      posts.map(async (post) => {
-        const like = await prisma.like.findUnique({
-          where: {
-            userId_postId: {
+    const postIds = posts.map((post) => post.id)
+    const userLikes =
+      postIds.length > 0
+        ? await prisma.like.findMany({
+            where: {
               userId: decoded.userId,
-              postId: post.id
-            }
-          }
-        })
+              postId: { in: postIds },
+            },
+            select: { postId: true },
+          })
+        : []
 
-        return {
-          ...post,
-          isLiked: !!like
-        }
-      })
-    )
+    const likedPostIds = new Set(userLikes.map((like) => like.postId))
+    const postsWithLikes = posts.map((post) => ({
+      ...post,
+      isLiked: likedPostIds.has(post.id),
+    }))
 
     return NextResponse.json(postsWithLikes)
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[POSTS_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }
 
@@ -110,20 +105,20 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    console.log('Request body:', body) // Debug log
-    const { 
-      content, 
-      imageUrl, 
-      videoUrl, 
-      hashtags, 
-      taggedUsers, 
+// Debug log
+    const {
+      content,
+      imageUrl,
+      videoUrl,
+      hashtags,
+      taggedUsers,
       isPrivate,
       postType = 'TEXT',
       pollOptions,
       pollEndTime,
       allowMultipleVotes = false,
       questionType,
-      questionOptions
+      questionOptions,
     } = body
 
     if (!content) {
@@ -145,30 +140,15 @@ export async function POST(req: NextRequest) {
       if (!questionType) {
         return new NextResponse('Question type is required', { status: 400 })
       }
-      if (questionType === 'MCQ' && (!questionOptions || !Array.isArray(questionOptions) || questionOptions.length < 2)) {
+      if (
+        questionType === 'MCQ' &&
+        (!questionOptions || !Array.isArray(questionOptions) || questionOptions.length < 2)
+      ) {
         return new NextResponse('MCQ question must have at least 2 options', { status: 400 })
       }
     }
 
-    console.log('Creating post with data:', {
-      content,
-      imageUrl,
-      videoUrl,
-      hashtags: hashtags || [],
-      taggedUsers: taggedUsers || [],
-      isPrivate: isPrivate || false,
-      postType,
-      pollOptions,
-      pollEndTime,
-      allowMultipleVotes,
-      questionType,
-      questionOptions,
-      status: 'APPROVED', // Posts are instantly visible
-      authorId: decoded.userId
-    }) // Debug log
-
-    // Create post with APPROVED status (instantly visible, no approval needed)
-    const post = await prisma.post.create({
+const post = await prisma.post.create({
       data: {
         content,
         imageUrl,
@@ -182,8 +162,8 @@ export async function POST(req: NextRequest) {
         allowMultipleVotes,
         questionType: questionType || null,
         questionOptions: questionOptions || null,
-        status: 'APPROVED', // Posts are instantly visible
-        authorId: decoded.userId
+        status: 'APPROVED',
+        authorId: decoded.userId,
       },
       include: {
         author: {
@@ -192,29 +172,26 @@ export async function POST(req: NextRequest) {
             name: true,
             profilePhoto: true,
             course: true,
-            year: true
-          }
-        }
-      }
+            year: true,
+          },
+        },
+      },
     })
 
-    console.log('Post created successfully:', post.id) // Debug log
-
-    // Return success message
-    return NextResponse.json({
+return NextResponse.json({
       success: true,
       message: 'Post created successfully and is now visible!',
       post: {
         ...post,
-        status: 'APPROVED'
-      }
+        status: 'APPROVED',
+      },
     })
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[POSTS_POST] Detailed error:', error) // Enhanced error logging
-    console.error('[POSTS_POST] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-    return new NextResponse(`Internal Error: ${error instanceof Error ? error.message : 'Unknown error'}`, { status: 500 })
+return new NextResponse(`Internal Error: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      status: 500,
+    })
   }
-} 
+}

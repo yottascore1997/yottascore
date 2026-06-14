@@ -26,15 +26,13 @@ export default function ImageUploadExample() {
       
       if (result.success) {
         setUploadedUrls(prev => [...prev, result.url]);
-        console.log('✅ Upload successful:', result.url);
-      } else {
+} else {
         setError(result.error || 'Upload failed');
         alert(result.error || 'Upload failed');
       }
     } catch (err) {
       setError('Upload error occurred');
-      console.error('Upload error:', err);
-    } finally {
+} finally {
       setUploading(false);
     }
   };
@@ -59,8 +57,7 @@ export default function ImageUploadExample() {
 
       if (successfulUploads.length > 0) {
         setUploadedUrls(prev => [...prev, ...successfulUploads]);
-        console.log('✅ Uploaded files:', successfulUploads);
-      }
+}
 
       if (failedUploads.length > 0) {
         const errorMessages = failedUploads
@@ -71,8 +68,7 @@ export default function ImageUploadExample() {
       }
     } catch (err) {
       setError('Upload error occurred');
-      console.error('Upload error:', err);
-    } finally {
+} finally {
       setUploading(false);
     }
   };

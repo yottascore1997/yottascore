@@ -37,9 +37,7 @@ export async function GET(req: Request) {
       weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
     }
 
-    console.log('🔍 Fetching live exams for week:', { weekStart, weekEnd })
-    
-    // Get all live exams conducted in the specified week
+// Get all live exams conducted in the specified week
     const liveExams = await prisma.liveExam.findMany({
       where: {
         endTime: {
@@ -80,9 +78,7 @@ export async function GET(req: Request) {
       }
     })
 
-    console.log('📊 Found live exams:', liveExams.length)
-
-    // Format the response
+// Format the response
     const leaderboardData = liveExams.map(exam => {
       // Calculate winners from top participants
       const topParticipants = exam.participants.slice(0, 5) // Top 5 winners
@@ -133,7 +129,6 @@ export async function GET(req: Request) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[WEEKLY_LEADERBOARD_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

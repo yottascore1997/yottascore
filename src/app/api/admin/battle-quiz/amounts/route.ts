@@ -56,8 +56,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(categories);
     }
   } catch (error: any) {
-    console.error('Error fetching battle quiz amounts:', error);
-    return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -114,8 +113,7 @@ export async function POST(req: NextRequest) {
       amounts: createdAmounts
     });
   } catch (error: any) {
-    console.error('Error updating battle quiz amounts:', error);
-    return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -152,7 +150,6 @@ export async function PUT(req: NextRequest) {
       amount: updatedAmount
     });
   } catch (error: any) {
-    console.error('Error updating battle quiz amount:', error);
-    return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
   }
 } 

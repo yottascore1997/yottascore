@@ -76,7 +76,6 @@ export async function POST(
       unattemptedCount,
     })
   } catch (error) {
-    console.error('[PYQ] Submit error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

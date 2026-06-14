@@ -18,9 +18,7 @@ export async function GET(req: Request) {
       return new NextResponse('Forbidden', { status: 403 })
     }
 
-    console.log('[MY_EXAMS_GET] User ID:', decoded.userId)
-
-    // For now, just return an empty array to test if the basic API works
+// For now, just return an empty array to test if the basic API works
     const allAttempts = []
 
     // Try to fetch live exam attempts with detailed data
@@ -50,9 +48,7 @@ export async function GET(req: Request) {
         }
       })
 
-      console.log('[MY_EXAMS_GET] Live attempts found:', liveAttempts.length)
-
-      const transformedLiveAttempts = liveAttempts.map((attempt: any) => {
+const transformedLiveAttempts = liveAttempts.map((attempt: any) => {
         const totalQuestions = attempt.exam._count.questions;
         const correctAnswers = attempt.score ? Math.floor(attempt.score / 10) : 0; // Assuming 10 points per correct answer
         const timeTaken = attempt.completedAt && attempt.startedAt 
@@ -76,9 +72,7 @@ export async function GET(req: Request) {
       })
 
       allAttempts.push(...transformedLiveAttempts)
-    } catch (error) {
-      console.error('[MY_EXAMS_GET] Error fetching live attempts:', error)
-    }
+    } catch {}
 
     // Try to fetch practice exam attempts with detailed data
     try {
@@ -107,9 +101,7 @@ export async function GET(req: Request) {
         }
       })
 
-      console.log('[MY_EXAMS_GET] Practice attempts found:', practiceAttempts.length)
-
-      const transformedPracticeAttempts = practiceAttempts.map((attempt: any) => {
+const transformedPracticeAttempts = practiceAttempts.map((attempt: any) => {
         const totalQuestions = attempt.exam._count.questions;
         const correctAnswers = attempt.score ? Math.floor(attempt.score / 10) : 0; // Assuming 10 points per correct answer
         const timeTaken = attempt.completedAt && attempt.startedAt 
@@ -133,9 +125,7 @@ export async function GET(req: Request) {
       })
 
       allAttempts.push(...transformedPracticeAttempts)
-    } catch (error) {
-      console.error('[MY_EXAMS_GET] Error fetching practice attempts:', error)
-    }
+    } catch {}
 
     // Try to fetch battle quiz attempts with detailed data
     try {
@@ -162,9 +152,7 @@ export async function GET(req: Request) {
         }
       })
 
-      console.log('[MY_EXAMS_GET] Battle attempts found:', battleAttempts.length)
-
-      const transformedBattleAttempts = battleAttempts.map((attempt: any) => {
+const transformedBattleAttempts = battleAttempts.map((attempt: any) => {
         const totalQuestions = attempt.quiz._count.questions;
         const correctAnswers = attempt.score ? Math.floor(attempt.score / 10) : 0; // Assuming 10 points per correct answer
         const timeTaken = attempt.quiz.duration || 0; // Battle quizzes have fixed duration
@@ -186,24 +174,11 @@ export async function GET(req: Request) {
       })
 
       allAttempts.push(...transformedBattleAttempts)
-    } catch (error) {
-      console.error('[MY_EXAMS_GET] Error fetching battle attempts:', error)
-    }
+    } catch {}
 
-    console.log('[MY_EXAMS_GET] Total attempts found:', allAttempts.length)
-    
-    // Log sample data for debugging
+// Log sample data for debugging
     if (allAttempts.length > 0) {
-      console.log('[MY_EXAMS_GET] Sample attempt data:', {
-        examName: allAttempts[0].examName,
-        examType: allAttempts[0].examType,
-        score: allAttempts[0].score,
-        totalQuestions: allAttempts[0].totalQuestions,
-        correctAnswers: allAttempts[0].correctAnswers,
-        timeTaken: allAttempts[0].timeTaken,
-        accuracy: allAttempts[0].accuracy
-      });
-    }
+}
     
     return NextResponse.json(allAttempts)
 
@@ -211,11 +186,6 @@ export async function GET(req: Request) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[MY_EXAMS_GET]', error)
-    console.error('[MY_EXAMS_GET] Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    })
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 } 

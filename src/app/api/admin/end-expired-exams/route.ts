@@ -8,9 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 // Function to check and end expired exams
 async function checkAndEndExpiredExams() {
   try {
-    console.log(`⏰ Checking for expired live exams...`);
-    
-    const now = new Date();
+const now = new Date();
     
     // Find live exams that have ended (endTime is in the past)
     const expiredExams = await prisma.liveExam.findMany({
@@ -28,18 +26,13 @@ async function checkAndEndExpiredExams() {
     });
     
     if (expiredExams.length === 0) {
-      console.log(`   - No expired exams found`);
-      return { ended: 0, exams: [] };
+return { ended: 0, exams: [] };
     }
     
-    console.log(`   - Found ${expiredExams.length} expired exams to end`);
-    
-    const endedExams: Array<{ id: string; title: string; endTime: Date | null }> = [];
+const endedExams: Array<{ id: string; title: string; endTime: Date | null }> = [];
     
     for (const exam of expiredExams) {
-      console.log(`   - Ending exam: ${exam.title} (ID: ${exam.id})`);
-      
-      // Update exam status to not live
+// Update exam status to not live
       await prisma.liveExam.update({
         where: { id: exam.id },
         data: { isLive: false }
@@ -51,16 +44,12 @@ async function checkAndEndExpiredExams() {
         endTime: exam.endTime
       });
       
-      console.log(`   - Successfully ended exam: ${exam.title}`);
-    }
+}
     
-    console.log(`   - Completed ending ${expiredExams.length} expired exams`);
-    
-    return { ended: expiredExams.length, exams: endedExams };
+return { ended: expiredExams.length, exams: endedExams };
     
   } catch (error) {
-    console.error(`❌ Error checking and ending expired exams:`, error);
-    throw error;
+throw error;
   }
 }
 
@@ -87,8 +76,7 @@ export const POST = withCORS(async (req: Request) => {
     });
     
   } catch (error) {
-    console.error('Error ending expired exams:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
@@ -154,8 +142,7 @@ export const GET = withCORS(async (req: Request) => {
     });
     
   } catch (error) {
-    console.error('Error fetching exam status:', error);
-    return NextResponse.json(
+return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

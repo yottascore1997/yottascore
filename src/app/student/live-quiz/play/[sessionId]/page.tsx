@@ -115,7 +115,7 @@ export default function LiveQuizPlayPage() {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       setUserId(payload.userId || null);
-    } catch (_) {}
+    } catch {}
     fetchSession();
   }, [fetchSession, router]);
 
@@ -147,7 +147,7 @@ export default function LiveQuizPlayPage() {
         try {
           const uid = JSON.parse(atob(token.split('.')[1]))?.userId;
           if (uid && typeof data.allRanks[uid] === 'number') setMyRank(data.allRanks[uid]);
-        } catch (_) {}
+        } catch {}
       }
     };
 
@@ -175,7 +175,7 @@ export default function LiveQuizPlayPage() {
         try {
           const uid = JSON.parse(atob(token.split('.')[1]))?.userId;
           if (uid && typeof data.allRanks[uid] === 'number') setMyRank(data.allRanks[uid]);
-        } catch (_) {}
+        } catch {}
       }
     };
 
@@ -192,13 +192,13 @@ export default function LiveQuizPlayPage() {
             setCorrectCount(me.correctCount);
             setWrongCount(me.wrongCount);
           }
-        } catch (_) {}
+        } catch {}
       }
       if (typeof data.allRanks === 'object' && data.allRanks && token) {
         try {
           const uid = JSON.parse(atob(token.split('.')[1]))?.userId;
           if (uid && typeof data.allRanks[uid] === 'number') setMyRank(data.allRanks[uid]);
-        } catch (_) {}
+        } catch {}
       }
     };
 

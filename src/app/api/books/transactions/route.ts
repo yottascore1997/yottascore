@@ -109,8 +109,7 @@ export const POST = withCORS(async (request: NextRequest) => {
       data: transaction,
     });
   } catch (error) {
-    console.error('Error creating transaction:', error);
-    if (error instanceof z.ZodError) {
+if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Validation error', details: error.errors },
         { status: 400 }

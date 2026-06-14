@@ -140,9 +140,7 @@ export default function ProfilePage() {
         const user = await response.json()
         setCurrentUserId(user.id)
       }
-    } catch (error) {
-      console.error('Error fetching current user ID:', error)
-    }
+    } catch {}
   }
 
   const fetchUserPosts = async (userId: string) => {
@@ -159,15 +157,12 @@ export default function ProfilePage() {
 
       if (response.ok) {
         const posts = await response.json()
-        console.log('Fetched user posts:', posts.length, posts) // Debug log
+// Debug log
         setUserPosts(posts)
       } else {
         const errorText = await response.text()
-        console.error('Failed to fetch user posts:', response.status, errorText)
-      }
-    } catch (error) {
-      console.error('Error fetching user posts:', error)
-    } finally {
+}
+    } catch {} finally {
       setPostsLoading(false)
     }
   }
@@ -426,8 +421,7 @@ export default function ProfilePage() {
             setShowSuccessMessage(true)
             setTimeout(() => setShowSuccessMessage(false), 3000)
           } catch (error) {
-            console.error('Photo upload error:', error)
-            setShowErrorMessage(true)
+setShowErrorMessage(true)
             setTimeout(() => setShowErrorMessage(false), 5000)
           } finally {
             setUploadingPhoto(false)
@@ -506,8 +500,7 @@ export default function ProfilePage() {
         photoInputRef.current.value = ''
       }
     } catch (error) {
-      console.error('Photo upload error:', error)
-      setShowErrorMessage(true)
+setShowErrorMessage(true)
       setTimeout(() => setShowErrorMessage(false), 5000)
     } finally {
       setUploadingPhoto(false)
@@ -528,13 +521,10 @@ export default function ProfilePage() {
 
         if (response.ok) {
           const data = await response.json()
-          console.log('Debug Follow Data:', data)
-          alert(`Debug Info:\nUser: ${data.user.name}\nFollowers: ${data.user.followersCount}\nFollowing: ${data.user.followingCount}\n\nFollowers: ${data.followers.map((f: any) => f.name).join(', ')}\nFollowing: ${data.following.map((f: any) => f.name).join(', ')}`)
+alert(`Debug Info:\nUser: ${data.user.name}\nFollowers: ${data.user.followersCount}\nFollowing: ${data.user.followingCount}\n\nFollowers: ${data.followers.map((f: any) => f.name).join(', ')}\nFollowing: ${data.following.map((f: any) => f.name).join(', ')}`)
         }
       }
-    } catch (error) {
-      console.error('Debug error:', error)
-    }
+    } catch {}
   }
 
   const explainFollowSystem = async () => {
@@ -551,9 +541,7 @@ export default function ProfilePage() {
 
         if (response.ok) {
           const data = await response.json()
-          console.log('Follow Explanation:', data)
-          
-          const message = `
+const message = `
 ${data.explanation.title}
 
 ${data.explanation.description}
@@ -575,9 +563,7 @@ Current Relationship:
           alert(message)
         }
       }
-    } catch (error) {
-      console.error('Follow explanation error:', error)
-    }
+    } catch {}
   }
 
   if (loading) {

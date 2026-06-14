@@ -77,8 +77,7 @@ export default function AdminReferralsPage() {
         setError('Failed to fetch referral data');
       }
     } catch (error) {
-      console.error('Error fetching referral data:', error);
-      setError('Failed to fetch referral data');
+setError('Failed to fetch referral data');
     } finally {
       setLoading(false);
     }

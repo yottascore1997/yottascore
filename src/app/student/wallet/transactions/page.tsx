@@ -45,8 +45,7 @@ const TransactionsPage: React.FC = () => {
       const data = await res.json();
       setTransactions(data.transactions || []);
     } catch (error: any) {
-      console.error('Error fetching transactions:', error);
-      toast.error(error.message || 'Failed to load transactions');
+toast.error(error.message || 'Failed to load transactions');
     } finally {
       setLoading(false);
     }

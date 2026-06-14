@@ -6,27 +6,21 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function GET(req: Request) {
   try {
-    console.log('Received request to fetch battle quizzes');
-    
-    const authHeader = req.headers.get('authorization');
+const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No authorization header or invalid format');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
       decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
-      console.log('Token decoded:', { userId: decoded.userId, role: decoded.role });
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+} catch (error) {
+return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     if (decoded.role !== 'ADMIN') {
-      console.log('User is not an admin');
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Fetch all battle quizzes
@@ -56,12 +50,9 @@ export async function GET(req: Request) {
       }
     });
 
-    console.log(`Found ${quizzes.length} battle quizzes`);
-    return NextResponse.json(quizzes);
+return NextResponse.json(quizzes);
   } catch (error) {
-    console.error('[BATTLE_QUIZ_GET] Detailed error:', error);
-    
-    if (error instanceof jwt.JsonWebTokenError) {
+if (error instanceof jwt.JsonWebTokenError) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
@@ -226,7 +217,6 @@ export async function POST(req: NextRequest) {
       questionsAdded: randomQuestions.length
     });
   } catch (error: any) {
-    console.error('Battle Quiz creation error:', error);
-    return NextResponse.json({ message: error.message || 'Failed to create quiz.' }, { status: 500 });
+return NextResponse.json({ message: error.message || 'Failed to create quiz.' }, { status: 500 });
   }
 } 

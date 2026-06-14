@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
-
-const prisma = new PrismaClient()
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
 // GET - Fetch user's pending posts (deprecated: posts are now instantly visible)
@@ -27,7 +24,6 @@ export async function GET(req: NextRequest) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[PENDING_POSTS_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

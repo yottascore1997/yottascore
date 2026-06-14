@@ -1347,6 +1347,7 @@ const upcomingExams = [
                 <li><Link href="#" className="hover:text-white transition-colors flex items-center gap-2"><FaArrowRight className="text-xs" /> FAQs</Link></li>
                 <li><Link href="#" className="hover:text-white transition-colors flex items-center gap-2"><FaArrowRight className="text-xs" /> Contact Us</Link></li>
                 <li><Link href="/privacy" className="hover:text-white transition-colors flex items-center gap-2"><FaArrowRight className="text-xs" /> Privacy Policy</Link></li>
+                <li><Link href="/delete-account" className="hover:text-white transition-colors flex items-center gap-2"><FaArrowRight className="text-xs" /> Delete Account</Link></li>
                 <li><Link href="#" className="hover:text-white transition-colors flex items-center gap-2"><FaArrowRight className="text-xs" /> Terms of Service</Link></li>
               </ul>
             </div>

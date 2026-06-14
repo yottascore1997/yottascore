@@ -40,8 +40,7 @@ const handler = async (req: Request) => {
       expiresIn: 900,
     })
   } catch (error) {
-    console.error('Refresh error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 

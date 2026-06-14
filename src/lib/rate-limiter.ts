@@ -130,8 +130,7 @@ export function cleanupExpiredEntries() {
   });
   
   if (cleaned > 0) {
-    console.log(`🧹 Cleaned ${cleaned} expired rate limit entries`);
-  }
+}
 }
 
 // Auto cleanup every hour

@@ -61,9 +61,7 @@ function PushNotificationsPage() {
         setNotifications(data.notifications || [])
         setUnreadCount(data.unreadCount || 0)
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
-    } finally {
+    } catch {} finally {
       setLoading(false)
     }
   }
@@ -96,9 +94,7 @@ function PushNotificationsPage() {
         )
         setUnreadCount(prev => Math.max(0, prev - 1))
       }
-    } catch (error) {
-      console.error('Error marking notification as read:', error)
-    }
+    } catch {}
   }
 
   const markAllAsRead = async () => {
@@ -123,9 +119,7 @@ function PushNotificationsPage() {
         )
         setUnreadCount(0)
       }
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error)
-    }
+    } catch {}
   }
 
   const getTypeIcon = (type: string) => {

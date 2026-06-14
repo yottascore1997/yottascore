@@ -14,17 +14,11 @@ async function checkQuestions() {
       }
     });
     
-    console.log('📋 Categories found:');
-    categories.forEach(cat => {
-      console.log(`   - ${cat.name} (${cat.id})`);
-    });
+categories.forEach(cat => {
+});
     
-    console.log('\n🔍 Checking questions for each category...\n');
-    
-    for (const category of categories) {
-      console.log(`📊 Category: ${category.name}`);
-      
-      // Check QuestionBankItem table
+for (const category of categories) {
+// Check QuestionBankItem table
       const questionBankCount = await prisma.questionBankItem.count({
         where: {
           categoryId: category.id,
@@ -39,11 +33,7 @@ async function checkQuestions() {
         }
       });
       
-      console.log(`   - QuestionBankItem: ${questionBankCount} questions`);
-      console.log(`   - Question table: ${questionTableCount} questions`);
-      console.log(`   - Total: ${questionBankCount + questionTableCount} questions`);
-      
-      // Show sample questions from QuestionBankItem
+// Show sample questions from QuestionBankItem
       if (questionBankCount > 0) {
         const sampleQuestions = await prisma.questionBankItem.findMany({
           where: {
@@ -58,21 +48,11 @@ async function checkQuestions() {
           },
           take: 3
         });
-        
-        console.log(`   - Sample questions from QuestionBankItem:`);
-        sampleQuestions.forEach((q, index) => {
-          console.log(`     ${index + 1}. ${q.text.substring(0, 80)}...`);
-          console.log(`        Options: ${JSON.stringify(q.options)}`);
-          console.log(`        Correct: ${q.correctAnswer}`);
-        });
       }
       
-      console.log('');
-    }
+}
     
-  } catch (error) {
-    console.error('❌ Error:', error);
-  } finally {
+  } catch {} finally {
     await prisma.$disconnect();
   }
 }

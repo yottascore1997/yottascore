@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { FaTrophy, FaRupeeSign } from 'react-icons/fa';
 import { GiFlexibleStar } from 'react-icons/gi';
 import { jwtDecode } from 'jwt-decode';
+import { pollWhenVisible } from '@/lib/poll-when-visible';
 
 interface Exam {
   id: string;
@@ -158,8 +159,7 @@ export default function LiveExamDetailPage() {
   useEffect(() => {
     const handleExamEnded = (data: any) => {
       if (data.examId === examId) {
-        console.log('Exam ended notification received:', data);
-        // Refresh the exam data to show updated status
+// Refresh the exam data to show updated status
         window.location.reload();
       }
     };
@@ -174,7 +174,6 @@ export default function LiveExamDetailPage() {
 
   // Auto-refresh leaderboard every 10s if tab is active
   useEffect(() => {
-    let interval: NodeJS.Timeout;
     const fetchLeaderboard = async () => {
       setLeaderboardLoading(true);
       try {
@@ -191,10 +190,9 @@ export default function LiveExamDetailPage() {
       }
     };
     if (activeTab === 'leaderboard' && examId) {
-      fetchLeaderboard();
-      interval = setInterval(fetchLeaderboard, 10000);
+      return pollWhenVisible(fetchLeaderboard, 10000);
     }
-    return () => interval && clearInterval(interval);
+    return () => {};
   }, [activeTab, examId]);
 
   // Fetch winnings
@@ -280,8 +278,7 @@ export default function LiveExamDetailPage() {
       setQuestions(data);
       setStarted(true);
     } catch (error) {
-      console.error('Error starting exam:', error);
-      alert(error instanceof Error ? error.message : 'Failed to start exam');
+alert(error instanceof Error ? error.message : 'Failed to start exam');
     } finally {
       setQuestionsLoading(false);
     }
@@ -326,8 +323,7 @@ export default function LiveExamDetailPage() {
       // Redirect to beautiful result page
       router.push(`/student/live-exams/${examId}/result`);
     } catch (error) {
-      console.error('Error submitting answers:', error);
-      alert(error instanceof Error ? error.message : 'Failed to submit answers');
+alert(error instanceof Error ? error.message : 'Failed to submit answers');
     } finally {
       setSubmitting(false);
     }

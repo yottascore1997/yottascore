@@ -33,21 +33,16 @@ export const initSocket = (res: NextApiResponseWithSocket) => {
     });
 
     io.on('connection', (socket) => {
-      console.log('Client connected:', socket.id);
-
-      socket.on('join-battle', (data) => {
-        console.log('Join battle request:', data);
-        // Handle battle joining logic here
+socket.on('join-battle', (data) => {
+// Handle battle joining logic here
       });
 
       socket.on('submit-answer', (data) => {
-        console.log('Answer submitted:', data);
-        // Handle answer submission logic here
+// Handle answer submission logic here
       });
 
       socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
-      });
+});
     });
 
     res.socket.server.io = io;

@@ -96,8 +96,7 @@ export default function AdminLiveExams() {
       const data = await response.json();
       setExams(data);
     } catch (error) {
-      console.error('Error fetching exams:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch exams');
+setError(error instanceof Error ? error.message : 'Failed to fetch exams');
     } finally {
       setLoading(false);
     }
@@ -138,8 +137,7 @@ export default function AdminLiveExams() {
       // Refresh the exams list
       fetchExams();
     } catch (error) {
-      console.error('Error deleting exam:', error);
-      alert(error instanceof Error ? error.message : 'Failed to delete exam');
+alert(error instanceof Error ? error.message : 'Failed to delete exam');
     }
   };
 
@@ -179,8 +177,7 @@ export default function AdminLiveExams() {
       }
 
     } catch (error) {
-      console.error('Error toggling exam status:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update exam status');
+alert(error instanceof Error ? error.message : 'Failed to update exam status');
     }
   };
 
@@ -209,8 +206,7 @@ export default function AdminLiveExams() {
       // Refresh the exams list to show updated status
       fetchExams();
     } catch (error) {
-      console.error('Error ending expired exams:', error);
-      alert(error instanceof Error ? error.message : 'Failed to end expired exams');
+alert(error instanceof Error ? error.message : 'Failed to end expired exams');
     }
   };
 

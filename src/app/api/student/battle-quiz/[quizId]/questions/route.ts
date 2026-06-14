@@ -18,9 +18,7 @@ export const GET = withCORS(async (
     }
 
     const { quizId } = params;
-    console.log('Looking for quiz with ID:', quizId);
-
-    // Verify the quiz exists and is active
+// Verify the quiz exists and is active
     const quiz = await prisma.battleQuiz.findFirst({
       where: {
         id: quizId,
@@ -28,9 +26,7 @@ export const GET = withCORS(async (
       }
     });
 
-    console.log('Found quiz:', quiz);
-
-    if (!quiz) {
+if (!quiz) {
       // Let's check if the quiz exists but is inactive
       const inactiveQuiz = await prisma.battleQuiz.findUnique({
         where: { id: quizId }
@@ -56,12 +52,9 @@ export const GET = withCORS(async (
       orderBy: { createdAt: 'asc' },
     });
 
-    console.log('Found questions:', questions.length);
-
-    return NextResponse.json(questions);
+return NextResponse.json(questions);
   } catch (error: any) {
-    console.error('Battle Quiz questions fetch error:', error);
-    return NextResponse.json({ 
+return NextResponse.json({ 
       error: 'Internal server error',
       details: error.message 
     }, { status: 500 });

@@ -56,8 +56,7 @@ export async function GET(req: NextRequest) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[BLOGS_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }
 
@@ -96,13 +95,11 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    console.log('✅ Blog created successfully:', blog.id)
-    return NextResponse.json(blog)
+return NextResponse.json(blog)
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[BLOG_POST]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

@@ -35,8 +35,7 @@ export async function GET(
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[BLOG_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }
 
@@ -87,14 +86,12 @@ export async function PUT(
       }
     })
 
-    console.log('✅ Blog updated successfully:', blog.id)
-    return NextResponse.json(blog)
+return NextResponse.json(blog)
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[BLOG_PUT]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }
 
@@ -128,13 +125,11 @@ export async function DELETE(
       where: { id: params.id }
     })
 
-    console.log('✅ Blog deleted successfully:', params.id)
-    return NextResponse.json({ success: true })
+return NextResponse.json({ success: true })
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       return new NextResponse('Invalid token', { status: 401 })
     }
-    console.error('[BLOG_DELETE]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+return new NextResponse('Internal Error', { status: 500 })
   }
 }

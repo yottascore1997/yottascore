@@ -30,8 +30,7 @@ const handler = async (req: Request) => {
     }
 
     if (!process.env.RESEND_API_KEY) {
-      console.error('[FORGOT_PASSWORD] RESEND_API_KEY not set')
-      return NextResponse.json(
+return NextResponse.json(
         { message: 'Email service not configured. Please try again later.' },
         { status: 500 }
       )
@@ -68,8 +67,7 @@ const handler = async (req: Request) => {
     })
 
     if (error) {
-      console.error('[FORGOT_PASSWORD] Resend error:', error)
-      return NextResponse.json(
+return NextResponse.json(
         { message: 'Failed to send email. Please try again later.' },
         { status: 500 }
       )
@@ -77,8 +75,7 @@ const handler = async (req: Request) => {
 
     return NextResponse.json({ message: 'If that email exists, we sent a reset link.' })
   } catch (err: unknown) {
-    console.error('[FORGOT_PASSWORD] Error:', err)
-    return NextResponse.json(
+return NextResponse.json(
       { message: 'Something went wrong. Please try again.' },
       { status: 500 }
     )

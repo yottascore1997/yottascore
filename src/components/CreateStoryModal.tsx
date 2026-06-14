@@ -109,8 +109,7 @@ export default function CreateStoryModal({
       onStoryCreated()
       onClose()
     } catch (error) {
-      console.error('Error creating story:', error)
-      alert('Failed to create story. Please try again.')
+alert('Failed to create story. Please try again.')
     } finally {
       setUploading(false)
     }

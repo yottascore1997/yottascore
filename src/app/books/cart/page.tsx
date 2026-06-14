@@ -55,9 +55,7 @@ export default function CartPage() {
         setCartItems(data.data.cartItems);
         setGroupedBySeller(data.data.groupedBySeller);
       }
-    } catch (error) {
-      console.error('Error fetching cart:', error);
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -82,8 +80,7 @@ export default function CartPage() {
         alert(data.error || 'Failed to remove book from cart');
       }
     } catch (error) {
-      console.error('Error removing from cart:', error);
-      alert('Failed to remove book from cart');
+alert('Failed to remove book from cart');
     } finally {
       setRemoving(null);
     }
@@ -126,8 +123,7 @@ export default function CartPage() {
         alert(data.error || 'Failed to send message');
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-      alert('Failed to send message. Please try again.');
+alert('Failed to send message. Please try again.');
     }
   };
 
@@ -160,8 +156,7 @@ export default function CartPage() {
       alert(`Messages sent to ${groupedBySeller.length} sellers! Check your messages.`);
       router.push('/student/messages');
     } catch (error) {
-      console.error('Error messaging sellers:', error);
-      alert('Failed to send messages. Please try again.');
+alert('Failed to send messages. Please try again.');
     }
   };
 

@@ -51,7 +51,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json(transformedCategories);
   } catch (error) {
-    console.error('Question categories fetch error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 
