@@ -70,7 +70,7 @@ const handler = async (req: NextRequest) => {
       user = await prisma.user.create({
         data: {
           id: DUMMY_UID,
-          email: '',
+          email: null,
           name: 'Test User',
           phoneNumber: DUMMY_PHONE,
           role: 'STUDENT',

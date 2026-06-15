@@ -99,7 +99,7 @@ logSecurityEvent({
       where: {
         OR: [
           { id: uid }, // Check by Firebase UID
-          { phoneNumber: phone_number || '' }, // Check by phone number
+          { phoneNumber: phone_number || undefined }, // Check by phone number
           { email: email || undefined } // Check by email if available
         ]
       },
@@ -114,9 +114,9 @@ logSecurityEvent({
         user = await prisma.user.create({
           data: {
             id: uid, // Use Firebase UID as our user ID
-            email: email || '',
+            email: email || null, // Set to null instead of empty string
             name: name || `User ${phone_number || 'Unknown'}`,
-            phoneNumber: phone_number || '',
+            phoneNumber: phone_number || null, // Set to null instead of empty string
             role: 'STUDENT',
             username: username,
             // Set default wallet balance
@@ -125,7 +125,8 @@ logSecurityEvent({
         });
         
 } catch (createError: any) {
-throw new Error(`Failed to create user: ${createError.message}`);
+  // If it's a unique constraint on username or something else, try a different approach
+  throw new Error(`Failed to create user: ${createError.message}`);
       }
     } else {
 // Update existing user with Firebase UID if not already set

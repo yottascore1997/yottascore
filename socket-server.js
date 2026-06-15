@@ -65,22 +65,21 @@ const io = new Server(httpServer, {
   path: '/api/socket',
   addTrailingSlash: false,
   allowEIO3: true,
-  transports: ['websocket', 'polling'], // Prefer websocket for better performance
-  pingTimeout: 60000, // 60 seconds
-  pingInterval: 25000, // 25 seconds
-  maxHttpBufferSize: 1e6, // 1MB
-  // Connection limits
+  transports: ['websocket', 'polling'], // Prefer websocket
+  pingTimeout: 45000, // Reduced to 45s (faster cleanup of dead connections)
+  pingInterval: 30000, // Increased to 30s (less overhead)
+  maxHttpBufferSize: 5e5, // Reduced to 500KB (lower memory usage)
   connectionStateRecovery: {
     maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
     skipMiddlewares: true,
+  },
+  perMessageDeflate: {
+    threshold: 1024 // Only compress messages over 1KB
   }
 });
 
 // Store user socket mappings
 const userSockets = {};
-
-// Spy game state (used by typing/stop_typing handlers – empty if feature unused)
-const spyGames = new Map();
 
 // Timetable reminder intervals
 const timetableReminderIntervals = new Map(); // userId -> interval
@@ -96,6 +95,38 @@ const privateRooms = new Map(); // roomCode -> room data
 
 // Matchmaking lock per queue - prevents race when 100+ users join at once
 const matchmakingLocks = new Map(); // quizId -> boolean (true = locked)
+
+// ---------------- CACHING ----------------
+// Simple in-memory cache with TTL
+const cache = new Map();
+const CACHE_TTL = 60_000; // 1 minute
+
+function getCached(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiry) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function setCached(key, value, ttl = CACHE_TTL) {
+  cache.set(key, {
+    value,
+    expiry: Date.now() + ttl
+  });
+}
+
+// Cleanup expired cache entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of cache.entries()) {
+    if (now > entry.expiry) {
+      cache.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
 
 // ---------------- Live Quiz (Always-on, join anytime) ----------------
 const LIVE_QUIZ_DEFAULT_QUESTION_COUNT = 10;
@@ -3553,9 +3584,78 @@ player2Socket.emit('match_ended', {
   const deleted = activeMatches.delete(matchId);
 }
 
+// ---------------- GRACEFUL SHUTDOWN ----------------
+async function gracefulShutdown(signal) {
+  console.log(`\nReceived ${signal}, shutting down gracefully...`);
+  
+  // Close Socket.IO server
+  io.close(() => {
+    console.log('Socket.IO server closed');
+  });
+
+  // Close HTTP server
+  httpServer.close(() => {
+    console.log('HTTP server closed');
+  });
+
+  // Clear all intervals and timeouts
+  // Clear live quiz category loops
+  for (const [categoryId, state] of liveQuizCategoryLoops.entries()) {
+    if (state.timeout) clearTimeout(state.timeout);
+  }
+  liveQuizCategoryLoops.clear();
+
+  // Clear live quiz refresh debounce
+  for (const [, state] of liveQuizRefreshDebounce.entries()) {
+    if (state.timeoutId) clearTimeout(state.timeoutId);
+  }
+  liveQuizRefreshDebounce.clear();
+
+  // Clear timetable reminder intervals
+  for (const interval of timetableReminderIntervals.values()) {
+    clearInterval(interval);
+  }
+  timetableReminderIntervals.clear();
+
+  // Clear live exam auto-end intervals
+  for (const timer of liveExamAutoEndIntervals.values()) {
+    clearTimeout(timer);
+  }
+  liveExamAutoEndIntervals.clear();
+
+  // Clear memory cleanup interval
+  // (We don't track it, but it's okay since we're shutting down)
+
+  // Disconnect Prisma
+  try {
+    await prisma.$disconnect();
+    console.log('Prisma disconnected');
+  } catch (err) {
+    console.error('Error disconnecting Prisma:', err);
+  }
+
+  // Disconnect Redis if connected
+  if (redis && redisConnected) {
+    try {
+      await redis.quit();
+      console.log('Redis disconnected');
+    } catch (err) {
+      console.error('Error disconnecting Redis:', err);
+    }
+  }
+
+  console.log('Shutdown complete');
+  process.exit(0);
+}
+
+// Listen for shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // Start HTTP server
 // Use SOCKET_PORT if provided (for Railway), otherwise use default 3001
 // Note: Don't use PORT env variable as it conflicts with Next.js on Railway
 const SOCKET_PORT = process.env.SOCKET_PORT || 3001;
 httpServer.listen(SOCKET_PORT, () => {
+  console.log(`Socket server running on port ${SOCKET_PORT}`);
 });
