@@ -78,6 +78,12 @@ const handler = async (req: NextRequest) => {
           wallet: 100.0,
         },
       });
+    } else if (user.role !== 'STUDENT') {
+      // Ensure dummy user always has STUDENT role
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'STUDENT' },
+      });
     }
 
     const token = jwt.sign(
