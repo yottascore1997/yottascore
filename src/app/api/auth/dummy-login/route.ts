@@ -124,3 +124,10 @@ const handler = async (req: NextRequest) => {
 };
 
 export const POST = withCORS(handler);
+
+export const GET = withCORS(() =>
+  new Response(JSON.stringify({ error: 'Dummy login requires POST' }), {
+    status: 405,
+    headers: { 'Content-Type': 'application/json' },
+  })
+);
